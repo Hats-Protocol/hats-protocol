@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: CC0
 pragma solidity >=0.8.13;
 
-import "src/IHats.sol";
+import "../IHats.sol";
 
 abstract contract HatsEligibility {
     address public immutable hats;

@@ -2,9 +2,9 @@
 pragma solidity >=0.8.13;
 
 import "solmate/tokens/ERC1155.sol";
-import "src/HatsConditions/IHatsConditions.sol";
-import "src/HatsOracles/IHatsOracle.sol";
-import "src/HatsEligibility/IHatsEligibility.sol";
+import "./HatsConditions/IHatsConditions.sol";
+import "./HatsOracles/IHatsOracle.sol";
+import "./HatsEligibility/IHatsEligibility.sol";
 import "utils/BASE64.sol";
 
 contract Hats is ERC1155 {

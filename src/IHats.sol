@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: CC0
 pragma solidity >=0.8.13;
 
-import "src/HatsEligibility/HatsEligibility.sol";
-
 interface IHats {
     function createHat(
         string memory name, // encode as bytes32 ??
