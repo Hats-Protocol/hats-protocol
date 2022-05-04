@@ -384,7 +384,7 @@ contract Hats is ERC1155 {
         Hat memory hat = hats[_hatId];
 
         bytes memory properties = abi.encodePacked(
-            '"current supply": "',
+            '{"current supply": "',
             hatSupply[_hatId],
             '", "supply cap": "',
             hat.maxSupply,
@@ -417,9 +417,9 @@ contract Hats is ERC1155 {
                         status,
                         //'", "image": "',
                         // some image URI,
-                        '", "properties": ', // open properties object
+                        '", "properties": ',
                         properties,
-                        "}" // close properties object and parent object
+                        "}"
                     )
                 )
             )
