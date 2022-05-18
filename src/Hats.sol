@@ -8,20 +8,28 @@ import "./HatsEligibility/IHatsEligibility.sol";
 import "utils/BASE64.sol";
 
 contract Hats is ERC1155 {
-    // Hats Errors --------
+    /*//////////////////////////////////////////////////////////////
+                              HATS ERRORS
+    //////////////////////////////////////////////////////////////*/
 
     // QUESTION should we add arguments to any of these errors?
-    error NotHatOwner();
+    error NotOfferAccepter();
     error NotHatsEligibility();
     error NotHatOracle();
+    error CannotRuleOnHat();
     error NotHatConditions();
+    error CannotDeactivateHat();
     error NotEligible();
     error HatNotActive();
     error AllHatsFilled();
     error OfferNotActive();
     error NotOfferSubmitter();
+    error TriggerAccountabilityFailed();
+    error NoTransfersAllowed();
 
-    // Hats Data Models ----
+    /*//////////////////////////////////////////////////////////////
+                              HATS DATA MODELS
+    //////////////////////////////////////////////////////////////*/
 
     // TODO can probably figure out a way to pack all this stuff into fewer storage slots. Most of it doesn't change, anyways
     struct Hat {
@@ -31,9 +39,9 @@ contract Hats is ERC1155 {
         uint256 maxSupply; // the max number of identical hats that can exist
         uint256 eligibilityThreshold; // the required amount from HatsEligibility
         address eligibility; // eligibility contract
-        address owner; // can accept Offers to wear this hat
-        address oracle; // rules on
-        address conditions;
+        bytes20 owner; // can accept Offers to wear this hat; can convert to address via address(owner)
+        bytes20 oracle; // rules on
+        bytes20 conditions;
         bool active; // can be altered by conditions, via deactivateHat()
     }
 
@@ -45,13 +53,15 @@ contract Hats is ERC1155 {
     }
 
     struct Offer {
-        uint256 hat;
+        uint256 hat; // the hat to wear
         address submitter; // the prospective wearer
-        uint256 amount; // the amount of eligibility "offered"
+        uint256 amount; // the amount of eligibility "offered"; can be higher than the eligibility threshold
         OfferStatus status; // 0:Empty, 1:Active, 2:Accepted, 3:Withdrawn
     }
 
-    // Hats Storage -------
+    /*//////////////////////////////////////////////////////////////
+                              HATS STORAGE
+    //////////////////////////////////////////////////////////////*/
 
     uint256 public nextHatId; // initialized at 0
     uint256 public nextOfferId; // initialized at 0; QUESTION Or should this be some kind of concatenation w/ hatId so its easier to retrieve the hat from the offerId?
@@ -59,7 +69,7 @@ contract Hats is ERC1155 {
     // holding zone for inactive hats ("hat rack")
     address private constant HAT_RACK = address(0x4a15); // 0xhats :)
 
-    // we never need to pass data into ERC1155 mint or transfer functions
+    // we don't need to pass data into ERC1155 mint or transfer functions
     bytes private constant EMPTY_DATA = "";
 
     Hat[] private hats; // can retrieve hat info via viewHat(hatId) or via uri(hatId);
@@ -68,9 +78,13 @@ contract Hats is ERC1155 {
 
     mapping(uint256 => uint256) public hatSupply; // key: hatId => value: supply
 
+    mapping(uint256 => mapping(address => bool)) hatWearers; // hatId => (wearer => true/false)
+
     // QUESTION do we need to store Hat wearing history on-chain? In other words, do other contracts need access to said history?
 
-    // Hats Events --------
+    /*//////////////////////////////////////////////////////////////
+                              HATS EVENTS
+    //////////////////////////////////////////////////////////////*/
 
     event HatCreated(
         string name,
@@ -79,9 +93,9 @@ contract Hats is ERC1155 {
         uint256 maxSupply,
         uint256 eligibilityThreshold,
         address eligibility,
-        address owner,
-        address oracle,
-        address conditions
+        bytes20 owner,
+        bytes20 oracle,
+        bytes20 conditions
     );
 
     event OfferSubmitted(
@@ -93,22 +107,44 @@ contract Hats is ERC1155 {
 
     event OfferAccepted(uint256 offerId); // QUESTION do we need this? In theory, the subgraph can know this from the 1155 transfer event
 
-    event HatRelinquished(uint256 hatId);
+    event HatRelinquished(uint256 hatId, address wearer);
 
-    event Ruling(uint256 hatId, bool ruling);
+    event Ruling(uint256 hatId, address wearer, bool ruling);
 
     event HatDeactivated(uint256 hatId);
 
-    event HatSupplyChanged(uint256 hatId, uint256 newSupply);
+    // event HatSupplyChanged(uint256 hatId, uint256 newSupply);
 
-    // Hats Constructor ---
+    /*//////////////////////////////////////////////////////////////
+                              HATS VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     constructor() {
         // nextHatId = 0;
         // nextOfferId = 0;
     }
 
-    // Hats Functions -----
+    /*//////////////////////////////////////////////////////////////
+                              HATS LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    function setAddressUp(address _target) public returns (uint256 hatId) {
+        // check if already has first hat???
+        // create hat
+        // hat.owner = hat.id
+        // mint hat to target
+        // return hat.id
+        // TODO
+    }
+
+    function setupAndCreateHat(params)
+        public
+        returns (uint256 firstHatId, uint256 hatId)
+    {
+        // setYourselfUp();
+        // createHat(params);
+        // TODO
+    }
 
     function createHat(
         string memory _name, // encode as bytes32 ??
@@ -116,9 +152,9 @@ contract Hats is ERC1155 {
         uint256 _maxSupply,
         uint256 _eligibilityThreshold,
         address _eligibility,
-        address _owner,
-        address _oracle,
-        address _conditions
+        bytes20 _owner,
+        bytes20 _oracle,
+        bytes20 _conditions
     ) public returns (uint256 hatId) {
         Hat memory hat;
         hat.name = _name;
@@ -133,8 +169,17 @@ contract Hats is ERC1155 {
         hat.eligibilityThreshold = _eligibilityThreshold;
         hat.eligibility = _eligibility;
         // hat.wearer initializes as 0 (the 0x address)
+
+        // if _owner is 20 bytes, then hat.owner = setAddressUp()
+        // if _owner is <20 bytes, then hat.owner = uint256(_owner) // hatId
         hat.owner = _owner;
+
+        // if _oracle is 20 bytes, then hat.oracle = setAddressUp()
+        // if _oracle is <20 bytes, then hat.oracle = uint256(_oracle) // hatId
         hat.oracle = _oracle;
+
+        // if _conditions is 20 bytes, then hat.conditions = setAddressUp()
+        // if _conditions is <20 bytes, then hat.conditions = uint256(_conditions) // hatId
         hat.conditions = _conditions;
         hat.active = true;
 
@@ -159,7 +204,9 @@ contract Hats is ERC1155 {
         address _submitter,
         uint256 _amount
     ) external onlyHatsEligibility(_hatId) returns (uint256 offerId) {
-        // TODO revert if !isEligible(_submitter, _hatId)
+        if (!isEligible(_submitter, _hatId)) {
+            revert NotEligible();
+        }
 
         offerId = nextOfferId;
         // increment next offer id
@@ -183,8 +230,11 @@ contract Hats is ERC1155 {
         returns (bool)
     {
         Offer storage offer = offers[offerId];
+        Hat memory hat = hats[offer.hat];
 
-        // TODO revert if msg.sender != hat.eligibility
+        if (msg.sender != hat.eligibility) {
+            revert NotHatsEligibility();
+        }
 
         if (_submitter != offer.submitter) {
             revert NotOfferSubmitter();
@@ -213,9 +263,9 @@ contract Hats is ERC1155 {
             // QUESTION do we want to destroy any other offers on the same hat?
         }
 
-        // only the hat owner can accept an offer
-        if (msg.sender != hat.owner) {
-            revert NotHatOwner();
+        // only the hat owner can accept an offer; might be either an explicit address or the wearer of some other hat
+        if (msg.sender != _hatOfferAccepter(hat)) {
+            revert NotOfferAccepter();
         }
 
         // hat max supply must not be reached
@@ -231,12 +281,8 @@ contract Hats is ERC1155 {
         }
 
         // now we can finally accept the offer!
-
         // update Offer status
         offer.status = OfferStatus.Accepted;
-
-        // increment Hat supply
-        ++hatSupply[hatId];
 
         // mint Hat token to submitter
         _mintHat(hatId, submitter);
@@ -247,32 +293,31 @@ contract Hats is ERC1155 {
         return true;
     }
 
-    function _mintHat(uint256 _hatId, address _wearer) internal {
-        _mint(_wearer, _hatId, 1, EMPTY_DATA);
-    }
+    // DECISION out of scope for mvp
+    // function changeHatSupply(uint256 _hatId, uint256 _newSupply)
+    //     external
+    //     returns (bool)
+    // {
+    //     // TODO revert if not hat owner
+    //     // TODO revert if hatSupply(_hatId) > _newSupply
+    //     // TODO revert if hats[_hatId].supply == _newSupply
 
-    // QUESTION do we want the ability to batch mint hats?
+    //     emit HatSupplyChanged(_hatId, _newSupply);
 
-    // QUESTION do we need this? I don't think we do
-    // function burnHat(uint256 hatId) internal returns (bool) {
-    //
+    //     return true;
     // }
 
-    function changeHatSupply(uint256 _hatId, uint256 _newSupply)
-        external
-        returns (bool)
-    {
-        // TODO revert if not hat owner
-        // TODO revert if hatSupply(_hatId) > _newSupply
-        // TODO revert if hats[_hatId].supply == _newSupply
+    function deactivateHat(uint256 _hatId) external returns (bool) {
+        Hat storage hat = hats[_hatId];
 
-        emit HatSupplyChanged(_hatId, _newSupply);
+        if (msg.sender != _hatDeactivator(hat)) {
+            revert CannotDeactivateHat();
+        }
+
+        hat.active = false;
 
         return true;
-    }
 
-    function deactivateHat(uint256 _hatId) external returns (bool) {
-        // TODO revert if msg.sender != hat.conditions
         // QUESTION do we also destroy any offers associated with this hat? A: probably not worth the gas to do so
     }
 
@@ -280,34 +325,74 @@ contract Hats is ERC1155 {
         // TODO
     }
 
-    function ruleOnHat(uint256 _hatId, bool _ruling) external returns (bool) {
-        // TODO revert if msg.sender != hat.oracle
+    function ruleOnHatWearer(
+        uint256 _hatId,
+        address _wearer,
+        bool _ruling // return false if the wearar is not fulfilling the duties of the hat
+    ) external returns (bool) {
+        Hat memory hat = hats[_hatId];
+
+        if (msg.sender != hatRuler(hat)) {
+            revert CannotRuleOnHat();
+        }
+
+        if (!_ruling) {
+            // take away the hat by burning it
+            _burnHat(_hatId, _wearer);
+
+            // penalize the wearer
+            _triggerAccountability(hat, _wearer);
+        }
+
+        emit Ruling(_hatId, _wearer, _ruling);
+
+        return true;
     }
 
     function recordRelinquishment(uint256 _hatId, address _wearer)
         external
         onlyHatsEligibility(_hatId)
-        returns (bool success, uint256 amount)
-    {
-        // TODO
-        // transfers token to HAT_RACK address
-    }
-
-    function _unlockEligibility(uint256 _hatId, address _wearer)
-        internal
         returns (bool)
     {
-        // TODO
+        // remove the hat
+        _burnHat(_hatId, _wearer);
+
+        // hat.eligibilty will handle the unlocking of eligibility
+
+        return true;
     }
 
-    function _triggerPenalty(uint256 _hatId, address _wearer)
-        internal
-        returns (bool)
-    {
-        // TODO
+    /*//////////////////////////////////////////////////////////////
+                              HATS INTERNAL LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    function _mintHat(uint256 _hatId, address _wearer) internal {
+        _mint(_wearer, _hatId, 1, EMPTY_DATA);
+
+        // increment Hat supply
+        ++hatSupply[_hatId];
     }
 
-    // Hats View Functions-
+    // QUESTION do we want the ability to batch mint hats?
+
+    function _burnHat(uint256 _hatId, address _wearer) internal {
+        _burn(_wearer, _hatId, 1, EMPTY_DATA);
+
+        // decrement Hat supply
+        --hatSupply[_hatId];
+    }
+
+    function _triggerAccountability(uint256 _hatId, address _wearer) internal {
+        IHatsEligibility ELIGIBILITY = IHatsEligibility(hat.eligibility);
+        bool success = ELIGIBILITY.triggerAccountability(_wearer, _hatId);
+        if (!success) {
+            revert TriggerAccountabilityFailed();
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              HATS VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
 
     function viewHat(uint256 _hatId)
         public
@@ -338,6 +423,15 @@ contract Hats is ERC1155 {
         oracle = hat.oracle;
         conditions = hat.conditions;
         active = _isActive(hat);
+    }
+
+    // alternative name: `wearsHat`
+    function isWearerOfHat(address _user, uint256 _hatId)
+        public
+        view
+        returns (bool)
+    {
+        return (balanceOf(_user, _hatId) >= 1);
     }
 
     // Hat is deemed active if both Conditions contract and hat's active property are TRUE
@@ -375,6 +469,49 @@ contract Hats is ERC1155 {
         return _isEligible(_wearer, hat);
     }
 
+    function _isInGoodStanding(address _wearer, Hat memory _hat)
+        public
+        view
+        returns (bool)
+    {
+        IHatsOracle ORACLE = IHatsOracle(_hat.oracle);
+        return (ORACLE.checkWearerStanding(_wearer, _hat.id));
+    }
+
+    function isInGoodStanding(address _wearer, uint256 _hatId)
+        public
+        view
+        returns (bool)
+    {
+        Hat memory hat = hats[_hatsId];
+        return _isInGoodStanding(_wearer, hat);
+    }
+
+    function _hatOfferAccepter(Hat memory _hat)
+        internal
+        view
+        returns (address)
+    {
+        // if _hat.owner is 20 bytes (i.e. an address), check if _user == _hat.owner
+        // if _hat.owner is <20 bytes, check if _user wears _hat.owner , ie
+        //      isWearerOfHat(_user, _hat.owner) // only works using the sequential integer hat id model
+        // TODO
+    }
+
+    function _hatRuler(Hat memory _hat) internal view returns (address) {
+        // if _hat.owner is 20 bytes (i.e. an address), check if _user == _hat.oracle
+        // if _hat.owner is <20 bytes, check if _user wears _hat.oracle , ie
+        //      isWearerOfHat(_user, _hat.oracle) // only works using the sequential integer hat id model
+        // TODO
+    }
+
+    function _hatDeactivator(Hat memory _hat) internal view returns (address) {
+        // if _hat.owner is 20 bytes (i.e. an address), check if _user == _hat.conditions
+        // if _hat.owner is <20 bytes, check if _user wears _hat.conditions , ie
+        //      isWearerOfHat(_user, _hat.conditions) // only works using the sequential integer hat id model
+        // TODO
+    }
+
     // effectively a wrapper around `viewHat` that formats the output as a json string
     function _constructURI(uint256 _hatId)
         internal
@@ -401,7 +538,7 @@ contract Hats is ERC1155 {
             '"}'
         );
 
-        string memory status = (_isActive(hat) ? "active" : "inctive");
+        string memory status = (_isActive(hat) ? "active" : "inactive");
 
         string memory json = Base64.encode(
             bytes(
@@ -430,7 +567,9 @@ contract Hats is ERC1155 {
         return uri_;
     }
 
-    // Hats Modifiers -----
+    /*//////////////////////////////////////////////////////////////
+                              HATS MODIFIERS
+    //////////////////////////////////////////////////////////////*/
 
     modifier onlyHatsEligibility(uint256 _hatId) {
         //
@@ -441,18 +580,56 @@ contract Hats is ERC1155 {
         _;
     }
 
-    // ERC1155 Functions ---
+    /*//////////////////////////////////////////////////////////////
+                              ERC1155 OVERRIDES
+    //////////////////////////////////////////////////////////////*/
 
-    // mapping(uint256 => address) private owners;
+    function balanceOf(address owner, uint256 id)
+        public
+        override
+        returns (uint256)
+    {
+        Hat memory hat = hats[id];
 
-    // function ownerOf(uint256 tokenId) public view override returns (address) {
-    //     // have this dynamically update based on Conditions and Eligibility
-    //     address owner;
-    //     if (isActive(tokenId) && isEligible(tokenId)) {
-    //         owner = owners[tokenId];
-    //     } else owner = address(0);
-    //     // but also include a separate function that fires a transfer event so that front ends can stay up to date
-    // }
+        uint256 balance = 0;
+
+        if (
+            _isActive(hat) &&
+            _isEligible(owner, hat) &&
+            _isInGoodStanding(owner, hat)
+        ) {
+            balance = balanceOf[_user][_hatId];
+        }
+
+        return balance;
+    }
+
+    function setApprovalForAll(address operator, bool approved)
+        public
+        override
+    {
+        revert NoTransfersAllowed();
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes calldata data
+    ) public override {
+        revert NoTransfersAllowed();
+    }
+
+    function safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] calldata ids,
+        uint256[] calldata amounts,
+        bytes calldata data
+    ) public override {
+        revert NoTransfersAllowed();
+    }
 
     function uri(uint256 id) public view override returns (string memory) {
         return _constructURI(id);

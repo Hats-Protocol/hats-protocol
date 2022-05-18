@@ -6,4 +6,8 @@ interface IHatsEligibility {
         external
         view
         returns (bool);
+
+    function triggerAccountability(address _wearer, uint256 _hatId)
+        external
+        returns (bool);
 }
