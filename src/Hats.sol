@@ -12,18 +12,12 @@ contract Hats is ERC1155 {
     //////////////////////////////////////////////////////////////*/
 
     // QUESTION should we add arguments to any of these errors?
-    error NotOfferAccepter();
-    error NotHatsEligibility();
     error NotHatOracle();
     error CannotRuleOnHat();
     error NotHatConditions();
     error CannotDeactivateHat();
-    error NotEligible();
     error HatNotActive();
-    error AllHatsFilled();
-    error OfferNotActive();
-    error NotOfferSubmitter();
-    error TriggerAccountabilityFailed();
+    error AllHatsWorn();
     error NoTransfersAllowed();
 
     /*//////////////////////////////////////////////////////////////
@@ -160,6 +154,21 @@ contract Hats is ERC1155 {
             _oracle,
             _conditions
         );
+    }
+
+    function mintHat(uint256 _hatId, address _wearer) external returns (bool) {
+        Hat memory hat = hats[_hatId];
+        if (msg.sender != hat.owner) {
+            revert CannotMintHat();
+        }
+
+        if (hatSupply[hat] >= hat.maxSupply) {
+            revert AllHatsWorn();
+        }
+
+        _mintHat(_hatId, _wearer);
+
+        return true;
     }
 
     // DECISION out of scope for mvp
