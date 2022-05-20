@@ -19,6 +19,7 @@ contract Hats is ERC1155 {
     error HatNotActive();
     error AllHatsWorn();
     error NoTransfersAllowed();
+    error NotHatWearer();
 
     /*//////////////////////////////////////////////////////////////
                               HATS DATA MODELS
@@ -26,13 +27,13 @@ contract Hats is ERC1155 {
 
     // TODO can probably figure out a way to pack all this stuff into fewer storage slots. Most of it doesn't change, anyways
     struct Hat {
-        string name; // QUESTION do we need to store this?
-        string details; // QUESTION do we need to store this?
+        string name; // QUESTION can this be included in details?
+        string details;
         uint256 id; // will be used as the 1155 token ID
         uint256 maxSupply; // the max number of identical hats that can exist
-        bytes20 owner; // can accept Offers to wear this hat; can convert to address via address(owner)
-        bytes20 oracle; // rules on
-        bytes20 conditions;
+        bytes20 owner; // controls who wears this hat; can convert to address via address(owner)
+        bytes20 oracle; // can revoke hat based on ruling
+        bytes20 conditions; // controls when hat is active
         bool active; // can be altered by conditions, via deactivateHat()
     }
 
@@ -52,7 +53,8 @@ contract Hats is ERC1155 {
 
     mapping(uint256 => uint256) public hatSupply; // key: hatId => value: supply
 
-    mapping(uint256 => mapping(address => bool)) hatWearers; // hatId => (wearer => true/false)
+    // for external contracts to check if hat was reounced or revoked
+    mapping(uint256 => mapping(address => bool)) public revocations; // key: hatId => value: (key: wearer => value: revoked?)
 
     // QUESTION do we need to store Hat wearing history on-chain? In other words, do other contracts need access to said history?
 
@@ -70,7 +72,7 @@ contract Hats is ERC1155 {
         bytes20 conditions
     );
 
-    event HatRelinquished(uint256 hatId, address wearer);
+    event HatRenounced(uint256 hatId, address wearer);
 
     event Ruling(uint256 hatId, address wearer, bool ruling);
 
@@ -91,31 +93,51 @@ contract Hats is ERC1155 {
                               HATS LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function setAddressUp(address _target) public returns (uint256 hatId) {
-        // check if already has first hat???
+    function mintTopHat(address _target) public returns (uint256 topHatId) {
         // create hat
-        // hat.owner = hat.id
-        // mint hat to target
-        // return hat.id
-        // TODO
+
+        topHatId = createHat(
+            "Top Hat", // name
+            "", // details
+            1, // maxSupply = 1
+            nextHatId, // the topHat owns itself
+            address(0), // there is no oracle
+            address(0) // it has no conditions
+        );
+
+        _mintHat(hatId, _target);
+
+        return topHatId;
     }
 
-    function setupAndCreateHat(params)
-        public
-        returns (uint256 firstHatId, uint256 hatId)
-    {
-        // setYourselfUp();
-        // createHat(params);
-        // TODO
+    function createTopHatAndHat(
+        string memory _name, // encode as bytes32 ??
+        string memory _details, // encode as bytes32 ??
+        uint256 _maxSupply,
+        address _oracle,
+        address _conditions
+    ) public returns (uint256 topHatId, uint256 firstHatId) {
+        topHatId = mintTopHat(msg.sender);
+
+        firstHatId = createHat(
+            _name,
+            _details,
+            _maxSupply,
+            topHatId, // the topHat is the owner
+            _oracle,
+            _conditions
+        );
+
+        return (topHatId, firstHatId);
     }
 
     function createHat(
         string memory _name, // encode as bytes32 ??
         string memory _details, // encode as bytes32 ??
         uint256 _maxSupply,
-        bytes20 _owner,
-        bytes20 _oracle,
-        bytes20 _conditions
+        uint256 _owner, // hatId
+        address _oracle,
+        address _conditions
     ) public returns (uint256 hatId) {
         Hat memory hat;
         hat.name = _name;
@@ -127,18 +149,11 @@ contract Hats is ERC1155 {
         hat.id = hatId;
 
         hat.maxSupply = _maxSupply;
-        // hat.wearer initializes as 0 (the 0x address)
 
-        // if _owner is 20 bytes, then hat.owner = setAddressUp()
-        // if _owner is <20 bytes, then hat.owner = uint256(_owner) // hatId
         hat.owner = _owner;
 
-        // if _oracle is 20 bytes, then hat.oracle = setAddressUp()
-        // if _oracle is <20 bytes, then hat.oracle = uint256(_oracle) // hatId
         hat.oracle = _oracle;
 
-        // if _conditions is 20 bytes, then hat.conditions = setAddressUp()
-        // if _conditions is <20 bytes, then hat.conditions = uint256(_conditions) // hatId
         hat.conditions = _conditions;
         hat.active = true;
 
@@ -171,20 +186,6 @@ contract Hats is ERC1155 {
         return true;
     }
 
-    // DECISION out of scope for mvp
-    // function changeHatSupply(uint256 _hatId, uint256 _newSupply)
-    //     external
-    //     returns (bool)
-    // {
-    //     // TODO revert if not hat owner
-    //     // TODO revert if hatSupply(_hatId) > _newSupply
-    //     // TODO revert if hats[_hatId].supply == _newSupply
-
-    //     emit HatSupplyChanged(_hatId, _newSupply);
-
-    //     return true;
-    // }
-
     function deactivateHat(uint256 _hatId) external returns (bool) {
         Hat storage hat = hats[_hatId];
 
@@ -195,8 +196,6 @@ contract Hats is ERC1155 {
         hat.active = false;
 
         return true;
-
-        // QUESTION do we also destroy any offers associated with this hat? A: probably not worth the gas to do so
     }
 
     function requestOracleRuling(uint256 _hatId) public returns (bool) {
@@ -210,16 +209,16 @@ contract Hats is ERC1155 {
     ) external returns (bool) {
         Hat memory hat = hats[_hatId];
 
-        if (msg.sender != hatRuler(hat)) {
+        if (isHatRuler(msg.sender, hat)) {
             revert CannotRuleOnHat();
         }
 
         if (!_ruling) {
-            // take away the hat by burning it
+            // revoke the hat by burning it
             _burnHat(_hatId, _wearer);
 
-            // record ruling for use by other contracts
-            // TODO likely a mapping or similar in storage
+            // record revocation for use by other contracts
+            revocations[_hatId][_wearer] = true;
         }
 
         emit Ruling(_hatId, _wearer, _ruling);
@@ -227,11 +226,10 @@ contract Hats is ERC1155 {
         return true;
     }
 
-    function recordRelinquishment(uint256 _hatId, address _wearer)
-        external
-        onlyHatsEligibility(_hatId)
-        returns (bool)
-    {
+    function renounceHat(uint256 _hatId) external returns (bool) {
+        if (!isWearerOfHa(msg.sender, _hatId)) {
+            revert NotHatWearer();
+        }
         // remove the hat
         _burnHat(_hatId, _wearer);
 
@@ -247,6 +245,9 @@ contract Hats is ERC1155 {
 
         // increment Hat supply
         ++hatSupply[_hatId];
+
+        // assign wearer to hat
+        hatWearers[_hatId] = _wearer;
     }
 
     // QUESTION do we want the ability to batch mint hats?
@@ -256,6 +257,9 @@ contract Hats is ERC1155 {
 
         // decrement Hat supply
         --hatSupply[_hatId];
+
+        // unassign wearer from hat
+        hatWearers[_hatId] = bytes20(0x0);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -289,8 +293,7 @@ contract Hats is ERC1155 {
         active = _isActive(hat);
     }
 
-    // alternative name: `wearsHat`
-    function isWearerOfHat(address _user, uint256 _hatId)
+    function isWearerOfHat(uint160 _user, uint256 _hatId)
         public
         view
         returns (bool)
@@ -328,20 +331,6 @@ contract Hats is ERC1155 {
     {
         Hat memory hat = hats[_hatsId];
         return _isInGoodStanding(_wearer, hat);
-    }
-
-    function _hatRuler(Hat memory _hat) internal view returns (address) {
-        // if _hat.owner is 20 bytes (i.e. an address), check if _user == _hat.oracle
-        // if _hat.owner is <20 bytes, check if _user wears _hat.oracle , ie
-        //      isWearerOfHat(_user, _hat.oracle) // only works using the sequential integer hat id model
-        // TODO
-    }
-
-    function _hatDeactivator(Hat memory _hat) internal view returns (address) {
-        // if _hat.owner is 20 bytes (i.e. an address), check if _user == _hat.conditions
-        // if _hat.owner is <20 bytes, check if _user wears _hat.conditions , ie
-        //      isWearerOfHat(_user, _hat.conditions) // only works using the sequential integer hat id model
-        // TODO
     }
 
     // effectively a wrapper around `viewHat` that formats the output as a json string
