@@ -26,28 +26,32 @@ contract Hats is ERC1155 {
 
     // TODO can probably figure out a way to pack all this stuff into fewer storage slots. Most of it doesn't change, anyways
     struct Hat {
+        // 1st storage slot
+        address oracle; // can revoke hat based on ruling; 20 bytes (+20)
+        uint64 id; // will be used as the 1155 token ID; 28 bytes (+8)
+        uint32 maxSupply; // the max number of identical hats that can exist; 32 bytes (+4)
+        // 2nd storage slot
+        address conditions; // controls when hat is active; 20 bytes (+20)
+        uint64 admin; // controls who wears this hat; can convert to address via address(admin); 28 bytes (+8)
+        bool active; // can be altered by conditions, via deactivateHat(); 29 bytes (+1)
+        // 3rd storage slot
         string name; // QUESTION can this be included in details?
+        // 4th storage slot
         string details;
-        uint256 id; // will be used as the 1155 token ID
-        uint256 maxSupply; // the max number of identical hats that can exist
-        uint256 admin; // controls who wears this hat; can convert to address via address(admin)
-        address oracle; // can revoke hat based on ruling
-        address conditions; // controls when hat is active
-        bool active; // can be altered by conditions, via deactivateHat()
     }
 
     /*//////////////////////////////////////////////////////////////
                               HATS STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    uint256 public nextHatId; // initialized at 0
+    uint64 public nextHatId; // initialized at 0
 
     Hat[] private hats; // can retrieve hat info via viewHat(hatId) or via uri(hatId);
 
-    mapping(uint256 => uint256) public hatSupply; // key: hatId => value: supply
+    mapping(uint64 => uint32) public hatSupply; // key: hatId => value: supply
 
     // for external contracts to check if hat was reounced or revoked
-    mapping(uint256 => mapping(address => bool)) public revocations; // key: hatId => value: (key: wearer => value: revoked?)
+    mapping(uint64 => mapping(address => bool)) public revocations; // key: hatId => value: (key: wearer => value: revoked?)
 
     // QUESTION do we need to store Hat wearing history on-chain? In other words, do other contracts need access to said history?
 
@@ -58,20 +62,20 @@ contract Hats is ERC1155 {
     event HatCreated(
         string name,
         string details,
-        uint256 id,
-        uint256 maxSupply,
-        uint256 admin,
+        uint64 id,
+        uint32 maxSupply,
+        uint64 admin,
         address oracle,
         address conditions
     );
 
-    event HatRenounced(uint256 hatId, address wearer);
+    event HatRenounced(uint64 hatId, address wearer);
 
-    event Ruling(uint256 hatId, address wearer, bool ruling);
+    event Ruling(uint64 hatId, address wearer, bool ruling);
 
-    event HatDeactivated(uint256 hatId);
+    event HatDeactivated(uint64 hatId);
 
-    // event HatSupplyChanged(uint256 hatId, uint256 newSupply);
+    // event HatSupplyChanged(uint64 hatId, uint256 newSupply);
 
     /*//////////////////////////////////////////////////////////////
                               HATS VIEW FUNCTIONS
@@ -131,7 +135,7 @@ contract Hats is ERC1155 {
         uint256 _admin, // hatId
         address _oracle,
         address _conditions
-    ) public returns (uint256 hatId) {
+    ) public returns (uint64 hatId) {
         // to create a hat, you must be wearing the hat of its admin
         if (!isWearerOfHat(msg.sender, _admin)) {
             revert NotAdmin();
@@ -148,7 +152,7 @@ contract Hats is ERC1155 {
         );
     }
 
-    function mintHat(uint256 _hatId, address _wearer) external returns (bool) {
+    function mintHat(uint64 _hatId, address _wearer) external returns (bool) {
         Hat memory hat = hats[_hatId];
         // only the wearer of a hat's admin hat can mint it
         if (_isAdminOfHat(hat)) {
@@ -164,7 +168,7 @@ contract Hats is ERC1155 {
         return true;
     }
 
-    function deactivateHat(uint256 _hatId) external returns (bool) {
+    function deactivateHat(uint64 _hatId) external returns (bool) {
         Hat storage hat = hats[_hatId];
 
         if (msg.sender != hat.conditions) {
@@ -176,12 +180,12 @@ contract Hats is ERC1155 {
         return true;
     }
 
-    function requestOracleRuling(uint256 _hatId) public returns (bool) {
+    function requestOracleRuling(uint64 _hatId) public returns (bool) {
         // TODO
     }
 
     function ruleOnHatWearer(
-        uint256 _hatId,
+        uint64 _hatId,
         address _wearer,
         bool _ruling // return false if the wearar is not fulfilling the duties of the hat
     ) external returns (bool) {
@@ -204,7 +208,7 @@ contract Hats is ERC1155 {
         return true;
     }
 
-    function renounceHat(uint256 _hatId) external returns (bool) {
+    function renounceHat(uint64 _hatId) external returns (bool) {
         if (!isWearerOfHa(msg.sender, _hatId)) {
             revert NotHatWearer();
         }
@@ -225,7 +229,7 @@ contract Hats is ERC1155 {
         uint256 _admin, // hatId
         address _oracle,
         address _conditions
-    ) internal returns (uint256 hatId) {
+    ) internal returns (uint64 hatId) {
         Hat memory hat;
         hat.name = _name;
         hat.details = _details;
@@ -258,14 +262,14 @@ contract Hats is ERC1155 {
         );
     }
 
-    function _mintHat(uint256 _hatId, address _wearer) internal {
+    function _mintHat(uint64 _hatId, address _wearer) internal {
         _mint(_wearer, _hatId, 1, "");
 
         // increment Hat supply
         ++hatSupply[_hatId];
     }
 
-    function _burnHat(uint256 _hatId, address _wearer) internal {
+    function _burnHat(uint64 _hatId, address _wearer) internal {
         _burn(_wearer, _hatId, 1, "");
 
         // decrement Hat supply
@@ -276,13 +280,13 @@ contract Hats is ERC1155 {
                               HATS VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function viewHat(uint256 _hatId)
+    function viewHat(uint64 _hatId)
         public
         view
         returns (
             string memory name,
             string memory details,
-            uint256 id,
+            uint64 id,
             uint256 maxSupply,
             uint256 supply,
             address admin,
@@ -308,12 +312,12 @@ contract Hats is ERC1155 {
         return (hat == hat.admin);
     }
 
-    function isTopHat(uint256 _hatId) public view returns (bool) {
+    function isTopHat(uint64 _hatId) public view returns (bool) {
         Hat memory hat = hats[_hatId];
         _isTopHat(hat);
     }
 
-    function isWearerOfHat(uint160 _user, uint256 _hatId)
+    function isWearerOfHat(uint160 _user, uint64 _hatId)
         public
         view
         returns (bool)
@@ -321,7 +325,7 @@ contract Hats is ERC1155 {
         return (balanceOf(_user, _hatId) >= 1);
     }
 
-    function isAdminOfHat(address _user, uint256 _hatId)
+    function isAdminOfHat(address _user, uint64 _hatId)
         public
         view
         returns (bool)
@@ -350,7 +354,7 @@ contract Hats is ERC1155 {
     }
 
     // for use externally (when can't pass Hat object)
-    function isActive(uint256 _hatId) public view returns (bool) {
+    function isActive(uint64 _hatId) public view returns (bool) {
         Hat memory hat = hats[_hatId];
         return _isActive(hat);
     }
@@ -364,7 +368,7 @@ contract Hats is ERC1155 {
         return (ORACLE.checkWearerStanding(_wearer, _hat.id));
     }
 
-    function isInGoodStanding(address _wearer, uint256 _hatId)
+    function isInGoodStanding(address _wearer, uint64 _hatId)
         public
         view
         returns (bool)
@@ -374,7 +378,7 @@ contract Hats is ERC1155 {
     }
 
     // effectively a wrapper around `viewHat` that formats the output as a json string
-    function _constructURI(uint256 _hatId)
+    function _constructURI(uint64 _hatId)
         internal
         view
         returns (string memory uri_)
@@ -433,12 +437,13 @@ contract Hats is ERC1155 {
         override
         returns (uint256)
     {
-        Hat memory hat = hats[id];
+        uint64 hatID = uint64(id); // QUESTION do we need to cast this? what happens if it overflows?
+        Hat memory hat = hats[hatId];
 
         uint256 balance = 0;
 
         if (_isActive(hat) && _isInGoodStanding(admin, hat)) {
-            balance = balanceOf[_user][_hatId];
+            balance = balanceOf[_user][hatId];
         }
 
         return balance;
@@ -458,7 +463,7 @@ contract Hats is ERC1155 {
         uint256 amount,
         bytes calldata data
     ) public override {
-        Hat memory hat = hats[id];
+        Hat memory hat = hats[uint64(id)];
         if (!_isHatAdmin(hat)) {
             revert OnlyAdminsCanTransfer();
         }
@@ -477,10 +482,10 @@ contract Hats is ERC1155 {
     }
 
     function uri(uint256 id) public view override returns (string memory) {
-        return _constructURI(id);
+        return _constructURI(uint64(id));
     }
 
-    // function playNiceWithFrontEnds(uint256 hatId) external returns (bool) {
+    // function playNiceWithFrontEnds(uint64 hatId) external returns (bool) {
     //     // check for adminOf changes
     //     // if changed, fire transfer event
     //     if (hats[hatId].wearer != adminOf(hatId)) {
