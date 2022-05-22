@@ -12,14 +12,13 @@ contract Hats is ERC1155 {
     //////////////////////////////////////////////////////////////*/
 
     // QUESTION should we add arguments to any of these errors?
-    error NotHatOracle();
-    error CannotRuleOnHat();
-    error NotHatConditions();
-    error CannotDeactivateHat();
     error HatNotActive();
+    error NotAdmin();
     error AllHatsWorn();
     error NoTransfersAllowed();
     error NotHatWearer();
+    error NotHatCondition();
+    error NotHatOracle();
 
     /*//////////////////////////////////////////////////////////////
                               HATS DATA MODELS
@@ -31,9 +30,9 @@ contract Hats is ERC1155 {
         string details;
         uint256 id; // will be used as the 1155 token ID
         uint256 maxSupply; // the max number of identical hats that can exist
-        bytes20 owner; // controls who wears this hat; can convert to address via address(owner)
-        bytes20 oracle; // can revoke hat based on ruling
-        bytes20 conditions; // controls when hat is active
+        bytes20 admin; // controls who wears this hat; can convert to address via address(admin)
+        address oracle; // can revoke hat based on ruling
+        address conditions; // controls when hat is active
         bool active; // can be altered by conditions, via deactivateHat()
     }
 
@@ -67,7 +66,7 @@ contract Hats is ERC1155 {
         string details,
         uint256 id,
         uint256 maxSupply,
-        bytes20 owner,
+        bytes20 admin,
         bytes20 oracle,
         bytes20 conditions
     );
@@ -100,7 +99,7 @@ contract Hats is ERC1155 {
             "Top Hat", // name
             "", // details
             1, // maxSupply = 1
-            nextHatId, // the topHat owns itself
+            nextHatId, // a topHat is its own admin
             address(0), // there is no oracle
             address(0) // it has no conditions
         );
@@ -123,7 +122,7 @@ contract Hats is ERC1155 {
             _name,
             _details,
             _maxSupply,
-            topHatId, // the topHat is the owner
+            topHatId, // the topHat is the admin
             _oracle,
             _conditions
         );
@@ -135,7 +134,7 @@ contract Hats is ERC1155 {
         string memory _name, // encode as bytes32 ??
         string memory _details, // encode as bytes32 ??
         uint256 _maxSupply,
-        uint256 _owner, // hatId
+        uint256 _admin, // hatId
         address _oracle,
         address _conditions
     ) public returns (uint256 hatId) {
@@ -150,7 +149,7 @@ contract Hats is ERC1155 {
 
         hat.maxSupply = _maxSupply;
 
-        hat.owner = _owner;
+        hat.admin = _admin;
 
         hat.oracle = _oracle;
 
@@ -165,7 +164,7 @@ contract Hats is ERC1155 {
             _details,
             hatId,
             _maxSupply,
-            _owner,
+            _admin,
             _oracle,
             _conditions
         );
@@ -173,8 +172,8 @@ contract Hats is ERC1155 {
 
     function mintHat(uint256 _hatId, address _wearer) external returns (bool) {
         Hat memory hat = hats[_hatId];
-        if (msg.sender != hat.owner) {
-            revert CannotMintHat();
+        if (_isAdminOfHat(hat)) {
+            revert NotAdmin();
         }
 
         if (hatSupply[hat] >= hat.maxSupply) {
@@ -189,8 +188,8 @@ contract Hats is ERC1155 {
     function deactivateHat(uint256 _hatId) external returns (bool) {
         Hat storage hat = hats[_hatId];
 
-        if (msg.sender != _hatDeactivator(hat)) {
-            revert CannotDeactivateHat();
+        if (msg.sender != hat.conditions) {
+            revert NotHatConditions();
         }
 
         hat.active = false;
@@ -209,8 +208,8 @@ contract Hats is ERC1155 {
     ) external returns (bool) {
         Hat memory hat = hats[_hatId];
 
-        if (isHatRuler(msg.sender, hat)) {
-            revert CannotRuleOnHat();
+        if (hat != hat.oracle) {
+            revert NotHatOracle();
         }
 
         if (!_ruling) {
@@ -275,7 +274,7 @@ contract Hats is ERC1155 {
             uint256 id,
             uint256 maxSupply,
             uint256 supply,
-            address owner,
+            address admin,
             address oracle,
             address conditions,
             bool active
@@ -287,10 +286,20 @@ contract Hats is ERC1155 {
         id = _hatId;
         maxSupply = hat.maxSupply;
         supply = hatSupply[_hatId];
-        owner = hat.owner;
+        admin = hat.admin;
         oracle = hat.oracle;
         conditions = hat.conditions;
         active = _isActive(hat);
+    }
+
+    function _isTopHat(Hat memory hat) internal view returns (bool) {
+        // a topHat is a hat that is its own admin
+        return (hat == hat.admin);
+    }
+
+    function isTopHat(uint256 _hatId) public view returns (bool) {
+        Hat memory hat = hats[_hatId];
+        _isTopHat(hat);
     }
 
     function isWearerOfHat(uint160 _user, uint256 _hatId)
@@ -299,6 +308,26 @@ contract Hats is ERC1155 {
         returns (bool)
     {
         return (balanceOf(_user, _hatId) >= 1);
+    }
+
+    function isAdminOfHat(address _user, uint256 _hatId)
+        public
+        view
+        returns (bool)
+    {
+        Hat memory hat = hats[_hatId];
+
+        // if hat is a topHat, then we know that _user is not the admin
+        if (_isTopHat(hat)) {
+            return false;
+        }
+
+        if (isWearerOfHat(_user, hat.admin)) {
+            return true;
+        } else {
+            // recursion
+            isAdminOfHat(_user, hat.admin);
+        }
     }
 
     // Hat is deemed active if both Conditions contract and hat's active property are TRUE
@@ -346,8 +375,8 @@ contract Hats is ERC1155 {
             hatSupply[_hatId],
             '", "supply cap": "',
             hat.maxSupply,
-            '", "owner": "',
-            hat.owner,
+            '", "admin": "',
+            hat.admin,
             '", "oracle": "',
             hat.oracle,
             '", "conditions": "',
@@ -385,14 +414,10 @@ contract Hats is ERC1155 {
     }
 
     /*//////////////////////////////////////////////////////////////
-                              HATS MODIFIERS
-    //////////////////////////////////////////////////////////////*/
-
-    /*//////////////////////////////////////////////////////////////
                               ERC1155 OVERRIDES
     //////////////////////////////////////////////////////////////*/
 
-    function balanceOf(address owner, uint256 id)
+    function balanceOf(address admin, uint256 id)
         public
         override
         returns (uint256)
@@ -401,7 +426,7 @@ contract Hats is ERC1155 {
 
         uint256 balance = 0;
 
-        if (_isActive(hat) && _isInGoodStanding(owner, hat)) {
+        if (_isActive(hat) && _isInGoodStanding(admin, hat)) {
             balance = balanceOf[_user][_hatId];
         }
 
@@ -422,7 +447,12 @@ contract Hats is ERC1155 {
         uint256 amount,
         bytes calldata data
     ) public override {
-        revert NoTransfersAllowed();
+        Hat memory hat = hats[id];
+        if (!_isHatAdmin(hat)) {
+            revert OnlyAdminsCanTransfer();
+        }
+
+        // TODO
     }
 
     function safeBatchTransferFrom(
@@ -440,9 +470,9 @@ contract Hats is ERC1155 {
     }
 
     // function playNiceWithFrontEnds(uint256 hatId) external returns (bool) {
-    //     // check for ownerOf changes
+    //     // check for adminOf changes
     //     // if changed, fire transfer event
-    //     if (hats[hatId].wearer != ownerOf(hatId)) {
+    //     if (hats[hatId].wearer != adminOf(hatId)) {
     //         // QUESTION how do we handle the case where there's a new wearer?
     //         // emit transfer event
     //     }
