@@ -24,7 +24,6 @@ contract Hats is ERC1155 {
                               HATS DATA MODELS
     //////////////////////////////////////////////////////////////*/
 
-    // TODO can probably figure out a way to pack all this stuff into fewer storage slots. Most of it doesn't change, anyways
     struct Hat {
         // 1st storage slot
         address oracle; // can revoke hat based on ruling; 20 bytes (+20)
@@ -34,9 +33,7 @@ contract Hats is ERC1155 {
         address conditions; // controls when hat is active; 20 bytes (+20)
         uint64 admin; // controls who wears this hat; can convert to address via address(admin); 28 bytes (+8)
         bool active; // can be altered by conditions, via deactivateHat(); 29 bytes (+1)
-        // 3rd storage slot
-        string name; // QUESTION can this be included in details?
-        // 4th storage slot
+        // 3rd+ storage slot
         string details;
     }
 
@@ -60,7 +57,6 @@ contract Hats is ERC1155 {
     //////////////////////////////////////////////////////////////*/
 
     event HatCreated(
-        string name,
         string details,
         uint64 id,
         uint32 maxSupply,
@@ -77,13 +73,8 @@ contract Hats is ERC1155 {
 
     // event HatSupplyChanged(uint64 hatId, uint256 newSupply);
 
-    /*//////////////////////////////////////////////////////////////
-                              HATS VIEW FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
     constructor() {
         // nextHatId = 0;
-        // nextOfferId = 0;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -94,7 +85,6 @@ contract Hats is ERC1155 {
         // create hat
 
         topHatId = createHat(
-            "Top Hat", // name
             "", // details
             1, // maxSupply = 1
             nextHatId, // a topHat is its own admin
@@ -108,7 +98,6 @@ contract Hats is ERC1155 {
     }
 
     function createTopHatAndHat(
-        string memory _name, // encode as bytes32 ??
         string memory _details, // encode as bytes32 ??
         uint256 _maxSupply,
         address _oracle,
@@ -117,7 +106,6 @@ contract Hats is ERC1155 {
         topHatId = mintTopHat(msg.sender);
 
         firstHatId = createHat(
-            _name,
             _details,
             _maxSupply,
             topHatId, // the topHat is the admin
@@ -129,7 +117,6 @@ contract Hats is ERC1155 {
     }
 
     function createHat(
-        string memory _name, // encode as bytes32 ??
         string memory _details, // encode as bytes32 ??
         uint256 _maxSupply,
         uint256 _admin, // hatId
@@ -142,14 +129,7 @@ contract Hats is ERC1155 {
         }
 
         // create the new hat
-        hatId = _createHat(
-            _name,
-            _details,
-            _maxSupply,
-            _admin,
-            _oracle,
-            _conditions
-        );
+        hatId = _createHat(_details, _maxSupply, _admin, _oracle, _conditions);
     }
 
     function mintHat(uint64 _hatId, address _wearer) external returns (bool) {
@@ -180,8 +160,18 @@ contract Hats is ERC1155 {
         return true;
     }
 
-    function requestOracleRuling(uint64 _hatId) public returns (bool) {
-        // TODO
+    function requestConditions(uint64 _hatId) external returns (bool) {
+        Hat storage hat = hats[_hatId];
+
+        IHatsConditions CONDITIONS = IHatsConditions(hat.conditions);
+
+        bool status = ORACLE.checkCondtions(_hat.id); // FIXME what happens if CONDITIONS doesn't have a checkConditions() function?
+
+        if (!status) {
+            hat.active = false;
+        }
+
+        return true;
     }
 
     function ruleOnHatWearer(
@@ -196,16 +186,30 @@ contract Hats is ERC1155 {
         }
 
         if (!_ruling) {
-            // revoke the hat by burning it
-            _burnHat(_hatId, _wearer);
-
-            // record revocation for use by other contracts
-            revocations[_hatId][_wearer] = true;
+            _revokeHat(_wearer, _hatId);
         }
 
         emit Ruling(_hatId, _wearer, _ruling);
 
         return true;
+    }
+
+    function requestOracleRuling(address _wearer, uint64 _hatId)
+        public
+        returns (bool)
+    {
+        Hat memory hat = hats[_hatId];
+        IHatsOracle ORACLE = IHatsOracle(hat.oracle);
+
+        bool ruling = ORACLE.checkWearerStanding(_wearer, _hat.id); // FIXME what happens if ORACLE doesn't have a checkWearerStanding() function?
+
+        if (!ruling) {
+            _revokeHat(_wearer, _hatId);
+        }
+
+        emit Ruling(_hatId, _wearer, ruling);
+
+        return ruling;
     }
 
     function renounceHat(uint64 _hatId) external returns (bool) {
@@ -223,7 +227,6 @@ contract Hats is ERC1155 {
     //////////////////////////////////////////////////////////////*/
 
     function _createHat(
-        string memory _name, // encode as bytes32 ??
         string memory _details, // encode as bytes32 ??
         uint256 _maxSupply,
         uint256 _admin, // hatId
@@ -231,7 +234,6 @@ contract Hats is ERC1155 {
         address _conditions
     ) internal returns (uint64 hatId) {
         Hat memory hat;
-        hat.name = _name;
         hat.details = _details;
 
         hatId = nextHatId;
@@ -252,7 +254,6 @@ contract Hats is ERC1155 {
         // may also need to add to mapping
 
         emit HatCreated(
-            _name,
             _details,
             hatId,
             _maxSupply,
@@ -267,6 +268,14 @@ contract Hats is ERC1155 {
 
         // increment Hat supply
         ++hatSupply[_hatId];
+    }
+
+    function _revokeHat(address _wearer, uint64 _hatId) internal {
+        // revoke the hat by burning it
+        _burnHat(_hatId, _wearer);
+
+        // record revocation for use by other contracts
+        revocations[_hatId][_wearer] = true;
     }
 
     function _burnHat(uint64 _hatId, address _wearer) internal {
@@ -284,7 +293,6 @@ contract Hats is ERC1155 {
         public
         view
         returns (
-            string memory name,
             string memory details,
             uint64 id,
             uint256 maxSupply,
@@ -296,7 +304,6 @@ contract Hats is ERC1155 {
         )
     {
         Hat memory hat = hats[_hatId];
-        name = hat.name;
         details = hat.details;
         id = _hatId;
         maxSupply = hat.maxSupply;
@@ -317,7 +324,7 @@ contract Hats is ERC1155 {
         _isTopHat(hat);
     }
 
-    function isWearerOfHat(uint160 _user, uint64 _hatId)
+    function isWearerOfHat(address _user, uint64 _hatId)
         public
         view
         returns (bool)
@@ -345,12 +352,26 @@ contract Hats is ERC1155 {
         }
     }
 
-    // Hat is deemed active if both Conditions contract and hat's active property are TRUE
-    // FIXME this may cause issues for hats whose status goes from inactive to active based on programmatic Conditions.
+    // FIXME need to figure out all the permutations
     // for use internally (can pass Hat object)
     function _isActive(Hat memory _hat) internal view returns (bool) {
         IHatsConditions CONDITIONS = IHatsConditions(_hat.conditions);
-        return (CONDITIONS.checkConditions(_hat.id) && _hat.active); // FIXME what happens if the `checkConditions` call reverts, eg if the conditions address is humanistic
+
+        return (CONDITIONS.checkConditions(_hat.id) && _hat.active);
+
+        /* 
+        hat.active is TRUE when...
+            - deactivateHat() has not been called
+        hat.active is FALSE when...
+            - deactivateHat() has been called
+
+        checkConditions() can return TRUE or FALSE when Conditions is a contract with a checkConditions() function
+
+        QUESTION: what happens to checkConditions() if Conditions is a contract without a checkConditions() function?
+
+        QUESTION: what happens to checkConditions() if Conditions is an EOA?
+
+        */
     }
 
     // for use externally (when can't pass Hat object)
@@ -390,11 +411,11 @@ contract Hats is ERC1155 {
             hatSupply[_hatId],
             '", "supply cap": "',
             hat.maxSupply,
-            '", "admin": "',
+            '", "admin (hat)": "',
             hat.admin,
-            '", "oracle": "',
+            '", "oracle (address)": "',
             hat.oracle,
-            '", "conditions": "',
+            '", "conditions (address)": "',
             hat.conditions,
             '"}'
         );
@@ -405,9 +426,7 @@ contract Hats is ERC1155 {
             bytes(
                 string(
                     abi.encodePacked(
-                        '{"name": "',
-                        hat.name, // alternatively, could point to a URI for offchain flexibility
-                        '", "description": "',
+                        '{"name & description": "',
                         hat.details, // alternatively, could point to a URI for offchain flexibility
                         '", "id": "',
                         _hatId,
@@ -484,15 +503,4 @@ contract Hats is ERC1155 {
     function uri(uint256 id) public view override returns (string memory) {
         return _constructURI(uint64(id));
     }
-
-    // function playNiceWithFrontEnds(uint64 hatId) external returns (bool) {
-    //     // check for adminOf changes
-    //     // if changed, fire transfer event
-    //     if (hats[hatId].wearer != adminOf(hatId)) {
-    //         // QUESTION how do we handle the case where there's a new wearer?
-    //         // emit transfer event
-    //     }
-
-    //     // no need to actually do any transfering or state changes
-    // }
 }
