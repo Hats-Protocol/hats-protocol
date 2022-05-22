@@ -30,7 +30,7 @@ contract Hats is ERC1155 {
         string details;
         uint256 id; // will be used as the 1155 token ID
         uint256 maxSupply; // the max number of identical hats that can exist
-        bytes20 admin; // controls who wears this hat; can convert to address via address(admin)
+        uint256 admin; // controls who wears this hat; can convert to address via address(admin)
         address oracle; // can revoke hat based on ruling
         address conditions; // controls when hat is active
         bool active; // can be altered by conditions, via deactivateHat()
@@ -41,12 +41,6 @@ contract Hats is ERC1155 {
     //////////////////////////////////////////////////////////////*/
 
     uint256 public nextHatId; // initialized at 0
-
-    // holding zone for inactive hats ("hat rack")
-    address private constant HAT_RACK = address(0x4a15); // 0xhats :)
-
-    // we don't need to pass data into ERC1155 mint or transfer functions
-    bytes private constant EMPTY_DATA = "";
 
     Hat[] private hats; // can retrieve hat info via viewHat(hatId) or via uri(hatId);
 
@@ -66,9 +60,9 @@ contract Hats is ERC1155 {
         string details,
         uint256 id,
         uint256 maxSupply,
-        bytes20 admin,
-        bytes20 oracle,
-        bytes20 conditions
+        uint256 admin,
+        address oracle,
+        address conditions
     );
 
     event HatRenounced(uint256 hatId, address wearer);
@@ -138,31 +132,15 @@ contract Hats is ERC1155 {
         address _oracle,
         address _conditions
     ) public returns (uint256 hatId) {
-        Hat memory hat;
-        hat.name = _name;
-        hat.details = _details;
+        // to create a hat, you must be wearing the hat of its admin
+        if (!isWearerOfHat(msg.sender, _admin)) {
+            revert NotAdmin();
+        }
 
-        hatId = nextHatId; // QUESTION maybe saves an SLOAD??
-        ++nextHatId; // increment the next Hat id
-
-        hat.id = hatId;
-
-        hat.maxSupply = _maxSupply;
-
-        hat.admin = _admin;
-
-        hat.oracle = _oracle;
-
-        hat.conditions = _conditions;
-        hat.active = true;
-
-        hats.push(hat);
-        // may also need to add to mapping
-
-        emit HatCreated(
+        // create the new hat
+        hatId = _createHat(
             _name,
             _details,
-            hatId,
             _maxSupply,
             _admin,
             _oracle,
@@ -172,6 +150,7 @@ contract Hats is ERC1155 {
 
     function mintHat(uint256 _hatId, address _wearer) external returns (bool) {
         Hat memory hat = hats[_hatId];
+        // only the wearer of a hat's admin hat can mint it
         if (_isAdminOfHat(hat)) {
             revert NotAdmin();
         }
@@ -239,26 +218,58 @@ contract Hats is ERC1155 {
                               HATS INTERNAL LOGIC
     //////////////////////////////////////////////////////////////*/
 
+    function _createHat(
+        string memory _name, // encode as bytes32 ??
+        string memory _details, // encode as bytes32 ??
+        uint256 _maxSupply,
+        uint256 _admin, // hatId
+        address _oracle,
+        address _conditions
+    ) internal returns (uint256 hatId) {
+        Hat memory hat;
+        hat.name = _name;
+        hat.details = _details;
+
+        hatId = nextHatId;
+        ++nextHatId; // increment the next Hat id
+
+        hat.id = hatId;
+
+        hat.maxSupply = _maxSupply;
+
+        hat.admin = _admin;
+
+        hat.oracle = _oracle;
+
+        hat.conditions = _conditions;
+        hat.active = true;
+
+        hats.push(hat);
+        // may also need to add to mapping
+
+        emit HatCreated(
+            _name,
+            _details,
+            hatId,
+            _maxSupply,
+            _admin,
+            _oracle,
+            _conditions
+        );
+    }
+
     function _mintHat(uint256 _hatId, address _wearer) internal {
-        _mint(_wearer, _hatId, 1, EMPTY_DATA);
+        _mint(_wearer, _hatId, 1, "");
 
         // increment Hat supply
         ++hatSupply[_hatId];
-
-        // assign wearer to hat
-        hatWearers[_hatId] = _wearer;
     }
 
-    // QUESTION do we want the ability to batch mint hats?
-
     function _burnHat(uint256 _hatId, address _wearer) internal {
-        _burn(_wearer, _hatId, 1, EMPTY_DATA);
+        _burn(_wearer, _hatId, 1, "");
 
         // decrement Hat supply
         --hatSupply[_hatId];
-
-        // unassign wearer from hat
-        hatWearers[_hatId] = bytes20(0x0);
     }
 
     /*//////////////////////////////////////////////////////////////
