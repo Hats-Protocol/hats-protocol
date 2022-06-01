@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: CC0
 pragma solidity >=0.8.13;
 
-import "solmate/tokens/ERC1155.sol";
+import {ERC1155} from "solmate/tokens/ERC1155.sol";
 import "./HatsConditions/IHatsConditions.sol";
 import "./HatsOracles/IHatsOracle.sol";
 import "utils/BASE64.sol";
 
 /// @title Hats Protocol
 /// @notice Hats are DAO-native revocable roles that are represented as semi-fungable tokens for composability
-/// @dev This contract can manage all Hats for a given chain.
+/// @dev This contract can manage all Hats for a given chain
+/// @author Hats Protocol
 contract Hats is ERC1155 {
     /*//////////////////////////////////////////////////////////////
                               HATS ERRORS
@@ -18,9 +19,12 @@ contract Hats is ERC1155 {
     error HatNotActive();
     error NotAdmin();
     error AllHatsWorn();
-    error NoTransfersAllowed();
+    error AlreadyWearingHat();
+    error NoApprovalsNeeded();
+    error OnlyAdminsCanTransfer();
+    error CannotTransferMultiple();
     error NotHatWearer();
-    error NotHatCondition();
+    error NotHatConditions();
     error NotHatOracle();
 
     /*//////////////////////////////////////////////////////////////
@@ -34,7 +38,7 @@ contract Hats is ERC1155 {
         uint32 maxSupply; // the max number of identical hats that can exist; 32 bytes (+4)
         // 2nd storage slot
         address conditions; // controls when Hat is active; 20 bytes (+20)
-        uint64 admin; // controls who wears this hat; can convert to address via address(admin); 28 bytes (+8)
+        uint64 admin; // controls who wears this hat; 28 bytes (+8)
         bool active; // can be altered by conditions, via deactivateHat(); 29 bytes (+1)
         // 3rd+ storage slot
         string details;
@@ -88,7 +92,7 @@ contract Hats is ERC1155 {
     /// @dev A topHat has no oracle and no conditions
     /// @param _target The address to which the newly created topHat is minted
     /// @return topHatId The id of the newly created topHat
-    function mintTopHat(address _target) public returns (uint256 topHatId) {
+    function mintTopHat(address _target) public returns (uint64 topHatId) {
         // create hat
 
         topHatId = createHat(
@@ -99,7 +103,7 @@ contract Hats is ERC1155 {
             address(0) // it has no conditions
         );
 
-        _mintHat(hatId, _target);
+        _mintHat(nextHatId, _target);
 
         return topHatId;
     }
@@ -113,10 +117,10 @@ contract Hats is ERC1155 {
     /// @return firstHatId The id of the other newly created hat
     function createTopHatAndHat(
         string memory _details, // encode as bytes32 ??
-        uint256 _maxSupply,
+        uint32 _maxSupply,
         address _oracle,
         address _conditions
-    ) public returns (uint256 topHatId, uint256 firstHatId) {
+    ) public returns (uint64 topHatId, uint64 firstHatId) {
         topHatId = mintTopHat(msg.sender);
 
         firstHatId = createHat(
@@ -137,10 +141,10 @@ contract Hats is ERC1155 {
     /// @param _admin The id of the Hat that will control who wears the newly created hat
     /// @param _oracle The address that can report on the Hat wearer's standing
     /// @param _conditions The address that can deactivate the hat
-    /// @return hattId The id of the newly created hat
+    /// @return hatId The id of the newly created hat
     function createHat(
         string memory _details, // encode as bytes32 ??
-        uint256 _maxSupply,
+        uint32 _maxSupply,
         uint64 _admin, // hatId
         address _oracle,
         address _conditions
@@ -162,11 +166,11 @@ contract Hats is ERC1155 {
     function mintHat(uint64 _hatId, address _wearer) external returns (bool) {
         Hat memory hat = hats[_hatId];
         // only the wearer of a hat's admin Hat can mint it
-        if (_isAdminOfHat(msg.sender, hat)) {
+        if (isAdminOfHat(msg.sender, hat.admin)) {
             revert NotAdmin();
         }
 
-        if (hatSupply[hat] >= hat.maxSupply) {
+        if (hatSupply[_hatId] >= hat.maxSupply) {
             revert AllHatsWorn();
         }
 
@@ -200,7 +204,7 @@ contract Hats is ERC1155 {
 
         IHatsConditions CONDITIONS = IHatsConditions(hat.conditions);
 
-        bool status = ORACLE.checkCondtions(_hat.id); // FIXME what happens if CONDITIONS doesn't have a checkConditions() function?
+        bool status = CONDITIONS.checkConditions(_hatId); // FIXME what happens if CONDITIONS doesn't have a checkConditions() function?
 
         if (!status) {
             hat.active = false;
@@ -221,7 +225,7 @@ contract Hats is ERC1155 {
     ) external returns (bool) {
         Hat memory hat = hats[_hatId];
 
-        if (hat != hat.oracle) {
+        if (msg.sender != hat.oracle) {
             revert NotHatOracle();
         }
 
@@ -245,7 +249,7 @@ contract Hats is ERC1155 {
         Hat memory hat = hats[_hatId];
         IHatsOracle ORACLE = IHatsOracle(hat.oracle);
 
-        bool ruling = ORACLE.checkWearerStanding(_wearer, _hat.id); // FIXME what happens if ORACLE doesn't have a checkWearerStanding() function?
+        bool ruling = ORACLE.checkWearerStanding(_wearer, _hatId); // FIXME what happens if ORACLE doesn't have a checkWearerStanding() function?
 
         if (!ruling) {
             _revokeHat(_hatId, _wearer);
@@ -264,9 +268,9 @@ contract Hats is ERC1155 {
             revert NotHatWearer();
         }
         // remove the hat
-        _burnHat(_hatId, _wearer);
+        _burnHat(_hatId, msg.sender);
 
-        emit HatRenounced();
+        emit HatRenounced(_hatId, msg.sender);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -280,11 +284,11 @@ contract Hats is ERC1155 {
     /// @param _admin The id of the Hat that will control who wears the newly created hat
     /// @param _oracle The address that can report on the Hat wearer's standing
     /// @param _conditions The address that can deactivate the hat
-    /// @return hattId The id of the newly created hat
+    /// @return hatId The id of the newly created hat
     function _createHat(
         string memory _details, // encode as bytes32 ??
-        uint256 _maxSupply,
-        uint256 _admin, // hatId
+        uint32 _maxSupply,
+        uint64 _admin, // hatId
         address _oracle,
         address _conditions
     ) internal returns (uint64 hatId) {
@@ -372,9 +376,9 @@ contract Hats is ERC1155 {
         returns (
             string memory details,
             uint64 id,
-            uint256 maxSupply,
-            uint256 supply,
-            address admin,
+            uint32 maxSupply,
+            uint32 supply,
+            uint64 admin,
             address oracle,
             address conditions,
             bool active
@@ -393,11 +397,11 @@ contract Hats is ERC1155 {
 
     /// @notice Internal call to check whether a Hat is a topHat
     /// @dev For use when passing a Hat object is appropriate
-    /// @param _hat The Hat in question
+    /// @param hat The Hat in question
     /// @return bool Whether the Hat is a topHat
-    function _isTopHat(Hat memory hat) internal view returns (bool) {
+    function _isTopHat(Hat memory hat) internal pure returns (bool) {
         // a topHat is a Hat that is its own admin
-        return (hat == hat.admin);
+        return (hat.id == hat.admin);
     }
 
     /// @notice Chcecks whether a Hat is a topHat
@@ -406,7 +410,7 @@ contract Hats is ERC1155 {
     /// @return bool Whether the Hat is a topHat
     function isTopHat(uint64 _hatId) public view returns (bool) {
         Hat memory hat = hats[_hatId];
-        _isTopHat(hat);
+        return _isTopHat(hat);
     }
 
     /// @notice Checks whether a given address wears a given Hat
@@ -443,7 +447,7 @@ contract Hats is ERC1155 {
             return true;
         } else {
             // recursion
-            isAdminOfHat(_user, hat.admin);
+            return isAdminOfHat(_user, hat.admin);
         }
     }
 
@@ -505,7 +509,7 @@ contract Hats is ERC1155 {
         view
         returns (bool)
     {
-        Hat memory hat = hats[_hatsId];
+        Hat memory hat = hats[_hatId];
         return _isInGoodStanding(_wearer, hat);
     }
 
@@ -565,21 +569,22 @@ contract Hats is ERC1155 {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Gets the Hat token balance of a user for a given Hat
-    /// @param _user The address whose balance is being checked
-    /// @param _id The id of the Hat
-    /// @return uint256 The `_user`'s balance of the Hat tokens. Will typically not be greater than 1.
-    function balanceOf(address _user, uint256 id)
+    /// @param wearer The address whose balance is being checked
+    /// @param id The id of the Hat
+    /// @return balance The `_user`'s balance of the Hat tokens. Will typically not be greater than 1.
+    function balanceOf(address wearer, uint256 id)
         public
+        view
         override
-        returns (uint256)
+        returns (uint256 balance)
     {
-        uint64 hatID = uint64(id); // QUESTION do we need to cast this? what happens if it overflows?
+        uint64 hatId = uint64(id); // QUESTION do we need to cast this? what happens if it overflows?
         Hat memory hat = hats[hatId];
 
-        uint256 balance = 0;
+        balance = 0;
 
-        if (_isActive(hat) && _isInGoodStanding(_user, hat)) {
-            balance = balanceOf[_user][hatId];
+        if (_isActive(hat) && _isInGoodStanding(wearer, hat)) {
+            balance = super.balanceOf(wearer, hatId);
         }
 
         return balance;
@@ -587,18 +592,19 @@ contract Hats is ERC1155 {
 
     function setApprovalForAll(address operator, bool approved)
         public
+        pure
         override
     {
-        revert NoTransfersAllowed();
+        revert NoApprovalsNeeded();
     }
 
-    /// @notice
-    /// @dev
-    /// @param from
-    /// @param to
-    /// @param id
-    /// @param amount
-    /// @param data
+    /// @notice Transfers a Hat token to a new wearer; if called by the Hat's admin
+    /// @dev Skips the typical 1155TokenReceiver hook since Hat wearers don't control their own Hat
+    /// @param from The old wearer of the Hat
+    /// @param to The new wearer of the Hat
+    /// @param id The id of the Hat to transfer
+    /// @param amount Must always be 1, since it's not possible wear >1 Hat
+    /// @param data Should be empty since we skip the 1155TokenReceiver hook
     function safeTransferFrom(
         address from,
         address to,
@@ -606,21 +612,32 @@ contract Hats is ERC1155 {
         uint256 amount,
         bytes calldata data
     ) public override {
-        Hat memory hat = hats[uint64(id)];
-        if (!_isHatAdmin(hat)) {
+        if (!isAdminOfHat(msg.sender, uint64(id))) {
             revert OnlyAdminsCanTransfer();
         }
 
-        // TODO
+        if (amount > 1) {
+            revert CannotTransferMultiple();
+        }
+
+        // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
+        if (_balanceOf[from][id] < 1) {
+            revert NotHatWearer();
+        }
+
+        _balanceOf[from][id] -= amount;
+        _balanceOf[to][id] += amount;
+
+        emit TransferSingle(msg.sender, from, to, id, amount);
     }
 
-    /// @notice
-    /// @dev
-    /// @param from
-    /// @param to
-    /// @param ids
-    /// @param amounts
-    /// @param data
+    /// @notice Transfer a batch of Hat tokens to new wearers, if called by a given Hat's admin
+    /// @dev Skips the typical 1155TokenReceiver hook since Hat wearers don't control their own Hat
+    /// @param from The old wearers of the Hats
+    /// @param to The new wearers of the Hats
+    /// @param ids The ids of the Hats to transfer
+    /// @param amounts Must always be 1, since it's not possible wear >1 Hat
+    /// @param data Should be empty since we skip the 1155TokenReceiver hook
     function safeBatchTransferFrom(
         address from,
         address to,
@@ -628,9 +645,42 @@ contract Hats is ERC1155 {
         uint256[] calldata amounts,
         bytes calldata data
     ) public override {
-        revert NoTransfersAllowed();
+        require(ids.length == amounts.length, "LENGTH_MISMATCH");
 
-        // TODO
+        // Storing these outside the loop saves ~15 gas per iteration.
+        uint256 id;
+        uint256 amount;
+
+        for (uint256 i = 0; i < ids.length; ) {
+            id = uint64(ids[i]);
+            amount = amounts[i];
+            if (
+                !isAdminOfHat(msg.sender, uint64(id)) ||
+                amount > 1 ||
+                _balanceOf[from][id] < 1
+            ) {
+                // An array can't have a total length
+                // larger than the max uint256 value.
+                unchecked {
+                    ++i;
+                }
+            }
+            // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
+            else if (_balanceOf[from][id] < 1) {
+                unchecked {
+                    ++i;
+                }
+            }
+
+            _balanceOf[from][id] -= amount;
+            _balanceOf[to][id] += amount;
+
+            unchecked {
+                ++i;
+            }
+
+            emit TransferBatch(msg.sender, from, to, ids, amounts);
+        }
     }
 
     /// @notice View the uri for a Hat
