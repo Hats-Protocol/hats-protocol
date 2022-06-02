@@ -26,6 +26,7 @@ contract Hats is ERC1155 {
     error NotHatWearer();
     error NotHatConditions();
     error NotHatOracle();
+    error BatchArrayLengthMismatch();
 
     /*//////////////////////////////////////////////////////////////
                               HATS DATA MODELS
@@ -57,7 +58,7 @@ contract Hats is ERC1155 {
     // for external contracts to check if Hat was reounced or revoked
     mapping(uint64 => mapping(address => bool)) public revocations; // key: hatId => value: (key: wearer => value: revoked?)
 
-    // QUESTION do we need to store Hat wearing history on-chain? In other words, do other contracts need access to said history?
+    // QUESTION do we need to store Hat wearing history on-chain? In other words, do other contracts need access to said history? See github issue #12.
 
     /*//////////////////////////////////////////////////////////////
                               HATS EVENTS
@@ -136,26 +137,89 @@ contract Hats is ERC1155 {
 
     /// @notice Creates a new hat. The msg.sender must wear the `_admin` hat.
     /// @dev Initializes a new Hat struct, but does not mint any tokens.
-    /// @param _details A description of the hat
+    /// @param _details A description of the Hat
     /// @param _maxSupply The total instances of the Hat that can be worn at once
     /// @param _admin The id of the Hat that will control who wears the newly created hat
     /// @param _oracle The address that can report on the Hat wearer's standing
-    /// @param _conditions The address that can deactivate the hat
-    /// @return hatId The id of the newly created hat
+    /// @param _conditions The address that can deactivate the Hat
+    /// @return newHatId The id of the newly created Hat
     function createHat(
         string memory _details, // encode as bytes32 ??
         uint32 _maxSupply,
         uint64 _admin, // hatId
         address _oracle,
         address _conditions
-    ) public returns (uint64 hatId) {
+    ) public returns (uint64 newHatId) {
         // to create a hat, you must be wearing the Hat of its admin
         if (!isWearerOfHat(msg.sender, _admin)) {
             revert NotAdmin();
         }
 
         // create the new hat
-        hatId = _createHat(_details, _maxSupply, _admin, _oracle, _conditions);
+        newHatId = _createHat(
+            _details,
+            _maxSupply,
+            _admin,
+            _oracle,
+            _conditions
+        );
+    }
+
+    /// @notice Creates a tree new Hats, where the root Hat is under admin control by the msg.sender. Especially useful for forking an existing Hat tree or initiating a template Hat tree structure.
+    /// @dev The admin for each Hat must exist before the Hat is created, so Hats must be created before Hats for which they serve as admin
+    /// @param _details Descriptions of the Hats
+    /// @param _maxSupplies The total instances of the Hats that can be worn at once
+    /// @param _firstAdmin The hatId of the admin of the first Hat to create; it must already exist
+    /// @param _adminOffsets The deltas between the ids of the Hats that will control who wears the newly created hat
+    /// @param _oracles The addresses that can report on the Hat wearers' standings
+    /// @param _conditions The addresses that can deactivate the Hats
+    function createHatsTree(
+        string[] memory _details,
+        uint32[] memory _maxSupplies,
+        uint64 _firstAdmin,
+        uint64[] memory _adminOffsets, // _adminOffsets.length + 1 = _details.length
+        address[] memory _oracles,
+        address[] memory _conditions
+    ) public {
+        // check that array lengths match
+        uint256 length = _maxSupplies.length; // saves an MLOAD
+
+        bool lengthsCheck = ((_details.length == length) &&
+            (length == _adminOffsets.length + 1) &&
+            (length == _oracles.length) &&
+            (length == _conditions.length));
+
+        if (!lengthsCheck) {
+            revert BatchArrayLengthMismatch();
+        }
+
+        // create a new Hat for each qualifying item
+        for (uint256 i = 0; i < length; ++i) {
+            // calculate the admin id for this Hat
+            uint64 admin;
+            if (i == 0) {
+                // first Hat created gets the _firstAdmin
+                admin = _firstAdmin;
+            } else {
+                /* subsequent Hats are assigned admins based on an offset.
+                Example: if nextHatId is 10, and the admin of the next Hat we want to create is id 8, then the offset would be 2.
+                */
+                admin = nextHatId - _adminOffsets[i - 1];
+            }
+
+            /* Only create the new Hat if it would not be a topHat (a Hat that is its own admin) and if the msg.sender serves as its admin, otherwise skip to the next item.
+            This requires that Hats must be created prior to any Hat(s) they are an admin for.
+            */
+            if ((admin != nextHatId) && isWearerOfHat(msg.sender, admin)) {
+                _createHat(
+                    _details[i],
+                    _maxSupplies[i],
+                    admin,
+                    _oracles[i],
+                    _conditions[i]
+                );
+            }
+        }
     }
 
     /// @notice Mints an ERC1155 token of the Hat to a recipient, who then "wears" the hat
@@ -175,6 +239,28 @@ contract Hats is ERC1155 {
         }
 
         _mintHat(_hatId, _wearer);
+
+        return true;
+    }
+
+    /// @notice Mints a batch of ERC1155 tokens representing Hats to a set of recipients, who each then "wears" their respective Hat
+    /// @dev The msg.sender must serve as the admin for each of the Hats in `_hatIds`
+    /// @param _hatIds The ids of the Hats to mint
+    /// @param _wearers The addresses to which the Hats are minted
+    /// @return bool Whether the mints succeeded
+    function batchMintHats(uint64[] memory _hatIds, address[] memory _wearers)
+        public
+        returns (bool)
+    {
+        // create an array of equal length to _hatIds with 1s
+        uint256 length = _hatIds.length;
+        uint256[] memory amounts;
+
+        for (uint256 i = 0; i < length; ++i) {
+            amounts[i] = 1;
+        }
+
+        _batchMintHats(_wearers, _hatIds, amounts, "");
 
         return true;
     }
@@ -588,6 +674,38 @@ contract Hats is ERC1155 {
         }
 
         return balance;
+    }
+
+    /// @notice overloads ERC1155._batchMint to add Hats-specific checks and state changes
+    function _batchMintHats(
+        address[] memory tos,
+        uint64[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal {
+        uint256 idsLength = ids.length; // Saves MLOADs.
+
+        require(idsLength == amounts.length, "LENGTH_MISMATCH");
+
+        for (uint256 i = 0; i < idsLength; ++i) {
+            uint64 hatId = uint64(ids[i]);
+            Hat memory hat = hats[hatId];
+
+            if (isAdminOfHat(msg.sender, hat.admin)) {
+                revert NotAdmin();
+            }
+
+            if (hatSupply[hatId] >= hat.maxSupply) {
+                revert AllHatsWorn();
+            }
+
+            _balanceOf[tos[i]][ids[i]] += amounts[i];
+
+            ++hatSupply[hatId];
+        }
+
+        // FIXME
+        // emit TransferBatch(msg.sender, address(0), tos, ids, amounts);
     }
 
     function setApprovalForAll(address operator, bool approved)
