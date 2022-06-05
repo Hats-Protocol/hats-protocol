@@ -22,11 +22,11 @@ contract Hats is ERC1155 {
     error AlreadyWearingHat();
     error NoApprovalsNeeded();
     error OnlyAdminsCanTransfer();
-    error CannotTransferMultiple();
     error NotHatWearer();
     error NotHatConditions();
     error NotHatOracle();
     error BatchArrayLengthMismatch();
+    error SafeTransfersNotNecessary();
 
     /*//////////////////////////////////////////////////////////////
                               HATS DATA MODELS
@@ -104,7 +104,7 @@ contract Hats is ERC1155 {
             address(0) // it has no conditions
         );
 
-        _mintHat(nextHatId, _target);
+        _mint(_target, nextHatId, 1, "");
 
         return topHatId;
     }
@@ -227,7 +227,7 @@ contract Hats is ERC1155 {
     /// @param _hatId The id of the Hat to mint
     /// @param _wearer The address to which the Hat is minted
     /// @return bool Whether the mint succeeded
-    function mintHat(uint64 _hatId, address _wearer) external returns (bool) {
+    function mintHat(uint64 _hatId, address _wearer) public returns (bool) {
         Hat memory hat = hats[_hatId];
         // only the wearer of a hat's admin Hat can mint it
         if (isAdminOfHat(msg.sender, hat.admin)) {
@@ -238,7 +238,7 @@ contract Hats is ERC1155 {
             revert AllHatsWorn();
         }
 
-        _mintHat(_hatId, _wearer);
+        _mint(_wearer, uint256(_hatId), 1, "");
 
         return true;
     }
@@ -252,15 +252,16 @@ contract Hats is ERC1155 {
         public
         returns (bool)
     {
-        // create an array of equal length to _hatIds with 1s
         uint256 length = _hatIds.length;
-        uint256[] memory amounts;
-
-        for (uint256 i = 0; i < length; ++i) {
-            amounts[i] = 1;
+        if (length != _wearers.length) {
+            revert BatchArrayLengthMismatch();
         }
 
-        _batchMintHats(_wearers, _hatIds, amounts, "");
+        for (uint256 i = 0; i < length; ++i) {
+            uint64 hatId = uint64(_hatIds[i]);
+
+            mintHat(hatId, _wearers[i]); // QUESTION if this fails, how do mint revert errors bubble up here, if at all?
+        }
 
         return true;
     }
@@ -354,7 +355,7 @@ contract Hats is ERC1155 {
             revert NotHatWearer();
         }
         // remove the hat
-        _burnHat(_hatId, msg.sender);
+        _burn(msg.sender, _hatId, 1);
 
         emit HatRenounced(_hatId, msg.sender);
     }
@@ -408,38 +409,56 @@ contract Hats is ERC1155 {
         );
     }
 
-    /// @notice Internal call to mint ERC1155 token of the Hat to a recipient, who then "wears" the hat
-    /// @dev Mints 1 Hat token, with no data passed to the receiver
-    /// @param _hatId The id of the Hat to mint
-    /// @param _wearer The address to which the Hat is minted
-    function _mintHat(uint64 _hatId, address _wearer) internal {
-        _mint(_wearer, _hatId, 1, "");
-
-        // increment Hat supply
-        ++hatSupply[_hatId];
-    }
-
     /// @notice Internal call to revoke a Hat from a wearer
     /// @dev Burns the wearer's Hat token
     /// @param _hatId The id of the Hat to revoke
     /// @param _wearer The address of the wearer from whom to revoke the hat
     function _revokeHat(uint64 _hatId, address _wearer) internal {
         // revoke the Hat by burning it
-        _burnHat(_hatId, _wearer);
+        _burn(_wearer, _hatId, 1);
 
         // record revocation for use by other contracts
         revocations[_hatId][_wearer] = true;
     }
 
-    /// @notice Internal call to burn a wearer's hat
-    /// @dev Burns 1 Hat token
-    /// @param _hatId The id of the Hat to burn
-    /// @param _wearer The address of the wearer who's Hat is being burned
-    function _burnHat(uint64 _hatId, address _wearer) internal {
-        _burn(_wearer, _hatId, 1);
+    function transferHat(
+        uint64 _hatId,
+        address _from,
+        address _to
+    ) public {
+        if (!isAdminOfHat(msg.sender, _hatId)) {
+            revert OnlyAdminsCanTransfer();
+        }
 
-        // decrement Hat supply
-        --hatSupply[_hatId];
+        uint256 id = uint256(_hatId);
+
+        // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
+        if (_balanceOf[_from][id] < 1) {
+            revert NotHatWearer();
+        }
+
+        --_balanceOf[_from][id];
+        ++_balanceOf[_to][id];
+
+        emit TransferSingle(msg.sender, _from, _to, id, 1);
+    }
+
+    function batchTransferHats(
+        uint64[] memory _hatIds,
+        address[] memory _froms,
+        address[] memory _tos
+    ) external {
+        uint256 length = _hatIds.length;
+        bool lengthsCheck = ((_froms.length == length) &&
+            (length == _tos.length));
+
+        if (!lengthsCheck) {
+            revert BatchArrayLengthMismatch();
+        }
+
+        for (uint256 i = 0; i < length; ) {
+            transferHat(_hatIds[i], _froms[i], _tos[i]);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -676,36 +695,42 @@ contract Hats is ERC1155 {
         return balance;
     }
 
-    /// @notice overloads ERC1155._batchMint to add Hats-specific checks and state changes
-    function _batchMintHats(
-        address[] memory tos,
-        uint64[] memory ids,
-        uint256[] memory amounts,
+    /// @notice Mints a Hat token to `to`
+    /// @dev Overrides ERC1155._mint: skips the typical 1155TokenReceiver hook since Hat wearers don't control their own Hat, and adds Hats-specific state changes
+    /// @param to The wearer of the Hat and the recipient of the newly minted token
+    /// @param id The id of the Hat to mint, cast to uint256
+    /// @param amount Must always be 1, since it's not possible wear >1 Hat
+    /// @param data Can be empty since we skip the 1155TokenReceiver hook
+    function _mint(
+        address to,
+        uint256 id,
+        uint256 amount,
         bytes memory data
-    ) internal {
-        uint256 idsLength = ids.length; // Saves MLOADs.
+    ) internal override {
+        _balanceOf[to][id] += amount;
 
-        require(idsLength == amounts.length, "LENGTH_MISMATCH");
+        // increment Hat supply counter
+        ++hatSupply[uint64(id)];
 
-        for (uint256 i = 0; i < idsLength; ++i) {
-            uint64 hatId = uint64(ids[i]);
-            Hat memory hat = hats[hatId];
+        emit TransferSingle(msg.sender, address(0), to, id, amount);
+    }
 
-            if (isAdminOfHat(msg.sender, hat.admin)) {
-                revert NotAdmin();
-            }
+    /// @notice Burns a wearer's (`from`'s) Hat token
+    /// @dev Overrides ERC1155._burn: adds Hats-specific state change
+    /// @param from The wearer from which to burn the Hat token
+    /// @param id The id of the Hat to burn, cast to uint256
+    /// @param amount Must always be 1, since it's not possible wear >1 Hat
+    function _burn(
+        address from,
+        uint256 id,
+        uint256 amount
+    ) internal override {
+        _balanceOf[from][id] -= amount;
 
-            if (hatSupply[hatId] >= hat.maxSupply) {
-                revert AllHatsWorn();
-            }
+        // decrement Hat supply counter
+        --hatSupply[uint64(id)];
 
-            _balanceOf[tos[i]][ids[i]] += amounts[i];
-
-            ++hatSupply[hatId];
-        }
-
-        // FIXME
-        // emit TransferBatch(msg.sender, address(0), tos, ids, amounts);
+        emit TransferSingle(msg.sender, from, address(0), id, amount);
     }
 
     function setApprovalForAll(address operator, bool approved)
@@ -716,13 +741,8 @@ contract Hats is ERC1155 {
         revert NoApprovalsNeeded();
     }
 
-    /// @notice Transfers a Hat token to a new wearer; if called by the Hat's admin
-    /// @dev Skips the typical 1155TokenReceiver hook since Hat wearers don't control their own Hat
-    /// @param from The old wearer of the Hat
-    /// @param to The new wearer of the Hat
-    /// @param id The id of the Hat to transfer
-    /// @param amount Must always be 1, since it's not possible wear >1 Hat
-    /// @param data Should be empty since we skip the 1155TokenReceiver hook
+    /// @notice Safe transfers are not necessary for Hats since transfers are not handled by the wearer
+    /// @dev Use `Hats.TransferHat()` instead
     function safeTransferFrom(
         address from,
         address to,
@@ -730,32 +750,11 @@ contract Hats is ERC1155 {
         uint256 amount,
         bytes calldata data
     ) public override {
-        if (!isAdminOfHat(msg.sender, uint64(id))) {
-            revert OnlyAdminsCanTransfer();
-        }
-
-        if (amount > 1) {
-            revert CannotTransferMultiple();
-        }
-
-        // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
-        if (_balanceOf[from][id] < 1) {
-            revert NotHatWearer();
-        }
-
-        _balanceOf[from][id] -= amount;
-        _balanceOf[to][id] += amount;
-
-        emit TransferSingle(msg.sender, from, to, id, amount);
+        revert SafeTransfersNotNecessary();
     }
 
-    /// @notice Transfer a batch of Hat tokens to new wearers, if called by a given Hat's admin
-    /// @dev Skips the typical 1155TokenReceiver hook since Hat wearers don't control their own Hat
-    /// @param from The old wearers of the Hats
-    /// @param to The new wearers of the Hats
-    /// @param ids The ids of the Hats to transfer
-    /// @param amounts Must always be 1, since it's not possible wear >1 Hat
-    /// @param data Should be empty since we skip the 1155TokenReceiver hook
+    /// @notice Safe transfers are not necessary for Hats since transfers are not handled by the wearer
+    /// @dev Use `Hats.BatchTransferHats()` instead
     function safeBatchTransferFrom(
         address from,
         address to,
@@ -763,42 +762,7 @@ contract Hats is ERC1155 {
         uint256[] calldata amounts,
         bytes calldata data
     ) public override {
-        require(ids.length == amounts.length, "LENGTH_MISMATCH");
-
-        // Storing these outside the loop saves ~15 gas per iteration.
-        uint256 id;
-        uint256 amount;
-
-        for (uint256 i = 0; i < ids.length; ) {
-            id = uint64(ids[i]);
-            amount = amounts[i];
-            if (
-                !isAdminOfHat(msg.sender, uint64(id)) ||
-                amount > 1 ||
-                _balanceOf[from][id] < 1
-            ) {
-                // An array can't have a total length
-                // larger than the max uint256 value.
-                unchecked {
-                    ++i;
-                }
-            }
-            // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
-            else if (_balanceOf[from][id] < 1) {
-                unchecked {
-                    ++i;
-                }
-            }
-
-            _balanceOf[from][id] -= amount;
-            _balanceOf[to][id] += amount;
-
-            unchecked {
-                ++i;
-            }
-
-            emit TransferBatch(msg.sender, from, to, ids, amounts);
-        }
+        revert SafeTransfersNotNecessary();
     }
 
     /// @notice View the uri for a Hat
