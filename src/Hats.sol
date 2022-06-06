@@ -77,6 +77,8 @@ contract Hats is ERC1155 {
 
     event Ruling(uint64 hatId, address wearer, bool ruling);
 
+    event HatRevoked(uint64 hatId, address wearer);
+
     event HatStatusChanged(uint64 hatId, bool newStatus);
 
     // event HatSupplyChanged(uint64 hatId, uint256 newSupply);
@@ -280,7 +282,7 @@ contract Hats is ERC1155 {
             revert NotHatConditions();
         }
 
-        if (newStatus != hat.status) {
+        if (newStatus != hat.active) {
             hat.active = newStatus;
             emit HatStatusChanged(_hatId, newStatus);
             return true;
@@ -424,6 +426,8 @@ contract Hats is ERC1155 {
 
         // record revocation for use by other contracts
         revocations[_hatId][_wearer] = true;
+
+        emit HatRevoked(_hatId, _wearer);
     }
 
     function transferHat(
