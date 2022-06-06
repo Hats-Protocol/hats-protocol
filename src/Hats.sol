@@ -77,7 +77,7 @@ contract Hats is ERC1155 {
 
     event Ruling(uint64 hatId, address wearer, bool ruling);
 
-    event HatDeactivated(uint64 hatId);
+    event HatStatusChanged(uint64 hatId, bool newStatus);
 
     // event HatSupplyChanged(uint64 hatId, uint256 newSupply);
 
@@ -266,20 +266,25 @@ contract Hats is ERC1155 {
         return true;
     }
 
-    /// @notice Deactivates a hat
+    /// @notice Toggles a Hat's status from active to deactive, or vice versa
     /// @dev The msg.sender must be set as the hat's Conditions
-    /// @param _hatId The id of the Hat to deactivate
-    /// @return bool Whether the deactivation succeeded
-    function deactivateHat(uint64 _hatId) external returns (bool) {
+    /// @param _hatId The id of the Hat for which to adjust status
+    /// @return bool Whether the status was toggled
+    function changeHatStatus(uint64 _hatId, bool newStatus)
+        external
+        returns (bool)
+    {
         Hat storage hat = hats[_hatId];
 
         if (msg.sender != hat.conditions) {
             revert NotHatConditions();
         }
 
-        hat.active = false;
-
-        return true;
+        if (newStatus != hat.status) {
+            hat.active = newStatus;
+            emit HatStatusChanged(_hatId, newStatus);
+            return true;
+        } else return false;
     }
 
     /// @notice Checks a hat's Conditions and, if `false`, deactivates the hat
