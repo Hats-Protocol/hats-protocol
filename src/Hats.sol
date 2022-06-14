@@ -27,6 +27,7 @@ contract Hats is ERC1155 {
     error NotHatOracle();
     error BatchArrayLengthMismatch();
     error SafeTransfersNotNecessary();
+    error MaxTreeDepthReached();
 
     /*//////////////////////////////////////////////////////////////
                               HATS DATA MODELS
@@ -35,12 +36,11 @@ contract Hats is ERC1155 {
     struct Hat {
         // 1st storage slot
         address oracle; // can revoke Hat based on ruling; 20 bytes (+20)
-        uint64 id; // will be used as the 1155 token ID; 28 bytes (+8)
-        uint32 maxSupply; // the max number of identical hats that can exist; 32 bytes (+4)
+        uint32 maxSupply; // the max number of identical hats that can exist; 24 bytes (+4)
+        bool active; // can be altered by conditions, via deactivateHat(); 25 bytes (+1)
+        uint8 lastHatId; // indexes how many different hats an admin is holding; 26 bytes (+1)
         // 2nd storage slot
         address conditions; // controls when Hat is active; 20 bytes (+20)
-        uint64 admin; // controls who wears this hat; 28 bytes (+8)
-        bool active; // can be altered by conditions, via deactivateHat(); 29 bytes (+1)
         // 3rd+ storage slot
         string details;
     }
@@ -49,16 +49,25 @@ contract Hats is ERC1155 {
                               HATS STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    uint64 public nextHatId; // initialized at 0
+    uint32 public lastTopHatId; // initialized at 0
 
-    Hat[] private hats; // can retrieve Hat info via viewHat(hatId) or via uri(hatId);
+    /**
+     * Hat IDs act like addresses. The top level consists of 4 bytes and references all tophats
+     * Each level below consists of 1 byte, which can contain up to 255 types of hats.
+     *
+     * A uint80 contains 4 bytes of space for tophat addresses and 6 bytes of space
+     * for 6 levels of heirarchy of ownership, with the admin at each level having space
+     * for 255 different hats.
+     *
+     */
+    mapping(uint80 => Hat) public hats;
 
     // string public baseImageURI = "https://images.hatsprotocol.xyz/"
 
     mapping(uint64 => uint32) public hatSupply; // key: hatId => value: supply
 
     // for external contracts to check if Hat was reounced or revoked
-    mapping(uint64 => mapping(address => bool)) public revocations; // key: hatId => value: (key: wearer => value: revoked?)
+    mapping(uint80 => mapping(address => bool)) public revocations; // key: hatId => value: (key: wearer => value: revoked?)
 
     // QUESTION do we need to store Hat wearing history on-chain? In other words, do other contracts need access to said history? See github issue #12.
 
@@ -67,10 +76,9 @@ contract Hats is ERC1155 {
     //////////////////////////////////////////////////////////////*/
 
     event HatCreated(
+        uint80 id,
         string details,
-        uint64 id,
         uint32 maxSupply,
-        uint64 admin,
         address oracle,
         address conditions
     );
@@ -86,7 +94,7 @@ contract Hats is ERC1155 {
     // event HatSupplyChanged(uint64 hatId, uint256 newSupply);
 
     constructor() {
-        // nextHatId = 0;
+        // lastTopHatId = 0;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -97,20 +105,20 @@ contract Hats is ERC1155 {
     /// @dev A topHat has no oracle and no conditions
     /// @param _target The address to which the newly created topHat is minted
     /// @return topHatId The id of the newly created topHat
-    function mintTopHat(address _target) public returns (uint64 topHatId) {
+    function mintTopHat(address _target) public returns (uint80 topHatId) {
         // create hat
 
-        topHatId = createHat(
+        topHatId = uint80(++lastTopHatId) << 48;
+
+         createHat(
+            topHatId,
             "", // details
             1, // maxSupply = 1
-            nextHatId, // a topHat is its own admin
             address(0), // there is no oracle
             address(0) // it has no conditions
         );
 
-        _mint(_target, nextHatId, 1, "");
-
-        return topHatId;
+        _mint(_target, topHatId, 1, "");
     }
 
     /// @notice Mints a topHat to the msg.sender and creates another Hat admin'd by the topHat
@@ -125,13 +133,13 @@ contract Hats is ERC1155 {
         uint32 _maxSupply,
         address _oracle,
         address _conditions
-    ) public returns (uint64 topHatId, uint64 firstHatId) {
+    ) public returns (uint80 topHatId, uint80 firstHatId) {
         topHatId = mintTopHat(msg.sender);
 
         firstHatId = createHat(
+            topHatId,
             _details,
             _maxSupply,
-            topHatId, // the topHat is the admin
             _oracle,
             _conditions
         );
@@ -148,25 +156,57 @@ contract Hats is ERC1155 {
     /// @param _conditions The address that can deactivate the Hat
     /// @return newHatId The id of the newly created Hat
     function createHat(
+        uint80 _admin,
         string memory _details, // encode as bytes32 ??
         uint32 _maxSupply,
-        uint64 _admin, // hatId
         address _oracle,
         address _conditions
-    ) public returns (uint64 newHatId) {
+    ) public returns (uint80 newHatId) {
         // to create a hat, you must be wearing the Hat of its admin
         if (!isWearerOfHat(msg.sender, _admin)) {
             revert NotAdmin();
         }
+        if (uint8(_admin) > 0) {
+          revert MaxTreeDepthReached();
+        }
 
+        newHatId = _buildNextId(_admin);
         // create the new hat
-        newHatId = _createHat(
+         _createHat(
+            newHatId,
             _details,
             _maxSupply,
-            _admin,
             _oracle,
             _conditions
         );
+    }
+
+    function _buildNextId(uint80 _admin) internal pure returns (uint80) {
+      uint8 nextHatId = hats[_admin].lastHatId + 1;
+
+        if(uint48(_admin) == 0){
+            return _admin | (uint80(nextHatId)<<40);
+        }
+
+        if (uint40(_admin) == 0) {
+            return _admin | (uint80(nextHatId)<< 32);
+        }
+
+        if (uint32(_admin) == 0) {
+            return _admin | (uint80(nextHatId)<< 24);
+        }
+
+        if (uint24(_admin) == 0) {
+            return _admin | (uint80(nextHatId)<< 16);
+        }
+
+        if (uint16(_admin) == 0) {
+            return _admin | (uint80(nextHatId)<< 8);
+        }
+
+
+        return _admin | uint80(nextHatId);
+
     }
 
     /// @notice Creates a tree new Hats, where the root Hat is under admin control by the msg.sender. Especially useful for forking an existing Hat tree or initiating a template Hat tree structure.
@@ -197,33 +237,7 @@ contract Hats is ERC1155 {
             revert BatchArrayLengthMismatch();
         }
 
-        // create a new Hat for each qualifying item
-        for (uint256 i = 0; i < length; ++i) {
-            // calculate the admin id for this Hat
-            uint64 admin;
-            if (i == 0) {
-                // first Hat created gets the _firstAdmin
-                admin = _firstAdmin;
-            } else {
-                /* subsequent Hats are assigned admins based on an offset.
-                Example: if nextHatId is 10, and the admin of the next Hat we want to create is id 8, then the offset would be 2.
-                */
-                admin = nextHatId - _adminOffsets[i - 1];
-            }
-
-            /* Only create the new Hat if it would not be a topHat (a Hat that is its own admin) and if the msg.sender serves as its admin, otherwise skip to the next item.
-            This requires that Hats must be created prior to any Hat(s) they are an admin for.
-            */
-            if ((admin != nextHatId) && isWearerOfHat(msg.sender, admin)) {
-                _createHat(
-                    _details[i],
-                    _maxSupplies[i],
-                    admin,
-                    _oracles[i],
-                    _conditions[i]
-                );
-            }
-        }
+        // TODO reimplement
     }
 
     /// @notice Mints an ERC1155 token of the Hat to a recipient, who then "wears" the hat
@@ -234,7 +248,7 @@ contract Hats is ERC1155 {
     function mintHat(uint64 _hatId, address _wearer) public returns (bool) {
         Hat memory hat = hats[_hatId];
         // only the wearer of a hat's admin Hat can mint it
-        if (isAdminOfHat(msg.sender, hat.admin)) {
+        if (isAdminOfHat(msg.sender, _hatId)) {
             revert NotAdmin();
         }
 
@@ -381,42 +395,32 @@ contract Hats is ERC1155 {
     /// @dev Initializes a new Hat struct, but does not mint any tokens
     /// @param _details A description of the hat
     /// @param _maxSupply The total instances of the Hat that can be worn at once
-    /// @param _admin The id of the Hat that will control who wears the newly created hat
     /// @param _oracle The address that can report on the Hat wearer's standing
     /// @param _conditions The address that can deactivate the hat
     /// @return hatId The id of the newly created hat
     function _createHat(
+        uint80 _id,
         string memory _details, // encode as bytes32 ??
         uint32 _maxSupply,
-        uint64 _admin, // hatId
         address _oracle,
         address _conditions
-    ) internal returns (uint64 hatId) {
-        Hat memory hat;
+    ) internal returns (Hat storage hat) {
         hat.details = _details;
 
-        hatId = nextHatId;
-        ++nextHatId; // increment the next Hat id
-
-        hat.id = hatId;
-
         hat.maxSupply = _maxSupply;
-
-        hat.admin = _admin;
 
         hat.oracle = _oracle;
 
         hat.conditions = _conditions;
         hat.active = true;
+        hats[_id] = hat;
 
-        hats.push(hat);
         // may also need to add to mapping
 
         emit HatCreated(
+            _id,
             _details,
-            hatId,
             _maxSupply,
-            _admin,
             _oracle,
             _conditions
         );
@@ -499,7 +503,6 @@ contract Hats is ERC1155 {
             uint64 id,
             uint32 maxSupply,
             uint32 supply,
-            uint64 admin,
             address oracle,
             address conditions,
             bool active
@@ -510,28 +513,17 @@ contract Hats is ERC1155 {
         id = _hatId;
         maxSupply = hat.maxSupply;
         supply = hatSupply[_hatId];
-        admin = hat.admin;
         oracle = hat.oracle;
         conditions = hat.conditions;
-        active = _isActive(hat);
-    }
-
-    /// @notice Internal call to check whether a Hat is a topHat
-    /// @dev For use when passing a Hat object is appropriate
-    /// @param hat The Hat in question
-    /// @return bool Whether the Hat is a topHat
-    function _isTopHat(Hat memory hat) internal pure returns (bool) {
-        // a topHat is a Hat that is its own admin
-        return (hat.id == hat.admin);
+        active = _isActive(hat, _hatId);
     }
 
     /// @notice Chcecks whether a Hat is a topHat
     /// @dev For use when passing a Hat object is not appropriate
     /// @param _hatId The Hat in question
     /// @return bool Whether the Hat is a topHat
-    function isTopHat(uint64 _hatId) public view returns (bool) {
-        Hat memory hat = hats[_hatId];
-        return _isTopHat(hat);
+    function isTopHat(uint80 _hatId) public view returns (bool) {
+      return _hatId > 0 && uint48(_hatId) == 0;
     }
 
     /// @notice Checks whether a given address wears a given Hat
@@ -539,7 +531,7 @@ contract Hats is ERC1155 {
     /// @param _user The address in question
     /// @param _hatId The id of the Hat that the `_user` might wear
     /// @return bool Whether the `_user` wears the Hat.
-    function isWearerOfHat(address _user, uint64 _hatId)
+    function isWearerOfHat(address _user, uint80 _hatId)
         public
         view
         returns (bool)
@@ -552,7 +544,7 @@ contract Hats is ERC1155 {
     /// @param _user The address in question
     /// @param _hatId The id of the Hat for which the `_user` might be the admin
     /// @return bool Whether the `_user` has admin rights for the Hat
-    function isAdminOfHat(address _user, uint64 _hatId)
+    function isAdminOfHat(address _user, uint80 _hatId)
         public
         view
         returns (bool)
@@ -560,32 +552,50 @@ contract Hats is ERC1155 {
         Hat memory hat = hats[_hatId];
 
         // if Hat is a topHat, then the _user cannot be the admin
-        if (_isTopHat(hat)) {
+        if (isTopHat(_hatId)) {
             return false;
         }
 
-        if (isWearerOfHat(_user, hat.admin)) {
+        uint8 adminHatLevel = getHatLevel(_hatId);
+
+        while (adminHatLevel >= 0) {
+          if (isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel))) {
             return true;
-        } else {
-            // recursion
-            return isAdminOfHat(_user, hat.admin);
+          }
+          adminHatLevel--;
         }
+        return false;
+    }
+
+    function getHatLevel(uint80 _hatId) public view returns (uint8 level) {
+
+      if (_hatId < 2 ** 8) return 6;
+      if (_hatId < 2 ** 16) return 5;
+      if (_hatId < 2 ** 24) return 4;
+      if (_hatId < 2 ** 32) return 3;
+      if (_hatId < 2 ** 40) return 2;
+      if (_hatId < 2 ** 48) return 1;
+      return 0;
+    }
+
+    function getAdminAtLevel(uint80 _hatId, uint8 _level) public view returns (uint80 admin) {
+      return uint80(_hatId - 2 ** (8 * (6 - _level)) - 1);
     }
 
     /// @notice Checks the active status of a hat
     /// @dev For internal use instead of `isActive` when passing Hat as param is preferable
     /// @param _hat The Hat struct
-    /// @return active The boolean status of the hat
-    function _isActive(Hat memory _hat) internal view returns (bool active) {
+    /// @return bool The active status of the hat
+    function _isActive(Hat memory _hat, uint80 _hatId) internal view returns (bool active) {
         IHatsConditions CONDITIONS = IHatsConditions(_hat.conditions);
 
-        return (CONDITIONS.checkConditions(_hat.id) && _hat.active);
+        return (CONDITIONS.checkConditions(_hatId) && _hat.active);
 
-        try CONDITIONS.checkConditions(_hat.id) returns (bool status_) {
+        try CONDITIONS.checkConditions(_hatId) returns (bool status_) {
             active = status_;
         } catch {
             // if the external call reverts, default to the existing state
-            active = _hat.status;
+            active = _hat.active;
         }
     }
 
@@ -595,7 +605,7 @@ contract Hats is ERC1155 {
     /// @return bool The active status of the hat
     function isActive(uint64 _hatId) public view returns (bool) {
         Hat memory hat = hats[_hatId];
-        return _isActive(hat);
+        return _isActive(hat, _hatId);
     }
 
     /// @notice Internal call to check whether a wearer of a Hat is in good standing
@@ -603,14 +613,14 @@ contract Hats is ERC1155 {
     /// @param _hat The Hat object
     /// @param _wearer The address of the Hat wearer
     /// @return standing Whether the wearer is in good standing
-    function _isInGoodStanding(address _wearer, Hat memory _hat)
+    function _isInGoodStanding(address _wearer, Hat memory _hat, uint80 _hatId)
         public
         view
         returns (bool standing)
     {
         IHatsOracle ORACLE = IHatsOracle(_hat.oracle);
 
-        try ORACLE.checkWearerStanding(_wearer, _hat.id) returns (
+        try ORACLE.checkWearerStanding(_wearer, _hatId) returns (
             bool standing_
         ) {
             standing = standing_;
@@ -631,7 +641,7 @@ contract Hats is ERC1155 {
         returns (bool)
     {
         Hat memory hat = hats[_hatId];
-        return _isInGoodStanding(_wearer, hat);
+        return _isInGoodStanding(_wearer, hat, _hatId);
     }
 
     /// @notice Constructs the URI for a Hat, using data from the Hat struct
@@ -650,7 +660,7 @@ contract Hats is ERC1155 {
             '", "supply cap": "',
             hat.maxSupply,
             '", "admin (hat)": "',
-            hat.admin,
+            getAdminAtLevel(_hatId, getHatLevel(_hatId) - 1),
             '", "oracle (address)": "',
             hat.oracle,
             '", "conditions (address)": "',
@@ -658,7 +668,7 @@ contract Hats is ERC1155 {
             '"}'
         );
 
-        string memory status = (_isActive(hat) ? "active" : "inactive");
+        string memory status = (_isActive(hat, _hatId) ? "active" : "inactive");
 
         string memory json = Base64.encode(
             bytes(
@@ -699,12 +709,12 @@ contract Hats is ERC1155 {
         override
         returns (uint256 balance)
     {
-        uint64 hatId = uint64(id); // QUESTION do we need to cast this? what happens if it overflows?
+        uint80 hatId = uint80(id); // QUESTION do we need to cast this? what happens if it overflows?
         Hat memory hat = hats[hatId];
 
         balance = 0;
 
-        if (_isActive(hat) && _isInGoodStanding(wearer, hat)) {
+        if (_isActive(hat, hatId) && _isInGoodStanding(wearer, hat, hatId)) {
             balance = super.balanceOf(wearer, hatId);
         }
 
