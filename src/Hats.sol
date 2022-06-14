@@ -448,12 +448,13 @@ contract Hats is ERC1155 {
         uint256 id = uint256(_hatId);
 
         // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
-        if (_balanceOf[_from][id] < 1) {
+        if (balanceOf(_from, id) < 1) {
             revert NotHatWearer();
         }
 
-        --_balanceOf[_from][id];
-        ++_balanceOf[_to][id];
+        //TODO Adjust balances
+        //--_balanceOf[_from][id];
+        //++_balanceOf[_to][id];
 
         emit TransferSingle(msg.sender, _from, _to, id, 1);
     }
@@ -722,7 +723,7 @@ contract Hats is ERC1155 {
         uint256 amount,
         bytes memory data
     ) internal override {
-        _balanceOf[to][id] += amount;
+        //_balanceOf[to][id] += amount;
 
         // increment Hat supply counter
         ++hatSupply[uint64(id)];
@@ -740,7 +741,7 @@ contract Hats is ERC1155 {
         uint256 id,
         uint256 amount
     ) internal override {
-        _balanceOf[from][id] -= amount;
+        //_balanceOf[from][id] -= amount;
 
         // decrement Hat supply counter
         --hatSupply[uint64(id)];
