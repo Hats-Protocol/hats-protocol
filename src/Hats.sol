@@ -15,7 +15,7 @@ contract Hats is ERC1155 {
                               HATS ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    // QUESTION should we add arguments to any of these errors?
+    // QUESTION should we add arguments to any of these errors? See github issue #21
     error HatNotActive();
     error NotAdmin();
     error AllHatsWorn();
@@ -52,6 +52,8 @@ contract Hats is ERC1155 {
     uint64 public nextHatId; // initialized at 0
 
     Hat[] private hats; // can retrieve Hat info via viewHat(hatId) or via uri(hatId);
+
+    // string public baseImageURI = "https://images.hatsprotocol.xyz/"
 
     mapping(uint64 => uint32) public hatSupply; // key: hatId => value: supply
 
@@ -262,7 +264,7 @@ contract Hats is ERC1155 {
         for (uint256 i = 0; i < length; ++i) {
             uint64 hatId = uint64(_hatIds[i]);
 
-            mintHat(hatId, _wearers[i]); // QUESTION if this fails, how do mint revert errors bubble up here, if at all?
+            mintHat(hatId, _wearers[i]); // QUESTION if this fails, how do mint revert errors bubble up here, if at all? See github issue #22
         }
 
         return true;
@@ -289,22 +291,24 @@ contract Hats is ERC1155 {
         } else return false;
     }
 
-    /// @notice Checks a hat's Conditions and, if `false`, deactivates the hat
+    /// @notice Checks a hat's Conditions and, if new, toggle's the hat's status
     /// @dev // TODO
     /// @param _hatId The id of the Hat whose Conditions we are checking
-    /// @return bool Whether the check succeeded
+    /// @return bool Whether the status was toggled
     function checkConditions(uint64 _hatId) external returns (bool) {
         Hat storage hat = hats[_hatId];
 
         IHatsConditions CONDITIONS = IHatsConditions(hat.conditions);
 
-        bool status = CONDITIONS.checkConditions(_hatId); // FIXME what happens if CONDITIONS doesn't have a checkConditions() function?
+        // FIXME what happens if CONDITIONS doesn't have a checkConditions() function?
+        // likely answer: the whole thing reverts, which is actually what we want
+        bool newStatus = CONDITIONS.checkConditions(_hatId);
 
-        if (!status) {
-            hat.active = false;
-        }
-
-        return true;
+        if (newStatus != hat.active) {
+            hat.active = newStatus;
+            emit HatStatusChanged(_hatId, newStatus);
+            return true;
+        } else return false;
     }
 
     /// @notice Report from a hat's Oracle on the standing of one of its wearers and, if `false`, revoke their hat
@@ -343,7 +347,9 @@ contract Hats is ERC1155 {
         Hat memory hat = hats[_hatId];
         IHatsOracle ORACLE = IHatsOracle(hat.oracle);
 
-        bool ruling = ORACLE.checkWearerStanding(_wearer, _hatId); // FIXME what happens if ORACLE doesn't have a checkWearerStanding() function?
+        // FIXME what happens if ORACLE doesn't have a checkWearerStanding() function?
+        // likely answer: the whole thing reverts, which is actually what we want
+        bool ruling = ORACLE.checkWearerStanding(_wearer, _hatId);
 
         if (!ruling) {
             _revokeHat(_hatId, _wearer);
@@ -568,26 +574,18 @@ contract Hats is ERC1155 {
     /// @notice Checks the active status of a hat
     /// @dev For internal use instead of `isActive` when passing Hat as param is preferable
     /// @param _hat The Hat struct
-    /// @return bool The active status of the hat
-    // FIXME need to figure out all the permutations
-    function _isActive(Hat memory _hat) internal view returns (bool) {
+    /// @return active The boolean status of the hat
+    function _isActive(Hat memory _hat) internal view returns (bool active) {
         IHatsConditions CONDITIONS = IHatsConditions(_hat.conditions);
 
         return (CONDITIONS.checkConditions(_hat.id) && _hat.active);
 
-        /* 
-        hat.active is TRUE when...
-            - deactivateHat() has not been called
-        hat.active is FALSE when...
-            - deactivateHat() has been called
-
-        checkConditions() can return TRUE or FALSE when Conditions is a contract with a checkConditions() function
-
-        QUESTION: what happens to checkConditions() if Conditions is a contract without a checkConditions() function?
-
-        QUESTION: what happens to checkConditions() if Conditions is an EOA?
-
-        */
+        try CONDITIONS.checkConditions(_hat.id) returns (bool status_) {
+            active = status_;
+        } catch {
+            // if the external call reverts, default to the existing state
+            active = _hat.status;
+        }
     }
 
     /// @notice Checks the active status of a hat
@@ -600,21 +598,29 @@ contract Hats is ERC1155 {
     }
 
     /// @notice Internal call to check whether a wearer of a Hat is in good standing
-    /// @dev // TODO
+    /// @dev Tries an external call to the Hat's Conditions address, defaulting to existing revocations state if the call fails (ie if the Conditions address does not conform to it IConditions interface)
     /// @param _hat The Hat object
     /// @param _wearer The address of the Hat wearer
-    /// @return bool Whether the wearer is in good standing
+    /// @return standing Whether the wearer is in good standing
     function _isInGoodStanding(address _wearer, Hat memory _hat)
         public
         view
-        returns (bool)
+        returns (bool standing)
     {
         IHatsOracle ORACLE = IHatsOracle(_hat.oracle);
-        return (ORACLE.checkWearerStanding(_wearer, _hat.id)); // FIXME what happens if ORACLE doesn't have a checkWearerStanding() function?
+
+        try ORACLE.checkWearerStanding(_wearer, _hat.id) returns (
+            bool standing_
+        ) {
+            standing = standing_;
+        } catch {
+            // if the external call reverts, default to the existing state
+            standing = revocations[_hatId][_wearer];
+        }
     }
 
     /// @notice Checks whether a wearer of a Hat is in good standing
-    /// @dev // TODO
+    /// @dev Public function for use when passing a Hat object is not possible or preferable
     /// @param _hatId The id of the Hat
     /// @param _wearer The address of the Hat wearer
     /// @return bool
