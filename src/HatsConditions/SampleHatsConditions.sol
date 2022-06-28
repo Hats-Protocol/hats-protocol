@@ -3,6 +3,7 @@
 pragma solidity >=0.8.13;
 
 import "./IHatsConditions.sol";
+import "../IHats.sol";
 import "solmate/auth/Auth.sol";
 
 abstract contract ExpiringHatsConditions is IHatsConditions {
@@ -18,11 +19,11 @@ abstract contract ExpiringHatsConditions is IHatsConditions {
         virtual
         returns (bool)
     {
-        return (now < expiries[_hatId]);
+        return (block.timestamp < expiries[_hatId]);
     }
 
     function setExpiry(uint256 _hatId, uint256 _expiry) public virtual {
-        if (now > _expiry) {
+        if (block.timestamp > _expiry) {
             revert ExpiryInPast();
         }
 
@@ -32,7 +33,7 @@ abstract contract ExpiringHatsConditions is IHatsConditions {
     }
 }
 
-abstract contract OwnableHatsConditions is IHats, IHatsConditions, Auth {
+abstract contract OwnableHatsConditions is IHatsConditions, Auth {
     event HatStatusSet(uint256 _hatId, bool _status);
 
     IHats public HATS;
@@ -63,7 +64,7 @@ abstract contract OwnableHatsConditions is IHats, IHatsConditions, Auth {
         emit HatStatusSet(_hatId, _status);
     }
 
-    function _updateHatStatus(_uint256 _hatId, bool _status) internal virtual {
+    function _updateHatStatus(uint256 _hatId, bool _status) internal virtual {
         HATS.changeHatStatus(_hatId, _status);
     }
 }
