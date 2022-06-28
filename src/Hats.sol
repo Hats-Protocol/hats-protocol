@@ -348,7 +348,7 @@ contract Hats is ERC1155 {
     /// @dev The msg.sender must be set as the hat's Conditions
     /// @param _hatId The id of the Hat for which to adjust status
     /// @return bool Whether the status was toggled
-    function changeHatStatus(uint256 _hatId, bool newStatus)
+    function setHatStatus(uint256 _hatId, bool newStatus)
         external
         returns (bool)
     {
@@ -369,14 +369,14 @@ contract Hats is ERC1155 {
     /// @dev // TODO
     /// @param _hatId The id of the Hat whose Conditions we are checking
     /// @return bool Whether the check succeeded
-    function checkConditions(uint256 _hatId) external returns (bool) {
+    function getHatStatus(uint256 _hatId) external returns (bool) {
         Hat storage hat = hats[_hatId];
 
         IHatsConditions CONDITIONS = IHatsConditions(hat.conditions);
 
-        // FIXME what happens if CONDITIONS doesn't have a checkConditions() function?
+        // FIXME what happens if CONDITIONS doesn't have a getHatStatus() function?
         // likely answer: the whole thing reverts, which is actually what we want
-        bool newStatus = CONDITIONS.checkConditions(_hatId);
+        bool newStatus = CONDITIONS.getHatStatus(_hatId);
 
         if (newStatus != hat.active) {
             hat.active = newStatus;
@@ -679,9 +679,7 @@ contract Hats is ERC1155 {
     {
         IHatsConditions CONDITIONS = IHatsConditions(_hat.conditions);
 
-        return (CONDITIONS.checkConditions(_hatId) && _hat.active);
-
-        try CONDITIONS.checkConditions(_hatId) returns (bool status_) {
+        try CONDITIONS.getHatStatus(_hatId) returns (bool status_) {
             active = status_;
         } catch {
             // if the external call reverts, default to the existing state
