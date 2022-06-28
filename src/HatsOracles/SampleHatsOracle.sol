@@ -3,6 +3,7 @@
 pragma solidity >=0.8.13;
 
 import "./IHatsOracle.sol";
+import "../IHats.sol";
 import "solmate/auth/Auth.sol";
 
 abstract contract ExpiringHatsOracle is IHatsOracle {
@@ -17,27 +18,27 @@ abstract contract ExpiringHatsOracle is IHatsOracle {
     }
 
     // key1: wearer => key2: hatId => value: token expiry timestamp
-    mapping(address => mapping(uint256 => uint256)) public tokenExpiries; 
+    mapping(address => mapping(uint256 => uint256)) public tokenExpiries;
 
     function ruleOnWearerStanding(address _wearer, uint64 _hatId)
         external
         virtual
     {
         bool ruling = checkWearerStanding(_wearer, _hatId);
-     
+
         HATS.ruleOnHatWearerStanding(_hatId, _wearer, ruling);
     }
 
     function checkWearerStanding(address _wearer, uint64 _hatId)
-        external
+        public
         view
-        returns (bool);
+        returns (bool)
     {
-        return (now < tokenExpiries[_wearer][_hatId]);
+        return (block.timestamp < tokenExpiries[_wearer][_hatId]);
     }
 
     function setTokenExpiry(address _wearer, uint256 _hatId, uint256 _expiry) public virtual {
-        if (now > _expiry) {
+        if (block.timestamp > _expiry) {
             revert TokenExpiryInPast();
         }
 
@@ -59,17 +60,17 @@ abstract contract OwnableHatsOracle is IHats, IHatsOracle, Auth {
     }
 
     // do we want to standardize this function / add to the interface?
-    function _ruleOnWearerStanding(address _wearer, uint64 _hatId, bool _ruling)
+    function _ruleOnWearerStanding(address _wearer, uint256 _hatId, bool _ruling)
         internal
         virtual
-    {        
+    {
         HATS.ruleOnHatWearerStanding(_hatId, _wearer, _ruling);
     }
 
     function checkWearerStanding(address _wearer, uint64 _hatId)
-        external
+        public
         view
-        returns (bool);
+        returns (bool)
     {
         return standing[_wearer][_hatId];
     }

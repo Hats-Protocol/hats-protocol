@@ -25,7 +25,9 @@ interface IHats {
 
     function requestOracleRuling(uint256 hatId) external returns (bool);
 
-    function rule(uint256 hatId, bool ruling) external returns (bool);
+    function ruleOnHatWearerStanding(uint256 hatId, address wearer, bool ruling) external returns (bool);
+
+    function changeHatStatus(uint256 hatId, bool newStatus) external returns (bool);
 
     function recordRelinquishment(uint256 hatId, address wearer)
         external
