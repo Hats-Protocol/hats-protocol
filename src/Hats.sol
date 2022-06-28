@@ -181,8 +181,8 @@ contract Hats is ERC1155 {
         );
     }
 
-    function _buildNextId(uint256 _admin) internal view returns (uint256) {
-      uint8 nextHatId = hats[_admin].lastHatId + 1;
+    function _buildNextId(uint256 _admin) internal returns (uint256) {
+      uint8 nextHatId = hats[_admin].lastHatId++;
 
         if(uint224(_admin) == 0){
             return _admin | (uint256(nextHatId)<<216);
