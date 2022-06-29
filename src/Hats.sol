@@ -37,7 +37,7 @@ contract Hats is ERC1155 {
         // 1st storage slot
         address oracle; // can revoke Hat based on ruling; 20 bytes (+20)
         uint32 maxSupply; // the max number of identical hats that can exist; 24 bytes (+4)
-        bool active; // can be altered by conditions, via deactivateHat(); 25 bytes (+1)
+        bool active; // can be altered by conditions, via setHatStatus(); 25 bytes (+1)
         uint8 lastHatId; // indexes how many different hats an admin is holding; 26 bytes (+1)
         // 2nd storage slot
         address conditions; // controls when Hat is active; 20 bytes (+20)
