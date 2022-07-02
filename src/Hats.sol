@@ -551,7 +551,6 @@ contract Hats is ERC1155 {
     /// @notice View the properties of a given Hat
     /// @param _hatId The id of the Hat
     /// @return details The details of the Hat
-    /// @return id The id of the Hat
     /// @return maxSupply The max supply of tokens for this Hat
     /// @return supply The number of current wearers of this Hat
     /// @return oracle The Oracle address for this Hat
@@ -562,7 +561,6 @@ contract Hats is ERC1155 {
         view
         returns (
             string memory details,
-            uint256 id,
             uint32 maxSupply,
             uint32 supply,
             address oracle,
@@ -572,7 +570,6 @@ contract Hats is ERC1155 {
     {
         Hat memory hat = hats[_hatId];
         details = hat.details;
-        id = _hatId;
         maxSupply = hat.maxSupply;
         supply = hatSupply[_hatId];
         oracle = hat.oracle;
