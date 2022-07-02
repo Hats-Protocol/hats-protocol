@@ -272,33 +272,34 @@ contract Hats is ERC1155 {
         return _admin | uint256(nextHatId);
     }
 
-    /// @notice Creates a tree new Hats, where the root Hat is under admin control by the msg.sender. Especially useful for forking an existing Hat tree or initiating a template Hat tree structure.
-    /// @dev The admin for each Hat must exist before the Hat is created, so Hats must be created before Hats for which they serve as admin
-    /// @param _details Descriptions of the Hats
-    /// @param _maxSupplies The total instances of the Hats that can be worn at once
-    /// @param _firstAdmin The hatId of the admin of the first Hat to create; it must already exist
-    /// @param _oracles The addresses that can report on the Hat wearers' status
-    /// @param _conditions The addresses that can deactivate the Hats
-    function createHatsTree(
-        string[] memory _details,
-        uint32[] memory _maxSupplies,
-        uint256 _firstAdmin,
-        address[] memory _oracles,
-        address[] memory _conditions
-    ) public {
-        // check that array lengths match
-        uint256 length = _maxSupplies.length; // saves an MLOAD
+    // TODO reimplement createHatsTree post-mvp
+    // /// @notice Creates a tree new Hats, where the root Hat is under admin control by the msg.sender. Especially useful for forking an existing Hat tree or initiating a template Hat tree structure.
+    // /// @dev The admin for each Hat must exist before the Hat is created, so Hats must be created before Hats for which they serve as admin
+    // /// @param _details Descriptions of the Hats
+    // /// @param _maxSupplies The total instances of the Hats that can be worn at once
+    // /// @param _firstAdmin The hatId of the admin of the first Hat to create; it must already exist
+    // /// @param _oracles The addresses that can report on the Hat wearers' status
+    // /// @param _conditions The addresses that can deactivate the Hats
+    // function createHatsTree(
+    //     string[] memory _details,
+    //     uint32[] memory _maxSupplies,
+    //     uint256 _firstAdmin,
+    //     address[] memory _oracles,
+    //     address[] memory _conditions
+    // ) public {
+    //     // check that array lengths match
+    //     uint256 length = _maxSupplies.length; // saves an MLOAD
 
-        bool lengthsCheck = ((_details.length == length) &&
-            (length == _oracles.length) &&
-            (length == _conditions.length));
+    //     bool lengthsCheck = ((_details.length == length) &&
+    //         (length == _oracles.length) &&
+    //         (length == _conditions.length));
 
-        if (!lengthsCheck) {
-            revert BatchArrayLengthMismatch();
-        }
+    //     if (!lengthsCheck) {
+    //         revert BatchArrayLengthMismatch();
+    //     }
 
-        // TODO reimplement
-    }
+    //
+    // }
 
     /// @notice Mints an ERC1155 token of the Hat to a recipient, who then "wears" the hat
     /// @dev The msg.sender must wear the admin Hat of `_hatId`
