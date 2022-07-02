@@ -562,7 +562,6 @@ contract Hats is ERC1155 {
         view
         returns (
             string memory details,
-            uint256 id,
             uint32 maxSupply,
             uint32 supply,
             address oracle,
@@ -572,7 +571,6 @@ contract Hats is ERC1155 {
     {
         Hat memory hat = hats[_hatId];
         details = hat.details;
-        id = _hatId;
         maxSupply = hat.maxSupply;
         supply = hatSupply[_hatId];
         oracle = hat.oracle;
