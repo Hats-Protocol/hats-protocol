@@ -519,9 +519,9 @@ contract Hats is ERC1155 {
             revert NotHatWearer();
         }
 
-        //TODO Adjust balances
-        //--_balanceOf[_from][id];
-        //++_balanceOf[_to][id];
+        //Adjust balances
+        --_balanceOf[_from][id];
+        ++_balanceOf[_to][id];
 
         emit TransferSingle(msg.sender, _from, _to, id, 1);
     }
@@ -817,7 +817,7 @@ contract Hats is ERC1155 {
         uint256 amount,
         bytes memory data
     ) internal override {
-        //_balanceOf[to][id] += amount;
+        _balanceOf[to][id] += amount;
 
         // increment Hat supply counter
         ++hatSupply[uint256(id)];
