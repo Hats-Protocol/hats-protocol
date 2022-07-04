@@ -2,6 +2,8 @@
 pragma solidity >=0.8.13;
 
 import {ERC1155} from "solmate/tokens/ERC1155.sol";
+// do we need an interface for Hatter / admin?
+import "forge-std/Test.sol"; //remove after testing
 import "./HatsConditions/IHatsConditions.sol";
 import "./HatsOracles/IHatsOracle.sol";
 import "utils/BASE64.sol";
@@ -115,13 +117,15 @@ contract Hats is ERC1155 {
 
         topHatId = uint256(++lastTopHatId) << 224;
 
-        createHat(
+        _createHat(
             topHatId,
             "", // details
             1, // maxSupply = 1
             address(0), // there is no oracle
             address(0) // it has no conditions
         );
+
+        ++lastTopHatId;
 
         _mint(_target, topHatId, 1, "");
     }
@@ -181,7 +185,7 @@ contract Hats is ERC1155 {
     }
 
     function _buildNextId(uint256 _admin) internal returns (uint256) {
-        uint8 nextHatId = hats[_admin].lastHatId++;
+        uint8 nextHatId = hats[_admin].lastHatId + 1;
 
         if (uint224(_admin) == 0) {
             return _admin | (uint256(nextHatId) << 216);
@@ -268,6 +272,8 @@ contract Hats is ERC1155 {
         if (uint16(_admin) == 0) {
             return _admin | (uint256(nextHatId) << 8);
         }
+
+        // hats[_admin].lastHatId = nextHatId;
 
         return _admin | uint256(nextHatId);
     }
@@ -625,36 +631,45 @@ contract Hats is ERC1155 {
         return false;
     }
 
+    // visualizing what's happening (to remove):
+    // (possible to display in hex instead of decimal for users?)
+    // 0000 0001 0000 0000 . 0000 0000 0000 0000 . 0000 0000 0000 0000 . 0000 0000 0000 0000 = 269
+    // 0000 0001 0100 0000 . 0000 0000 0000 0000 . 0000 0000 0000 0000 . 0000 0000 0000 0000 = 270
+    // 0000 0000 00FF FFFF . FFFF FFFF FFFF FFFF . FFFF FFFF FFFF FFFF . FFFF FFFF FFFF FFFF = 105
+
     function getHatLevel(uint256 _hatId) public pure returns (uint8 level) {
+        // trim topHat decimal places first
+        uint224 hatId = uint224(_hatId);
+
         // TODO: invert the order for optimization
-        if (_hatId < 2**8) return 28;
-        if (_hatId < 2**16) return 27;
-        if (_hatId < 2**24) return 26;
-        if (_hatId < 2**32) return 25;
-        if (_hatId < 2**40) return 24;
-        if (_hatId < 2**48) return 23;
-        if (_hatId < 2**56) return 22;
-        if (_hatId < 2**64) return 21;
-        if (_hatId < 2**72) return 20;
-        if (_hatId < 2**80) return 19;
-        if (_hatId < 2**88) return 18;
-        if (_hatId < 2**96) return 17;
-        if (_hatId < 2**104) return 16;
-        if (_hatId < 2**112) return 15;
-        if (_hatId < 2**120) return 14;
-        if (_hatId < 2**128) return 13;
-        if (_hatId < 2**136) return 12;
-        if (_hatId < 2**144) return 11;
-        if (_hatId < 2**152) return 10;
-        if (_hatId < 2**160) return 9;
-        if (_hatId < 2**168) return 8;
-        if (_hatId < 2**176) return 7;
-        if (_hatId < 2**184) return 6;
-        if (_hatId < 2**192) return 5;
-        if (_hatId < 2**200) return 4;
-        if (_hatId < 2**208) return 3;
-        if (_hatId < 2**216) return 2;
-        if (_hatId < 2**224) return 1;
+        if (hatId < 2**8) return 28;
+        if (hatId < 2**16) return 27;
+        if (hatId < 2**24) return 26;
+        if (hatId < 2**32) return 25;
+        if (hatId < 2**40) return 24;
+        if (hatId < 2**48) return 23;
+        if (hatId < 2**56) return 22;
+        if (hatId < 2**64) return 21;
+        if (hatId < 2**72) return 20;
+        if (hatId < 2**80) return 19;
+        if (hatId < 2**88) return 18;
+        if (hatId < 2**96) return 17;
+        if (hatId < 2**104) return 16;
+        if (hatId < 2**112) return 15;
+        if (hatId < 2**120) return 14;
+        if (hatId < 2**128) return 13;
+        if (hatId < 2**136) return 12;
+        if (hatId < 2**144) return 11;
+        if (hatId < 2**152) return 10;
+        if (hatId < 2**160) return 9;
+        if (hatId < 2**168) return 8;
+        if (hatId < 2**176) return 7;
+        if (hatId < 2**184) return 6;
+        if (hatId < 2**192) return 5;
+        if (hatId < 2**200) return 4;
+        if (hatId < 2**208) return 3;
+        if (hatId < 2**216) return 2;
+        if (hatId < 2**224) return 1;
         return 0;
     }
 
@@ -675,14 +690,37 @@ contract Hats is ERC1155 {
         view
         returns (bool active)
     {
-        IHatsConditions CONDITIONS = IHatsConditions(_hat.conditions);
+        // try CONDITIONS was returning () and not reverting, this is the workaround
 
-        try CONDITIONS.getHatStatus(_hatId) returns (bool status_) {
-            active = status_;
-        } catch {
-            // if the external call reverts, default to the existing state
-            active = _hat.active;
+        // IHatsConditions CONDITIONS = IHatsConditions(_hat.conditions);
+
+        console2.log("_isActive: function start", _hat.active);
+
+        bytes memory data = abi.encodeWithSignature("getHatStatus(uint256)", _hatId);
+
+        (bool success, bytes memory returndata) = _hat.conditions.staticcall(data);
+
+        // if (!success) {
+        //     active = _hat.active;
+        // } 
+        // if (success && returndata.length == 0) {
+        //     active = _hat.active;
+        // } 
+        if (success && returndata.length > 0) {
+            active = abi.decode(returndata, (bool));
+            console2.log("_isActive: success && returndata > 0", active);
+        } else {
+        active = _hat.active;
+            console2.log("_isActive: other returndata", active);
         }
+
+        // try CONDITIONS.getHatStatus(_hatId) returns (bool status_) {
+        //     console.log(status_);
+        //     active = status_;
+        // } catch {
+        //     // if the external call reverts, default to the existing state
+        //     active = _hat.active;
+        // }
     }
 
     /// @notice Checks the active status of a hat
@@ -704,16 +742,22 @@ contract Hats is ERC1155 {
         Hat memory _hat,
         uint256 _hatId
     ) public view returns (bool standing) {
-        IHatsOracle ORACLE = IHatsOracle(_hat.oracle);
+        // TODO: implement workaround from _isActive here too
+        // standing = true will break other code
+        if (isTopHat(_hatId)) { 
+            standing = true;
+        } else {
+            IHatsOracle ORACLE = IHatsOracle(_hat.oracle);
 
-        try ORACLE.getWearerStatus(_wearer, _hatId) returns (
-            bool revoke_,
-            bool standing_
-        ) {
-            standing = standing_;
-        } catch {
-            // if the external call reverts, default to the existing state
-            standing = badStandings[_hatId][_wearer];
+            try ORACLE.getWearerStatus(_wearer, _hatId) returns (
+                bool revoke_,
+                bool standing_
+            ) {
+                standing = standing_;
+            } catch {
+                // if the external call reverts, default to the existing state
+                standing = badStandings[_hatId][_wearer];
+            }
         }
     }
 
