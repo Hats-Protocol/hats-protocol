@@ -2,8 +2,8 @@
 pragma solidity >=0.8.13;
 
 interface IHatsOracle {
-    function checkWearerStanding(address _wearer, uint256 _hatId)
+    function getWearerStatus(address _wearer, uint256 _hatId)
         external
         view
-        returns (bool);
+        returns (bool, bool);
 }

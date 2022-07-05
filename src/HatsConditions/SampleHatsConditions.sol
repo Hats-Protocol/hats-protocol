@@ -13,7 +13,7 @@ abstract contract ExpiringHatsConditions is IHatsConditions {
 
     mapping(uint256 => uint256) public expiries; // key: hatId => value: expiry timestamp
 
-    function checkConditions(uint256 _hatId)
+    function getHatStatus(uint256 _hatId)
         public
         view
         virtual
@@ -44,7 +44,7 @@ abstract contract OwnableHatsConditions is IHatsConditions, Auth {
         HATS = IHats(_hatsContract);
     }
 
-    function checkConditions(uint256 _hatId)
+    function getHatStatus(uint256 _hatId)
         public
         view
         virtual
@@ -53,7 +53,7 @@ abstract contract OwnableHatsConditions is IHatsConditions, Auth {
         return (status[_hatId]);
     }
 
-    function setStatus(uint256 _hatId, bool _status)
+    function setHatStatus(uint256 _hatId, bool _status)
         public
         virtual
         requiresAuth
@@ -65,6 +65,6 @@ abstract contract OwnableHatsConditions is IHatsConditions, Auth {
     }
 
     function _updateHatStatus(uint256 _hatId, bool _status) internal virtual {
-        HATS.changeHatStatus(_hatId, _status);
+        HATS.setHatStatus(_hatId, _status);
     }
 }
