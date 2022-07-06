@@ -28,7 +28,7 @@ contract HatsTest is Test {
         secondWearer = 0x2000000000000000000000000000000000000000;
         thirdWearer = 0x2000000000000000000000000000000000000000;
         nonWearer = 0x9000000000000000000000000000000000000000;
-        
+
         // instantiate Hats contract
         test = new Hats();
 
@@ -47,17 +47,17 @@ contract HatsTest is Test {
     function testTopHatCreated() public {
         topHatId = test.mintTopHat(topHatWearer);
         console2.log(topHatId);
-        
+
         bool topHatTest = test.isTopHat(topHatId);
         console2.log(topHatTest);
 
-        bool wearerTest = test.isWearerOfHat(topHatWearer, topHatId); 
+        bool wearerTest = test.isWearerOfHat(topHatWearer, topHatId);
         console2.log(wearerTest);
 
-        bool notWearerTest = test.isWearerOfHat(nonWearer, topHatId); 
+        bool notWearerTest = test.isWearerOfHat(nonWearer, topHatId);
         console2.log(!notWearerTest);
-        
-        bool activeTest = test.isActive(topHatId); 
+
+        bool activeTest = test.isActive(topHatId);
         console2.log(activeTest);
     }
 
@@ -73,7 +73,13 @@ contract HatsTest is Test {
 
         // create a second Hat with TopHat as admin
         vm.prank(address(topHatWearer));
-        secondHatId = test.createHat(topHatId, _details, _maxSupply, _oracle, _conditions);
+        secondHatId = test.createHat(
+            topHatId,
+            "second hat",
+            _maxSupply,
+            _oracle,
+            _conditions
+        );
 
         // mint second Hat to another wearer
         vm.prank(address(topHatWearer));
@@ -81,11 +87,17 @@ contract HatsTest is Test {
 
         // create a third Hat with secondHat as admin
         vm.prank(address(secondWearer));
-        thirdHatId = test.createHat(secondHatId, _details, _maxSupply, _oracle, _conditions);
+        thirdHatId = test.createHat(
+            secondHatId,
+            "third hat",
+            _maxSupply,
+            _oracle,
+            _conditions
+        );
 
         // mint third Hat to another wearer
-        // vm.prank(address(secondWearer));
-        // test.mintHat(thirdHatId, thirdWearer);
+        vm.prank(address(secondWearer));
+        test.mintHat(thirdHatId, thirdWearer);
 
         // // create a fourth Hat with secondHat as admin
         // vm.prank(address(thirdWearer));

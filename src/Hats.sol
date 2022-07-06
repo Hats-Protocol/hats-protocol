@@ -19,7 +19,7 @@ contract Hats is ERC1155 {
 
     // QUESTION should we add arguments to any of these errors? See github issue #21
     error HatNotActive();
-    error NotAdmin();
+    error NotAdmin(address _user, uint256 _hatId);
     error AllHatsWorn();
     error AlreadyWearingHat();
     error NoApprovalsNeeded();
@@ -173,7 +173,7 @@ contract Hats is ERC1155 {
     ) public returns (uint256 newHatId) {
         // to create a hat, you must be wearing the Hat of its admin
         if (!isWearerOfHat(msg.sender, _admin)) {
-            revert NotAdmin();
+            revert NotAdmin(msg.sender, _admin);
         }
         if (uint8(_admin) > 0) {
             revert MaxTreeDepthReached();
@@ -316,7 +316,7 @@ contract Hats is ERC1155 {
         Hat memory hat = hats[_hatId];
         // only the wearer of a hat's admin Hat can mint it
         if (isAdminOfHat(msg.sender, _hatId)) {
-            revert NotAdmin();
+            revert NotAdmin(msg.sender, _hatId);
         }
 
         if (hatSupply[_hatId] >= hat.maxSupply) {
@@ -622,20 +622,23 @@ contract Hats is ERC1155 {
 
         uint8 adminHatLevel = getHatLevel(_hatId);
 
-        while (adminHatLevel >= 0) {
+        while (adminHatLevel >= 1) {
             if (isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel))) {
                 return true;
             }
             adminHatLevel--;
         }
-        return false;
+        return isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel));
     }
 
     // visualizing what's happening (to remove):
     // (possible to display in hex instead of decimal for users?)
-    // 0000 0001 0000 0000 . 0000 0000 0000 0000 . 0000 0000 0000 0000 . 0000 0000 0000 0000 = 269
-    // 0000 0001 0100 0000 . 0000 0000 0000 0000 . 0000 0000 0000 0000 . 0000 0000 0000 0000 = 270
-    // 0000 0000 00FF FFFF . FFFF FFFF FFFF FFFF . FFFF FFFF FFFF FFFF . FFFF FFFF FFFF FFFF = 105
+    // level 0 hat (ie tophat):
+    // 0000 0001 00 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 = 269
+    // level 1 hat:
+    // 0000 0001 01 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 = 270
+    // level 1 hatId minus level 0 hatId
+    // 0000 0000 00 FF FF FF . FF FF FF FF FF FF FF FF . FF FF FF FF FF FF FF FF . FF FF FF FF FF FF FF FF = 105
 
     function getHatLevel(uint256 _hatId) public pure returns (uint8 level) {
         // trim topHat decimal places first
@@ -678,7 +681,7 @@ contract Hats is ERC1155 {
         pure
         returns (uint256 admin)
     {
-        return uint256(_hatId - 2**(8 * (28 - _level)) - 1);
+        admin = uint256(_hatId - 2**(8 * (28 - _level)) - 1);
     }
 
     /// @notice Checks the active status of a hat
@@ -696,21 +699,26 @@ contract Hats is ERC1155 {
 
         console2.log("_isActive: function start", _hat.active);
 
-        bytes memory data = abi.encodeWithSignature("getHatStatus(uint256)", _hatId);
+        bytes memory data = abi.encodeWithSignature(
+            "getHatStatus(uint256)",
+            _hatId
+        );
 
-        (bool success, bytes memory returndata) = _hat.conditions.staticcall(data);
+        (bool success, bytes memory returndata) = _hat.conditions.staticcall(
+            data
+        );
 
         // if (!success) {
         //     active = _hat.active;
-        // } 
+        // }
         // if (success && returndata.length == 0) {
         //     active = _hat.active;
-        // } 
+        // }
         if (success && returndata.length > 0) {
             active = abi.decode(returndata, (bool));
             console2.log("_isActive: success && returndata > 0", active);
         } else {
-        active = _hat.active;
+            active = _hat.active;
             console2.log("_isActive: other returndata", active);
         }
 
@@ -744,20 +752,40 @@ contract Hats is ERC1155 {
     ) public view returns (bool standing) {
         // TODO: implement workaround from _isActive here too
         // standing = true will break other code
-        if (isTopHat(_hatId)) { 
+        if (isTopHat(_hatId)) {
             standing = true;
         } else {
-            IHatsOracle ORACLE = IHatsOracle(_hat.oracle);
+            bytes memory data = abi.encodeWithSignature(
+                "getWearerStatus(address,uint256)",
+                _wearer,
+                _hatId
+            );
 
-            try ORACLE.getWearerStatus(_wearer, _hatId) returns (
-                bool revoke_,
-                bool standing_
-            ) {
-                standing = standing_;
-            } catch {
-                // if the external call reverts, default to the existing state
-                standing = badStandings[_hatId][_wearer];
+            (bool success, bytes memory returndata) = _hat.oracle.staticcall(
+                data
+            );
+
+            if (success && returndata.length > 0) {
+                (, standing) = abi.decode(returndata, (bool, bool));
+                console2.log(
+                    "_isInGoodStanding: success && returndata > 0",
+                    standing
+                );
+            } else {
+                standing = !badStandings[_hatId][_wearer];
+                console2.log("_isInGoodStanding: other returndata", standing);
             }
+            // IHatsOracle ORACLE = IHatsOracle(_hat.oracle);
+
+            // try ORACLE.getWearerStatus(_wearer, _hatId) returns (
+            //     bool revoke_,
+            //     bool standing_
+            // ) {
+            //     standing = standing_;
+            // } catch {
+            //     // if the external call reverts, default to the existing state
+            //     standing = badStandings[_hatId][_wearer];
+            // }
         }
     }
 
