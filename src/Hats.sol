@@ -124,7 +124,6 @@ contract Hats is ERC1155 {
             address(0), // there is no oracle
             address(0) // it has no conditions
         );
-        // TODO might be an issue with this incrementation; log this to check
         ++lastTopHatId;
 
         _mint(_target, topHatId, 1, "");
@@ -182,6 +181,8 @@ contract Hats is ERC1155 {
         newHatId = _buildNextId(_admin);
         // create the new hat
         _createHat(newHatId, _details, _maxSupply, _oracle, _conditions);
+        // increment _admin.lastHatId
+        ++hats[_admin].lastHatId;
     }
 
     function _buildNextId(uint256 _admin) internal returns (uint256) {
@@ -482,9 +483,8 @@ contract Hats is ERC1155 {
 
         hat.conditions = _conditions;
         hat.active = true;
-        hats[_id] = hat;
 
-        // may also need to add to mapping
+        hats[_id] = hat;
 
         emit HatCreated(_id, _details, _maxSupply, _oracle, _conditions);
     }
@@ -621,7 +621,7 @@ contract Hats is ERC1155 {
         }
 
         uint8 adminHatLevel = getHatLevel(_hatId) - 1;
-        console2.log("adminHatLevel", adminHatLevel);
+        // console2.log("adminHatLevel", adminHatLevel);
 
         while (adminHatLevel >= 0) {
             // console2.log(
@@ -632,7 +632,7 @@ contract Hats is ERC1155 {
             // );
 
             if (isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel))) {
-                console2.log("isWearerOfHat in if-statement", true);
+                // console2.log("isWearerOfHat in if-statement", true);
                 return true;
             }
             adminHatLevel--;
@@ -688,22 +688,12 @@ contract Hats is ERC1155 {
 
     function getAdminAtLevel(uint256 _hatId, uint8 _level)
         public
-        view
+        pure
         returns (uint256 admin)
     {
         uint256 operAND = type(uint256).max << (8 * (28 - _level));
-        console2.log("operAND", operAND);
-
-        // FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF
 
         return _hatId & operAND;
-
-        // if (_level == 1) return _hatId - uint256(uint216(_hatId));
-        // // admin = _hatId - uint256(_hatId - 2**(8 * (28 - _level)));
-
-        // uint256 a = (_hatId >> (8 * _level));
-
-        // admin = a << (8 * _level);
     }
 
     /// @notice Checks the active status of a hat
@@ -715,11 +705,7 @@ contract Hats is ERC1155 {
         view
         returns (bool active)
     {
-        // try CONDITIONS was returning () and not reverting, this is the workaround
-
-        // IHatsConditions CONDITIONS = IHatsConditions(_hat.conditions);
-
-        console2.log("_isActive: function start", _hat.active);
+        // console2.log("_isActive: function start", _hat.active);
 
         bytes memory data = abi.encodeWithSignature(
             "getHatStatus(uint256)",
@@ -730,27 +716,13 @@ contract Hats is ERC1155 {
             data
         );
 
-        // if (!success) {
-        //     active = _hat.active;
-        // }
-        // if (success && returndata.length == 0) {
-        //     active = _hat.active;
-        // }
         if (success && returndata.length > 0) {
             active = abi.decode(returndata, (bool));
-            console2.log("_isActive: success && returndata > 0", active);
+            // console2.log("_isActive: success && returndata > 0", active);
         } else {
             active = _hat.active;
-            console2.log("_isActive: other returndata", active);
+            // console2.log("_isActive: other returndata", active);
         }
-
-        // try CONDITIONS.getHatStatus(_hatId) returns (bool status_) {
-        //     console.log(status_);
-        //     active = status_;
-        // } catch {
-        //     // if the external call reverts, default to the existing state
-        //     active = _hat.active;
-        // }
     }
 
     /// @notice Checks the active status of a hat
@@ -772,42 +744,23 @@ contract Hats is ERC1155 {
         Hat memory _hat,
         uint256 _hatId
     ) public view returns (bool standing) {
-        // TODO: implement workaround from _isActive here too
-        // standing = true will break other code
-        if (isTopHat(_hatId)) {
-            standing = true;
+        bytes memory data = abi.encodeWithSignature(
+            "getWearerStatus(address,uint256)",
+            _wearer,
+            _hatId
+        );
+
+        (bool success, bytes memory returndata) = _hat.oracle.staticcall(data);
+
+        if (success && returndata.length > 0) {
+            (, standing) = abi.decode(returndata, (bool, bool));
+            // console2.log(
+            //     "_isInGoodStanding: success && returndata > 0",
+            //     standing
+            // );
         } else {
-            bytes memory data = abi.encodeWithSignature(
-                "getWearerStatus(address,uint256)",
-                _wearer,
-                _hatId
-            );
-
-            (bool success, bytes memory returndata) = _hat.oracle.staticcall(
-                data
-            );
-
-            if (success && returndata.length > 0) {
-                (, standing) = abi.decode(returndata, (bool, bool));
-                console2.log(
-                    "_isInGoodStanding: success && returndata > 0",
-                    standing
-                );
-            } else {
-                standing = !badStandings[_hatId][_wearer];
-                console2.log("_isInGoodStanding: other returndata", standing);
-            }
-            // IHatsOracle ORACLE = IHatsOracle(_hat.oracle);
-
-            // try ORACLE.getWearerStatus(_wearer, _hatId) returns (
-            //     bool revoke_,
-            //     bool standing_
-            // ) {
-            //     standing = standing_;
-            // } catch {
-            //     // if the external call reverts, default to the existing state
-            //     standing = badStandings[_hatId][_wearer];
-            // }
+            standing = !badStandings[_hatId][_wearer];
+            // console2.log("_isInGoodStanding: other returndata", standing);
         }
     }
 
