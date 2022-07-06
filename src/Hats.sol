@@ -124,7 +124,7 @@ contract Hats is ERC1155 {
             address(0), // there is no oracle
             address(0) // it has no conditions
         );
-
+        // TODO might be an issue with this incrementation; log this to check
         ++lastTopHatId;
 
         _mint(_target, topHatId, 1, "");
@@ -315,7 +315,7 @@ contract Hats is ERC1155 {
     function mintHat(uint256 _hatId, address _wearer) public returns (bool) {
         Hat memory hat = hats[_hatId];
         // only the wearer of a hat's admin Hat can mint it
-        if (isAdminOfHat(msg.sender, _hatId)) {
+        if (!isAdminOfHat(msg.sender, _hatId)) {
             revert NotAdmin(msg.sender, _hatId);
         }
 
@@ -620,68 +620,90 @@ contract Hats is ERC1155 {
             return false;
         }
 
-        uint8 adminHatLevel = getHatLevel(_hatId);
+        uint8 adminHatLevel = getHatLevel(_hatId) - 1;
+        console2.log("adminHatLevel", adminHatLevel);
 
-        while (adminHatLevel >= 1) {
+        while (adminHatLevel >= 0) {
+            // console2.log(
+            //     "isWearerOfHat",
+            //     _user,
+            //     getAdminAtLevel(_hatId, adminHatLevel),
+            //     isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel))
+            // );
+
             if (isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel))) {
+                console2.log("isWearerOfHat in if-statement", true);
                 return true;
             }
             adminHatLevel--;
         }
-        return isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel));
+        // console2.log("tophat", getAdminAtLevel(_hatId, 0));
+        return false;
     }
 
     // visualizing what's happening (to remove):
     // (possible to display in hex instead of decimal for users?)
     // level 0 hat (ie tophat):
     // 0000 0001 00 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 = 269
-    // level 1 hat:
-    // 0000 0001 01 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 = 270
+    // level 1 hat (ie "second hat"):
+    // 0000 0001 01 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 = 270...216
     // level 1 hatId minus level 0 hatId
     // 0000 0000 00 FF FF FF . FF FF FF FF FF FF FF FF . FF FF FF FF FF FF FF FF . FF FF FF FF FF FF FF FF = 105
 
-    function getHatLevel(uint256 _hatId) public pure returns (uint8 level) {
-        // trim topHat decimal places first
-        uint224 hatId = uint224(_hatId);
+    // level 2 hat (ie "third hat"):
+    // 0000 0001 01 01 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 = 270...008
 
+    function getHatLevel(uint256 _hatId) public pure returns (uint8 level) {
         // TODO: invert the order for optimization
-        if (hatId < 2**8) return 28;
-        if (hatId < 2**16) return 27;
-        if (hatId < 2**24) return 26;
-        if (hatId < 2**32) return 25;
-        if (hatId < 2**40) return 24;
-        if (hatId < 2**48) return 23;
-        if (hatId < 2**56) return 22;
-        if (hatId < 2**64) return 21;
-        if (hatId < 2**72) return 20;
-        if (hatId < 2**80) return 19;
-        if (hatId < 2**88) return 18;
-        if (hatId < 2**96) return 17;
-        if (hatId < 2**104) return 16;
-        if (hatId < 2**112) return 15;
-        if (hatId < 2**120) return 14;
-        if (hatId < 2**128) return 13;
-        if (hatId < 2**136) return 12;
-        if (hatId < 2**144) return 11;
-        if (hatId < 2**152) return 10;
-        if (hatId < 2**160) return 9;
-        if (hatId < 2**168) return 8;
-        if (hatId < 2**176) return 7;
-        if (hatId < 2**184) return 6;
-        if (hatId < 2**192) return 5;
-        if (hatId < 2**200) return 4;
-        if (hatId < 2**208) return 3;
-        if (hatId < 2**216) return 2;
-        if (hatId < 2**224) return 1;
+        if (uint8(_hatId) > 0) return 28;
+        if (uint16(_hatId) > 0) return 27;
+        if (uint24(_hatId) > 0) return 26;
+        if (uint32(_hatId) > 0) return 25;
+        if (uint40(_hatId) > 0) return 24;
+        if (uint48(_hatId) > 0) return 23;
+        if (uint56(_hatId) > 0) return 22;
+        if (uint64(_hatId) > 0) return 21;
+        if (uint72(_hatId) > 0) return 20;
+        if (uint80(_hatId) > 0) return 19;
+        if (uint88(_hatId) > 0) return 18;
+        if (uint96(_hatId) > 0) return 17;
+        if (uint104(_hatId) > 0) return 16;
+        if (uint112(_hatId) > 0) return 15;
+        if (uint120(_hatId) > 0) return 14;
+        if (uint128(_hatId) > 0) return 13;
+        if (uint136(_hatId) > 0) return 12;
+        if (uint144(_hatId) > 0) return 11;
+        if (uint152(_hatId) > 0) return 10;
+        if (uint160(_hatId) > 0) return 9;
+        if (uint168(_hatId) > 0) return 8;
+        if (uint176(_hatId) > 0) return 7;
+        if (uint184(_hatId) > 0) return 6;
+        if (uint192(_hatId) > 0) return 5;
+        if (uint200(_hatId) > 0) return 4;
+        if (uint208(_hatId) > 0) return 3;
+        if (uint216(_hatId) > 0) return 2;
+        if (uint224(_hatId) > 0) return 1;
         return 0;
     }
 
     function getAdminAtLevel(uint256 _hatId, uint8 _level)
         public
-        pure
+        view
         returns (uint256 admin)
     {
-        admin = uint256(_hatId - 2**(8 * (28 - _level)) - 1);
+        uint256 operAND = type(uint256).max << (8 * (28 - _level));
+        console2.log("operAND", operAND);
+
+        // FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF
+
+        return _hatId & operAND;
+
+        // if (_level == 1) return _hatId - uint256(uint216(_hatId));
+        // // admin = _hatId - uint256(_hatId - 2**(8 * (28 - _level)));
+
+        // uint256 a = (_hatId >> (8 * _level));
+
+        // admin = a << (8 * _level);
     }
 
     /// @notice Checks the active status of a hat

@@ -24,10 +24,10 @@ contract HatsTest is Test {
 
     function setUp() public {
         testNumber = 42;
-        topHatWearer = 0x1000000000000000000000000000000000000000;
-        secondWearer = 0x2000000000000000000000000000000000000000;
-        thirdWearer = 0x2000000000000000000000000000000000000000;
-        nonWearer = 0x9000000000000000000000000000000000000000;
+        topHatWearer = address(1);
+        secondWearer = address(2);
+        thirdWearer = address(3);
+        nonWearer = address(9);
 
         // instantiate Hats contract
         test = new Hats();
@@ -36,36 +36,36 @@ contract HatsTest is Test {
         //_admin = 1;
         _details = "test details";
         _maxSupply = 1;
-        _oracle = 0x0010000000000000000000000000000000000000;
-        _conditions = 0x0001000000000000000000000000000000000000;
+        _oracle = address(555);
+        _conditions = address(333);
     }
 
     function testExample() public {
         assertTrue(true);
     }
 
-    function testTopHatCreated() public {
-        topHatId = test.mintTopHat(topHatWearer);
-        console2.log(topHatId);
+    // function testTopHatCreated() public {
+    //     topHatId = test.mintTopHat(topHatWearer);
+    //     console2.log(topHatId);
 
-        bool topHatTest = test.isTopHat(topHatId);
-        console2.log(topHatTest);
+    //     bool topHatTest = test.isTopHat(topHatId);
+    //     console2.log(topHatTest);
 
-        bool wearerTest = test.isWearerOfHat(topHatWearer, topHatId);
-        console2.log(wearerTest);
+    //     bool wearerTest = test.isWearerOfHat(topHatWearer, topHatId);
+    //     console2.log(wearerTest);
 
-        bool notWearerTest = test.isWearerOfHat(nonWearer, topHatId);
-        console2.log(!notWearerTest);
+    //     bool notWearerTest = test.isWearerOfHat(nonWearer, topHatId);
+    //     console2.log(!notWearerTest);
 
-        bool activeTest = test.isActive(topHatId);
-        console2.log(activeTest);
-    }
+    //     bool activeTest = test.isActive(topHatId);
+    //     console2.log(activeTest);
+    // }
 
-    function testHatCreated() public {
-        topHatId = test.mintTopHat(topHatWearer);
-        vm.prank(address(topHatWearer));
-        test.createHat(topHatId, _details, _maxSupply, _oracle, _conditions);
-    }
+    // function testHatCreated() public {
+    //     topHatId = test.mintTopHat(topHatWearer);
+    //     vm.prank(address(topHatWearer));
+    //     test.createHat(topHatId, _details, _maxSupply, _oracle, _conditions);
+    // }
 
     function testNotTopHatAdminCreated() public {
         // mint TopHat
@@ -99,9 +99,19 @@ contract HatsTest is Test {
         vm.prank(address(secondWearer));
         test.mintHat(thirdHatId, thirdWearer);
 
-        // // create a fourth Hat with secondHat as admin
-        // vm.prank(address(thirdWearer));
-        // test.createHat(thirdHatId, _details, _maxSupply, _oracle, _conditions);
+        // create a fourth Hat with secondHat as admin
+        vm.prank(address(secondWearer));
+        uint256 fourthHatId = test.createHat(
+            secondHatId,
+            "fourth hat",
+            _maxSupply,
+            _oracle,
+            _conditions
+        );
+
+        // mint fourth Hat to another wearer
+        // vm.prank(address(secondWearer));
+        // test.mintHat(fourthHatId, address(4));
     }
 
     /*
