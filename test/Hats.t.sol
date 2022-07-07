@@ -21,36 +21,7 @@ abstract contract TestVariables {
     uint256 internal topHatId;
     uint256 internal secondHatId;
     uint256 internal thirdHatId;
-}
 
-contract HatsRevokeTests is Test, TestVariables {
-    function setUp() public {
-        testNumber = 42;
-        topHatWearer = address(1);
-        secondWearer = address(2);
-        thirdWearer = address(3);
-        nonWearer = address(9);
-
-        // instantiate Hats contract
-        test = new Hats();
-
-        // set variables
-        //_admin = 1;
-        _details = "test details";
-        _maxSupply = 1;
-        _oracle = address(555);
-        _conditions = address(333);
-    }
-
-    function testTopHatCreated1() public {
-        topHatId = test.mintTopHat(topHatWearer);
-
-        assertTrue(test.isTopHat(topHatId));
-        assertEq(2**224, topHatId);
-    }
-}
-
-contract HatsTest is Test, TestVariables {
     event HatCreated(
         uint256 id,
         string details,
@@ -65,7 +36,36 @@ contract HatsTest is Test, TestVariables {
         uint256 id,
         uint256 amount
     );
+}
 
+// contract HatsRevokeTests is Test, TestVariables {
+//     function setUp() public {
+//         testNumber = 42;
+//         topHatWearer = address(1);
+//         secondWearer = address(2);
+//         thirdWearer = address(3);
+//         nonWearer = address(9);
+
+//         // instantiate Hats contract
+//         test = new Hats();
+
+//         // set variables
+//         //_admin = 1;
+//         _details = "test details";
+//         _maxSupply = 1;
+//         _oracle = address(555);
+//         _conditions = address(333);
+//     }
+
+//     function testTopHatCreated1() public {
+//         topHatId = test.mintTopHat(topHatWearer);
+
+//         assertTrue(test.isTopHat(topHatId));
+//         assertEq(2**224, topHatId);
+//     }
+// }
+
+contract CreateHatsTest is Test, TestVariables {
     function setUp() public {
         testNumber = 42;
         topHatWearer = address(1);
@@ -106,9 +106,16 @@ contract HatsTest is Test, TestVariables {
     }
 
     function testHatCreated() public {
+        // get prelim values
+        (, , , , , uint8 lastHatId, ) = test.viewHat(topHatId);
+
         topHatId = test.mintTopHat(topHatWearer);
         vm.prank(address(topHatWearer));
         test.createHat(topHatId, _details, _maxSupply, _oracle, _conditions);
+
+        // assert admin's lastHatId is incremented
+        (, , , , , uint8 lastHatIdPost, ) = test.viewHat(topHatId);
+        assertEq(++lastHatId, lastHatIdPost);
     }
 
     function testNotTopHatAdminCreated() public {
@@ -157,4 +164,102 @@ contract HatsTest is Test, TestVariables {
         vm.prank(address(secondWearer));
         test.mintHat(fourthHatId, address(4));
     }
+}
+
+contract MintHatsTest is Test, TestVariables {
+    function setUp() public {
+        topHatWearer = address(1);
+        secondWearer = address(2);
+        thirdWearer = address(3);
+        nonWearer = address(9);
+
+        // instantiate Hats contract
+        test = new Hats();
+
+        // create new Hat
+        topHatId = test.mintTopHat(topHatWearer);
+
+        vm.prank(topHatWearer);
+        secondHatId = test.createHat(
+            topHatId,
+            "second hat",
+            2, // maxSupply
+            _oracle,
+            _conditions
+        );
+
+        // set variables
+        _maxSupply = 1;
+        _oracle = address(555);
+        _conditions = address(333);
+    }
+
+    function testMintHat() public {
+        // get initial values
+        uint256 secondWearerBalance = test.balanceOf(secondWearer, secondHatId);
+        uint32 hatSupply = test.hatSupply(secondHatId);
+
+        // check transfer event will be emitted
+        vm.expectEmit(true, true, true, true);
+
+        emit TransferSingle(
+            topHatWearer,
+            address(0),
+            secondWearer,
+            secondHatId,
+            1
+        );
+
+        // mint hat
+        vm.prank(address(topHatWearer));
+        test.mintHat(secondHatId, secondWearer);
+
+        // assert balance = 1
+        assertEq(
+            test.balanceOf(secondWearer, secondHatId),
+            ++secondWearerBalance
+        );
+
+        // assert iswearer
+        assertTrue(test.isWearerOfHat(secondWearer, secondHatId));
+
+        // assert hatSupply is incremented
+        assertEq(test.hatSupply(secondHatId), ++hatSupply);
+    }
+
+    function testMintAnotherHat() public {
+        // mint hat
+        // mint another of same id to a new wearer
+        // assert balance is incremented by 1
+        // assert isWearer is true
+        // assert hatSupply is incremented
+        // assert admin's lastHatId is properly incremented
+    }
+
+    function testMint2HatsToSameWearer() public {
+        // mint hat
+        // mint another hat of same id to same wearer
+        // assert wearer balance is only incremented by 1
+        // assert isWearer is true
+        // what happens to the hatSupply?
+    }
+
+    function testMintHatErrorNotAdmin() public {
+        // try to mint hat from a non-wearer
+        // assert NotAdmin error thrown
+        // assert hatSupply is not incremented
+        // assert wearer balance is unchanged
+    }
+
+    function testMintHatErrorAllHatsWorn() public {
+        // mint hat
+        // mint another
+        // try to mint another of same id
+        // assert AllHatsWorn error thrown
+        // assert wearer balance is unchanged
+    }
+
+    function testBatchMintHats() public {}
+
+    function testBatchMintHatsErrorArrayLength() public {}
 }
