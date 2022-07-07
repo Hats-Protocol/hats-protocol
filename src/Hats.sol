@@ -562,6 +562,7 @@ contract Hats is ERC1155 {
     /// @return supply The number of current wearers of this Hat
     /// @return oracle The Oracle address for this Hat
     /// @return conditions The Conditions address for this Hat
+    /// @return lastHatId The most recently created Hat with this Hat as admin; also the count of Hats with this Hat as admin
     /// @return active Whether the Hat is current active, as read from `_isActive`
     function viewHat(uint256 _hatId)
         public
@@ -572,6 +573,7 @@ contract Hats is ERC1155 {
             uint32 supply,
             address oracle,
             address conditions,
+            uint8 lastHatId,
             bool active
         )
     {
@@ -581,6 +583,7 @@ contract Hats is ERC1155 {
         supply = hatSupply[_hatId];
         oracle = hat.oracle;
         conditions = hat.conditions;
+        lastHatId = hat.lastHatId;
         active = _isActive(hat, _hatId);
     }
 
