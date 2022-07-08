@@ -502,7 +502,7 @@ contract Hats is ERC1155 {
         // revoke the Hat by burning it
         _burn(_wearer, _hatId, 1);
 
-        if (_wearerStanding) {
+        if (!_wearerStanding) {
             // record revocation for use by other contracts
             badStandings[_hatId][_wearer] = true;
         }

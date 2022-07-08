@@ -30,6 +30,14 @@ abstract contract TestVariables {
         address oracle,
         address conditions
     );
+    event HatRenounced(uint256 hatId, address wearer);
+    event WearerStatus(
+        uint256 hatId,
+        address wearer,
+        bool revoke,
+        bool wearerStanding
+    );
+    event HatStatusChanged(uint256 hatId, bool newStatus);
     event TransferSingle(
         address indexed operator,
         address indexed from,
@@ -37,8 +45,6 @@ abstract contract TestVariables {
         uint256 id,
         uint256 amount
     );
-    event HatRenounced(uint256 hatId, address wearer);
-    event HatStatusChanged(uint256 hatId, bool newStatus);
 }
 
 abstract contract TestVariablesAndSetup is Test, TestVariables {
@@ -301,6 +307,35 @@ contract MintHatsTest is Test, TestVariables {
     function testBatchMintHatsErrorArrayLength() public {}
 }
 
+contract OracleHatsTests is Test, TestVariablesAndSetup {
+    function testRevokeHatFromWearerInGoodStanding() public {
+        // confirm second hat is worn by second Wearer
+        assertTrue(test.isWearerOfHat(secondWearer, secondHatId));
+
+        // expectEmit WearerStatus false
+        vm.expectEmit(false, false, false, true);
+        emit WearerStatus(secondHatId, secondWearer, true, true);
+
+        // revoke hat
+        vm.prank(address(_oracle));
+        test.setHatWearerStatus(secondHatId, secondWearer, true, true);
+        assertFalse(test.isWearerOfHat(secondWearer, secondHatId));
+        assertTrue(test.isInGoodStanding(secondWearer, secondHatId));
+    }
+
+    function testRevokeHatFromWearerInBadStanding() public {
+        // expectEmit WearerStatus false
+        vm.expectEmit(false, false, false, true);
+        emit WearerStatus(secondHatId, secondWearer, true, false);
+
+        // revoke hat with bad standing
+        vm.prank(address(_oracle));
+        test.setHatWearerStatus(secondHatId, secondWearer, true, false);
+        assertFalse(test.isWearerOfHat(secondWearer, secondHatId));
+        assertFalse(test.isInGoodStanding(secondWearer, secondHatId));
+    }
+}
+
 contract RenounceHatsTest is Test, TestVariablesAndSetup {
     function testRenounceHat() public {
         // expectEmit HatRenounced
@@ -333,7 +368,7 @@ contract ConditionsHatsTest is Test, TestVariablesAndSetup {
         vm.expectEmit(false, false, false, true);
         emit HatStatusChanged(secondHatId, false);
         
-        // 7-2. changeHatStatus true->false via setHatStatus
+        // 7-2. change Hat Status true->false via setHatStatus
         vm.prank(address(_conditions));
         test.setHatStatus(secondHatId, false);
         assertFalse(test.isActive(secondHatId));
@@ -344,13 +379,13 @@ contract ConditionsHatsTest is Test, TestVariablesAndSetup {
     // vm.expectRevert(test.NotHatConditions.selector);
     // rename function to testCannotCallFunctionsOnDeactivatedHat()
     function testFailToDeactivateHatByNonWearer() public {
-        // 7-1. attempt to changeHatStatus hat from wearer / other wallet / admin, should revert
+        // 7-1. attempt to change Hat Status hat from wearer / other wallet / admin, should revert
         vm.prank(address(nonWearer));
         test.setHatStatus(secondHatId, false);
     }
 
     // function testFailFunctionCallsOnDeactivatedHat() public {
-    //     // changeHatStatus true->false via setHatStatus
+    //     // change Hat Status true->false via setHatStatus
     //     vm.prank(address(_conditions));
     //     test.setHatStatus(secondHatId, false);
     //     assertFalse(test.isActive(secondHatId));
@@ -362,7 +397,7 @@ contract ConditionsHatsTest is Test, TestVariablesAndSetup {
     // }
 
     function testActivateDeactivatedHat() public {
-        // changeHatStatus true->false via setHatStatus
+        // change Hat Status true->false via setHatStatus
         vm.prank(address(_conditions));
         test.setHatStatus(secondHatId, false);
 
@@ -381,7 +416,7 @@ contract ConditionsHatsTest is Test, TestVariablesAndSetup {
     // vm.expectRevert(test.NotHatConditions.selector);
     // rename function to testCannotActivateDeactivatedHat()
     function testFailToActivateDeactivatedHatByNonWearer() public {
-        // changeHatStatus true->false via setHatStatus
+        // change Hat Status true->false via setHatStatus
         vm.prank(address(_conditions));
         test.setHatStatus(secondHatId, false);
 
