@@ -886,7 +886,7 @@ contract Hats is ERC1155 {
         uint256 id,
         uint256 amount
     ) internal override {
-        //_balanceOf[from][id] -= amount;
+        _balanceOf[from][id] -= amount;
 
         // decrement Hat supply counter
         --hatSupply[uint256(id)];

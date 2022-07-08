@@ -37,6 +37,7 @@ abstract contract TestVariables {
         uint256 id,
         uint256 amount
     );
+    event HatRenounced(uint256 hatId, address wearer);
     event HatStatusChanged(uint256 hatId, bool newStatus);
 }
 
@@ -266,6 +267,61 @@ contract MintHatsTest is Test, TestVariables {
     function testBatchMintHatsErrorArrayLength() public {}
 }
 
+contract RenounceHatsTest is Test, TestVariables {
+    function setUp() public {
+        // set variables: addresses
+        topHatWearer = address(1);
+        secondWearer = address(2);
+        thirdWearer = address(3);
+        nonWearer = address(9);
+
+        // set variables: Hat parameters
+        _maxSupply = 1;
+        _oracle = address(555);
+        _conditions = address(333);
+
+        // instantiate Hats contract
+        test = new Hats();
+
+        // create TopHat
+        topHatId = test.mintTopHat(topHatWearer);
+
+        // create second Hat
+        vm.prank(topHatWearer);
+        secondHatId = test.createHat(
+            topHatId,
+            "second hat",
+            2, // maxSupply
+            _oracle,
+            _conditions
+        );
+       
+        // mint second hat
+        vm.prank(address(topHatWearer));
+        test.mintHat(secondHatId, secondWearer);
+    }
+
+    function testRenounceHat() public {
+        // expectEmit HatRenounced
+        vm.expectEmit(false, false, false, true);
+        emit HatRenounced(secondHatId, secondWearer);
+
+        //  6-2. renounce hat from wearer2
+        vm.prank(address(secondWearer));
+        test.renounceHat(secondHatId);
+        assertFalse(test.isWearerOfHat(secondWearer, secondHatId));
+    }
+
+    // TODO: update to best practice: 
+    // vm.expectRevert(test.NotHatWearer.selector);
+    // rename function to testCannotRenounceHatAsNonWearer()
+    function testFailToRenounceHatByNonWearer() public {
+        //  6-1. attempt to renounce from admin / other wallet
+        vm.prank(address(nonWearer));
+        test.renounceHat(secondHatId);
+    }
+}
+
 contract DeactivateHatsTest is Test, TestVariables {
     function setUp() public {
         // set variables: addresses
@@ -319,7 +375,7 @@ contract DeactivateHatsTest is Test, TestVariables {
     // TODO: update to best practice: 
     // vm.expectRevert(test.NotHatConditions.selector);
     // rename function to testCannotCallFunctionsOnDeactivatedHat()
-    function testFailDeactivateHat() public {
+    function testFailToDeactivateHatByNonWearer() public {
         // 7-1. attempt to changeHatStatus hat from wearer / other wallet / admin, should revert
         vm.prank(address(nonWearer));
         test.setHatStatus(secondHatId, false);
@@ -356,7 +412,7 @@ contract DeactivateHatsTest is Test, TestVariables {
     // TODO: update to best practice: 
     // vm.expectRevert(test.NotHatConditions.selector);
     // rename function to testCannotActivateDeactivatedHat()
-    function testFailToActivateDeactivatedHat() public {
+    function testFailToActivateDeactivatedHatByNonWearer() public {
         // changeHatStatus true->false via setHatStatus
         vm.prank(address(_conditions));
         test.setHatStatus(secondHatId, false);
