@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../src/Hats.sol";
+// import "../src/HatsConditions/SampleHatsConditions.sol";
 
 abstract contract TestVariables {
     Hats test;
@@ -36,6 +37,7 @@ abstract contract TestVariables {
         uint256 id,
         uint256 amount
     );
+    event HatStatusChanged(uint256 hatId, bool newStatus);
 }
 
 // contract HatsRevokeTests is Test, TestVariables {
@@ -262,4 +264,105 @@ contract MintHatsTest is Test, TestVariables {
     function testBatchMintHats() public {}
 
     function testBatchMintHatsErrorArrayLength() public {}
+}
+
+contract DeactivateHatsTest is Test, TestVariables {
+    function setUp() public {
+        // set variables: addresses
+        topHatWearer = address(1);
+        secondWearer = address(2);
+        thirdWearer = address(3);
+        nonWearer = address(9);
+
+        // set variables: Hat parameters
+        _maxSupply = 1;
+        _oracle = address(555);
+        _conditions = address(333);
+
+        // instantiate Hats contract
+        test = new Hats();
+
+        // create TopHat
+        topHatId = test.mintTopHat(topHatWearer);
+
+        // create second Hat
+        vm.prank(topHatWearer);
+        secondHatId = test.createHat(
+            topHatId,
+            "second hat",
+            2, // maxSupply
+            _oracle,
+            _conditions
+        );
+       
+        // mint second hat
+        vm.prank(address(topHatWearer));
+        test.mintHat(secondHatId, secondWearer);
+    }
+
+    function testDeactivateHat() public {
+        // confirm second hat is active
+        assertTrue(test.isActive(secondHatId));
+        assertTrue(test.isWearerOfHat(secondWearer, secondHatId));
+        
+        // expectEmit HatStatusChanged to false
+        vm.expectEmit(false, false, false, true);
+        emit HatStatusChanged(secondHatId, false);
+        
+        // 7-2. changeHatStatus true->false via setHatStatus
+        vm.prank(address(_conditions));
+        test.setHatStatus(secondHatId, false);
+        assertFalse(test.isActive(secondHatId));
+        assertFalse(test.isWearerOfHat(secondWearer, secondHatId));
+    }
+
+    // TODO: update to best practice: 
+    // vm.expectRevert(test.NotHatConditions.selector);
+    // rename function to testCannotCallFunctionsOnDeactivatedHat()
+    function testFailDeactivateHat() public {
+        // 7-1. attempt to changeHatStatus hat from wearer / other wallet / admin, should revert
+        vm.prank(address(nonWearer));
+        test.setHatStatus(secondHatId, false);
+    }
+
+    // function testFailFunctionCallsOnDeactivatedHat() public {
+    //     // changeHatStatus true->false via setHatStatus
+    //     vm.prank(address(_conditions));
+    //     test.setHatStatus(secondHatId, false);
+    //     assertFalse(test.isActive(secondHatId));
+
+    //     // TODO: are there any functions in Hats.sol where we need to check if the hat is active 
+    //     // before allowing the function to be called?
+    //     // 7-3. call various functions in deactivated state again as wearer / other wallet / admin, should revert
+    //     // ...
+    // }
+
+    function testActivateDeactivatedHat() public {
+        // changeHatStatus true->false via setHatStatus
+        vm.prank(address(_conditions));
+        test.setHatStatus(secondHatId, false);
+
+        // expectEmit HatStatusChanged to true
+        vm.expectEmit(false, false, false, true);
+        emit HatStatusChanged(secondHatId, true);
+
+        // changeHatStatus false->true via setHatStatus
+        vm.prank(address(_conditions));
+        test.setHatStatus(secondHatId, true);
+        assertTrue(test.isActive(secondHatId));
+        assertTrue(test.isWearerOfHat(secondWearer, secondHatId));
+    }
+
+    // TODO: update to best practice: 
+    // vm.expectRevert(test.NotHatConditions.selector);
+    // rename function to testCannotActivateDeactivatedHat()
+    function testFailToActivateDeactivatedHat() public {
+        // changeHatStatus true->false via setHatStatus
+        vm.prank(address(_conditions));
+        test.setHatStatus(secondHatId, false);
+
+        // 8-1. attempt to changeHatStatus hat from wearer / other wallet / admin
+        vm.prank(address(nonWearer));
+        test.setHatStatus(secondHatId, true);
+    }
 }
