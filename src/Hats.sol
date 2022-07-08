@@ -94,7 +94,7 @@ contract Hats is ERC1155 {
         bool wearerStanding
     );
 
-    event HatRevoked(uint256 hatId, address wearer);
+    // event HatRevoked(uint256 hatId, address wearer);
 
     event HatStatusChanged(uint256 hatId, bool newStatus);
 

@@ -308,31 +308,90 @@ contract MintHatsTest is Test, TestVariables {
 }
 
 contract OracleHatsTests is Test, TestVariablesAndSetup {
-    function testRevokeHatFromWearerInGoodStanding() public {
+    // setHatWearerStatus tests
+    function testDoNotRevokeHatFromWearerInGoodStanding() public {
         // confirm second hat is worn by second Wearer
         assertTrue(test.isWearerOfHat(secondWearer, secondHatId));
 
-        // expectEmit WearerStatus false
+        // expectEmit WearerStatus - wearing, in good standing
+        vm.expectEmit(false, false, false, true);
+        emit WearerStatus(secondHatId, secondWearer, false, true);
+
+        // 5-6. do not revoke hat
+        vm.prank(address(_oracle));
+        test.setHatWearerStatus(secondHatId, secondWearer, false, true);
+        assertTrue(test.isWearerOfHat(secondWearer, secondHatId));
+        assertTrue(test.isInGoodStanding(secondWearer, secondHatId));
+    }
+    
+    function testRevokeHatFromWearerInGoodStanding() public {
+        uint32 hatSupply = test.hatSupply(secondHatId);
+
+        // expectEmit WearerStatus - not wearing, in good standing
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, true, true);
 
-        // revoke hat
+        // 5-8a. revoke hat
         vm.prank(address(_oracle));
         test.setHatWearerStatus(secondHatId, secondWearer, true, true);
         assertFalse(test.isWearerOfHat(secondWearer, secondHatId));
         assertTrue(test.isInGoodStanding(secondWearer, secondHatId));
+
+        // assert hatSupply is decremented
+        assertEq(test.hatSupply(secondHatId), --hatSupply);
     }
 
     function testRevokeHatFromWearerInBadStanding() public {
-        // expectEmit WearerStatus false
+        // expectEmit WearerStatus - not wearing, in bad standing
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, true, false);
 
-        // revoke hat with bad standing
+        // 5-8b. revoke hat with bad standing
         vm.prank(address(_oracle));
         test.setHatWearerStatus(secondHatId, secondWearer, true, false);
         assertFalse(test.isWearerOfHat(secondWearer, secondHatId));
         assertFalse(test.isInGoodStanding(secondWearer, secondHatId));
+    }
+
+    // the following call should never happen:
+    // setHatWearerStatus(secondHatId, secondWearer, false, false);
+    // i.e. WearerStatus - wearing, in bad standing
+    // TODO: do we need to test this functionality?
+
+    function testRemintAfterRevokeHatFromWearerInGoodStanding() public {
+        uint32 hatSupply = test.hatSupply(secondHatId);
+
+        // revoke hat
+        vm.prank(address(_oracle));
+        test.setHatWearerStatus(secondHatId, secondWearer, true, true);
+
+        // 5-4. remint hat
+        vm.prank(address(topHatWearer));
+        test.mintHat(secondHatId, secondWearer);
+
+        // assert balance = 1
+        assertEq(test.balanceOf(secondWearer, secondHatId), 1);
+
+        // assert iswearer
+        assertTrue(test.isWearerOfHat(secondWearer, secondHatId));
+
+        // assert hatSupply is not incremented
+        assertEq(test.hatSupply(secondHatId), hatSupply);
+    }
+
+    // getHatWearerStatus tests
+   
+    // TODO: 5-1. test that does not revoke Hat using getHatWearerStanding
+
+    // TODO: 5-3a. test that revokes Hat using getHatWearerStanding
+
+    // TODO: 5-3b. test that revokes Hat with Wearer Bad Standing using getHatWearerStanding 
+
+    // TODO: should getHatWearerStanding fail in a different way when the Oracle contract doesn't have the function?
+    // TODO: update to best practice with specific expectRevert
+    function testFailGetHatWearerStandingNoFunctionInOracleContract() public {
+        bool standing;
+        (,standing) = test.getHatWearerStatus(secondHatId, secondWearer);
     }
 }
 
@@ -359,6 +418,7 @@ contract RenounceHatsTest is Test, TestVariablesAndSetup {
 }
 
 contract ConditionsHatsTest is Test, TestVariablesAndSetup {
+    // setHatStatus tests
     function testDeactivateHat() public {
         // confirm second hat is active
         assertTrue(test.isActive(secondHatId));
@@ -424,4 +484,18 @@ contract ConditionsHatsTest is Test, TestVariablesAndSetup {
         vm.prank(address(nonWearer));
         test.setHatStatus(secondHatId, true);
     }
+
+    // getHatStatus tests
+
+    // TODO: test that deactivates Hat using getHatStatus
+
+    // TODO: test that activates Hat using getHatStatus
+
+    // TODO: should getHatStatus fail in a different way when the Conditions contract doesn't have the function?
+    // TODO: update to best practice with specific expectRevert
+    function testFailGetHatStatusNoFunctionInConditionsContract() public {
+        test.getHatStatus(secondHatId);
+    }
+
+
 }
