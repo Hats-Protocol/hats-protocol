@@ -7,7 +7,7 @@ import "../src/Hats.sol";
 
 abstract contract TestVariables {
     Hats test;
-    uint256 testNumber;
+
     address internal topHatWearer;
     address internal secondWearer;
     address internal thirdWearer;
@@ -41,6 +41,41 @@ abstract contract TestVariables {
     event HatStatusChanged(uint256 hatId, bool newStatus);
 }
 
+abstract contract TestVariablesAndSetup is Test, TestVariables {
+    function setUp() public {
+        // set variables: addresses
+        topHatWearer = address(1);
+        secondWearer = address(2);
+        thirdWearer = address(3);
+        nonWearer = address(9);
+
+        // set variables: Hat parameters
+        _maxSupply = 1;
+        _oracle = address(555);
+        _conditions = address(333);
+
+        // instantiate Hats contract
+        test = new Hats();
+
+        // create TopHat
+        topHatId = test.mintTopHat(topHatWearer);
+
+        // create second Hat
+        vm.prank(topHatWearer);
+        secondHatId = test.createHat(
+            topHatId,
+            "second hat",
+            2, // maxSupply
+            _oracle,
+            _conditions
+        );
+       
+        // mint second hat
+        vm.prank(address(topHatWearer));
+        test.mintHat(secondHatId, secondWearer);
+    }
+}
+
 // contract HatsRevokeTests is Test, TestVariables {
 //     function setUp() public {
 //         testNumber = 42;
@@ -70,7 +105,6 @@ abstract contract TestVariables {
 
 contract CreateHatsTest is Test, TestVariables {
     function setUp() public {
-        testNumber = 42;
         topHatWearer = address(1);
         secondWearer = address(2);
         thirdWearer = address(3);
@@ -267,40 +301,7 @@ contract MintHatsTest is Test, TestVariables {
     function testBatchMintHatsErrorArrayLength() public {}
 }
 
-contract RenounceHatsTest is Test, TestVariables {
-    function setUp() public {
-        // set variables: addresses
-        topHatWearer = address(1);
-        secondWearer = address(2);
-        thirdWearer = address(3);
-        nonWearer = address(9);
-
-        // set variables: Hat parameters
-        _maxSupply = 1;
-        _oracle = address(555);
-        _conditions = address(333);
-
-        // instantiate Hats contract
-        test = new Hats();
-
-        // create TopHat
-        topHatId = test.mintTopHat(topHatWearer);
-
-        // create second Hat
-        vm.prank(topHatWearer);
-        secondHatId = test.createHat(
-            topHatId,
-            "second hat",
-            2, // maxSupply
-            _oracle,
-            _conditions
-        );
-       
-        // mint second hat
-        vm.prank(address(topHatWearer));
-        test.mintHat(secondHatId, secondWearer);
-    }
-
+contract RenounceHatsTest is Test, TestVariablesAndSetup {
     function testRenounceHat() public {
         // expectEmit HatRenounced
         vm.expectEmit(false, false, false, true);
@@ -322,40 +323,7 @@ contract RenounceHatsTest is Test, TestVariables {
     }
 }
 
-contract DeactivateHatsTest is Test, TestVariables {
-    function setUp() public {
-        // set variables: addresses
-        topHatWearer = address(1);
-        secondWearer = address(2);
-        thirdWearer = address(3);
-        nonWearer = address(9);
-
-        // set variables: Hat parameters
-        _maxSupply = 1;
-        _oracle = address(555);
-        _conditions = address(333);
-
-        // instantiate Hats contract
-        test = new Hats();
-
-        // create TopHat
-        topHatId = test.mintTopHat(topHatWearer);
-
-        // create second Hat
-        vm.prank(topHatWearer);
-        secondHatId = test.createHat(
-            topHatId,
-            "second hat",
-            2, // maxSupply
-            _oracle,
-            _conditions
-        );
-       
-        // mint second hat
-        vm.prank(address(topHatWearer));
-        test.mintHat(secondHatId, secondWearer);
-    }
-
+contract ConditionsHatsTest is Test, TestVariablesAndSetup {
     function testDeactivateHat() public {
         // confirm second hat is active
         assertTrue(test.isActive(secondHatId));
