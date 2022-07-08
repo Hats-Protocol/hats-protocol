@@ -358,6 +358,14 @@ contract OracleHatsTests is Test, TestVariablesAndSetup {
     // i.e. WearerStatus - wearing, in bad standing
     // TODO: do we need to test this functionality?
 
+    // TODO: update to best practice: 
+    // vm.expectRevert(test.NotHatOracle.selector);
+    // rename function to testCannotRevokeHatAsNonWearer()
+    function testFailToRevokeHatAsNonWearer() public {
+        vm.prank(address(nonWearer));
+        test.setHatWearerStatus(secondHatId, secondWearer, true, false);
+    }
+
     function testRemintAfterRevokeHatFromWearerInGoodStanding() public {
         uint32 hatSupply = test.hatSupply(secondHatId);
 
@@ -410,7 +418,7 @@ contract RenounceHatsTest is Test, TestVariablesAndSetup {
     // TODO: update to best practice: 
     // vm.expectRevert(test.NotHatWearer.selector);
     // rename function to testCannotRenounceHatAsNonWearer()
-    function testFailToRenounceHatByNonWearer() public {
+    function testFailToRenounceHatAsNonWearer() public {
         //  6-1. attempt to renounce from admin / other wallet
         vm.prank(address(nonWearer));
         test.renounceHat(secondHatId);
@@ -437,8 +445,8 @@ contract ConditionsHatsTest is Test, TestVariablesAndSetup {
 
     // TODO: update to best practice: 
     // vm.expectRevert(test.NotHatConditions.selector);
-    // rename function to testCannotCallFunctionsOnDeactivatedHat()
-    function testFailToDeactivateHatByNonWearer() public {
+    // rename function to testCannotDeactivateHatAsNonWearer()
+    function testFailToDeactivateHatAsNonWearer() public {
         // 7-1. attempt to change Hat Status hat from wearer / other wallet / admin, should revert
         vm.prank(address(nonWearer));
         test.setHatStatus(secondHatId, false);
@@ -474,8 +482,8 @@ contract ConditionsHatsTest is Test, TestVariablesAndSetup {
 
     // TODO: update to best practice: 
     // vm.expectRevert(test.NotHatConditions.selector);
-    // rename function to testCannotActivateDeactivatedHat()
-    function testFailToActivateDeactivatedHatByNonWearer() public {
+    // rename function to testCannotActivateDeactivatedHatAsNonWearer()
+    function testFailToActivateDeactivatedHatAsNonWearer() public {
         // change Hat Status true->false via setHatStatus
         vm.prank(address(_conditions));
         test.setHatStatus(secondHatId, false);
