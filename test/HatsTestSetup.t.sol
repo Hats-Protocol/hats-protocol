@@ -45,6 +45,19 @@ abstract contract TestVariables {
         uint256 id,
         uint256 amount
     );
+
+    error HatNotActive();
+    error NotAdmin(address _user, uint256 _hatId);
+    error AllHatsWorn();
+    error AlreadyWearingHat();
+    error NoApprovalsNeeded();
+    error OnlyAdminsCanTransfer();
+    error NotHatWearer();
+    error NotHatConditions();
+    error NotHatOracle();
+    error BatchArrayLengthMismatch();
+    error SafeTransfersNotNecessary();
+    error MaxTreeDepthReached();
 }
 
 abstract contract TestSetup is Test, TestVariables {
@@ -99,7 +112,7 @@ abstract contract TestSetup is Test, TestVariables {
 
             id = hats.createHat(
                 admin,
-                string.concat("hat ", vm.toString(i + 1)),
+                string.concat("hat ", vm.toString(i + 2)),
                 _maxSupply,
                 _oracle,
                 _conditions

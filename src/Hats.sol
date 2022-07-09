@@ -626,7 +626,7 @@ contract Hats is ERC1155 {
         uint8 adminHatLevel = getHatLevel(_hatId) - 1;
         // console2.log("adminHatLevel", adminHatLevel);
 
-        while (adminHatLevel >= 0) {
+        while (adminHatLevel >= 1) {
             // console2.log(
             //     "isWearerOfHat",
             //     _user,
@@ -641,7 +641,7 @@ contract Hats is ERC1155 {
             adminHatLevel--;
         }
         // console2.log("tophat", getAdminAtLevel(_hatId, 0));
-        return false;
+        return isWearerOfHat(_user, getAdminAtLevel(_hatId, 0));
     }
 
     // visualizing what's happening (to remove):
