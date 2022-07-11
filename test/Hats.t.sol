@@ -5,8 +5,6 @@ import "forge-std/Test.sol";
 import "../src/Hats.sol";
 import "./HatsTestSetup.t.sol";
 
-// import "../src/HatsConditions/SampleHatsConditions.sol";
-
 contract CreateTopHatTest is TestSetup {
     function setUp() public override {
         setUpVariables();
@@ -137,7 +135,8 @@ contract MintHatsTest is TestSetup {
         assertEq(lastHatId_post, lastHatId_pre);
     }
 
-    function testMint2HatsToSameWearer() public {
+    // TODO: update to best practice with specific expectRevert
+    function testFailMint2HatsToSameWearer() public {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(thirdWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
@@ -438,13 +437,49 @@ contract ConditionsHatsTest is TestSetup {
 
     // getHatStatus tests
 
-    // TODO: test that deactivates Hat using getHatStatus
-
-    // TODO: test that activates Hat using getHatStatus
-
     // TODO: should getHatStatus fail in a different way when the Conditions contract doesn't have the function?
     // TODO: update to best practice with specific expectRevert
     function testFailGetHatStatusNoFunctionInConditionsContract() public {
         hats.getHatStatus(secondHatId);
+    }
+
+    function testCheckConditionsToDeactivateHat() public {
+        // expectEmit HatStatusChanged to false
+        vm.expectEmit(false, false, false, true);
+        emit HatStatusChanged(secondHatId, false);
+        
+        // mock all calls to Conditions contract to return false
+        vm.mockCall(
+            address(_conditions),
+            abi.encodeWithSelector(hats.getHatStatus.selector),
+            abi.encode(false)
+        );
+
+        // call getHatStatus and the subsequent conditions contract
+        hats.getHatStatus(secondHatId);
+        assertFalse(hats.isActive(secondHatId));
+        assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
+    }
+
+    function testCheckConditionsToActivateDeactivatedHat() public {
+        // change Hat Status true->false via setHatStatus
+        vm.prank(address(_conditions));
+        hats.setHatStatus(secondHatId, false);
+
+        // expectEmit HatStatusChanged to true
+        vm.expectEmit(false, false, false, true);
+        emit HatStatusChanged(secondHatId, true);
+        
+        // mock all calls to Conditions contract to return true
+        vm.mockCall(
+            address(_conditions),
+            abi.encodeWithSelector(hats.getHatStatus.selector),
+            abi.encode(true)
+        );
+
+        // call getHatStatus and the subsequent conditions contract
+        hats.getHatStatus(secondHatId);
+        assertTrue(hats.isActive(secondHatId));
+        assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 }
