@@ -324,6 +324,10 @@ contract Hats is ERC1155 {
             revert AllHatsWorn();
         }
 
+        if (isWearerOfHat(_wearer, _hatId)) {
+            revert AlreadyWearingHat();
+        }
+
         _mint(_wearer, uint256(_hatId), 1, "");
 
         return true;
