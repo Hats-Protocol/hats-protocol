@@ -217,11 +217,12 @@ contract OracleHatsTests is TestSetup {
     }
 
     // setHatWearerStatus tests
+
     function testDoNotRevokeHatFromWearerInGoodStanding() public {
         // confirm second hat is worn by second Wearer
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
 
-        // expectEmit WearerStatus - wearing, in good standing
+        // expectEmit WearerStatus - should be wearing, in good standing
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, false, true);
 
@@ -235,7 +236,7 @@ contract OracleHatsTests is TestSetup {
     function testRevokeHatFromWearerInGoodStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
-        // expectEmit WearerStatus - not wearing, in good standing
+        // expectEmit WearerStatus - should not be wearing, in good standing
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, true, true);
 
@@ -250,7 +251,7 @@ contract OracleHatsTests is TestSetup {
     }
 
     function testRevokeHatFromWearerInBadStanding() public {
-        // expectEmit WearerStatus - not wearing, in bad standing
+        // expectEmit WearerStatus - should not be wearing, in bad standing
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, true, false);
 
@@ -297,17 +298,86 @@ contract OracleHatsTests is TestSetup {
 
     // getHatWearerStatus tests
 
-    // TODO: 5-1. test that does not revoke Hat using getHatWearerStanding
-
-    // TODO: 5-3a. test that revokes Hat using getHatWearerStanding
-
-    // TODO: 5-3b. test that revokes Hat with Wearer Bad Standing using getHatWearerStanding
-
     // TODO: should getHatWearerStanding fail in a different way when the Oracle contract doesn't have the function?
     // TODO: update to best practice with specific expectRevert
     function testFailGetHatWearerStandingNoFunctionInOracleContract() public {
         bool standing;
         (, standing) = hats.getHatWearerStatus(secondHatId, secondWearer);
+    }
+
+    function testCheckOracleAndDoNotRevokeHatFromWearerInGoodStanding() public {
+        uint32 hatSupply = hats.hatSupply(secondHatId);
+        bytes4 select0r = 0xbd683872; // this works but I'm not sure why this is the selector...
+
+        // confirm second hat is worn by second Wearer
+        assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
+
+        // expectEmit WearerStatus - should not be wearing, in good standing
+        vm.expectEmit(false, false, false, true);
+        emit WearerStatus(secondHatId, secondWearer, false, true);
+
+        // mock calls to Oracle contract to return (false, true)
+        vm.mockCall(
+            address(_oracle),
+            abi.encodeWithSelector(select0r),
+            abi.encode(false, true)
+        );
+
+        // 5-1. call getHatStatus - no revocation
+        hats.getHatWearerStatus(secondHatId, secondWearer);
+        assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
+        assertTrue(hats.isInGoodStanding(secondWearer, secondHatId));
+
+        // assert hatSupply is not decremented
+        assertEq(hats.hatSupply(secondHatId), hatSupply);
+    }
+
+    function testCheckOracleToRevokeHatFromWearerInGoodStanding() public {
+        uint32 hatSupply = hats.hatSupply(secondHatId);
+        bytes4 select0r = 0xbd683872; // this works but I'm not sure why this is the selector...
+
+        // expectEmit WearerStatus - should not be wearing, in good standing
+        vm.expectEmit(false, false, false, true);
+        emit WearerStatus(secondHatId, secondWearer, true, true);
+
+        // mock calls to Oracle contract to return (true, true)
+        vm.mockCall(
+            address(_oracle),
+            abi.encodeWithSelector(select0r),
+            abi.encode(true, true)
+        );
+
+        // 5-3a. call getHatStatus to revoke
+        hats.getHatWearerStatus(secondHatId, secondWearer);
+        assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
+        assertTrue(hats.isInGoodStanding(secondWearer, secondHatId));
+
+        // assert hatSupply is decremented
+        assertEq(hats.hatSupply(secondHatId), --hatSupply);
+    }
+
+    function testCheckOracleToRevokeHatFromWearerInBadStanding() public {
+        uint32 hatSupply = hats.hatSupply(secondHatId);
+        bytes4 select0r = 0xbd683872; // this works but I'm not sure why this is the selector...
+
+        // expectEmit WearerStatus - should not be wearing, in bad standing
+        vm.expectEmit(false, false, false, true);
+        emit WearerStatus(secondHatId, secondWearer, true, false);
+
+        // mock calls to Oracle contract to return (true, false)
+        vm.mockCall(
+            address(_oracle),
+            abi.encodeWithSelector(select0r),
+            abi.encode(true, false)
+        );
+
+        // 5-3b. call getHatStatus to revoke
+        hats.getHatWearerStatus(secondHatId, secondWearer);
+        assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
+        assertFalse(hats.isInGoodStanding(secondWearer, secondHatId));
+
+        // assert hatSupply is decremented
+        assertEq(hats.hatSupply(secondHatId), --hatSupply);
     }
 }
 
@@ -369,6 +439,7 @@ contract ConditionsHatsTest is TestSetup {
     }
 
     // setHatStatus tests
+
     function testDeactivateHat() public {
         // confirm second hat is active
         assertTrue(hats.isActive(secondHatId));
@@ -448,14 +519,14 @@ contract ConditionsHatsTest is TestSetup {
         vm.expectEmit(false, false, false, true);
         emit HatStatusChanged(secondHatId, false);
         
-        // mock all calls to Conditions contract to return false
+        // mock getHatStatus calls to Conditions contract to return false
         vm.mockCall(
             address(_conditions),
             abi.encodeWithSelector(hats.getHatStatus.selector),
             abi.encode(false)
         );
 
-        // call getHatStatus and the subsequent conditions contract
+        // call getHatStatus to deactivate
         hats.getHatStatus(secondHatId);
         assertFalse(hats.isActive(secondHatId));
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
@@ -470,14 +541,14 @@ contract ConditionsHatsTest is TestSetup {
         vm.expectEmit(false, false, false, true);
         emit HatStatusChanged(secondHatId, true);
         
-        // mock all calls to Conditions contract to return true
+        // mock getHatStatus calls to Conditions contract to return true
         vm.mockCall(
             address(_conditions),
             abi.encodeWithSelector(hats.getHatStatus.selector),
             abi.encode(true)
         );
 
-        // call getHatStatus and the subsequent conditions contract
+        // call getHatStatus to activate
         hats.getHatStatus(secondHatId);
         assertTrue(hats.isActive(secondHatId));
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
