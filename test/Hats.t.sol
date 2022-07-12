@@ -596,3 +596,14 @@ contract ConditionsGetHatsTest is TestSetup2 {
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 }
+
+contract OverridesHatTests is TestSetup2 {
+    function testFailSetApprovalForAll() public {
+        hats.setApprovalForAll(topHatWearer, true);
+    }
+
+    function testFailSafeTransferFrom() public {
+        bytes memory b = bytes("");
+        hats.safeTransferFrom(secondWearer, thirdWearer, secondHatId, 1, b);
+    }
+}
