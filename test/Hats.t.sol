@@ -606,4 +606,16 @@ contract OverridesHatTests is TestSetup2 {
         bytes memory b = bytes("");
         hats.safeTransferFrom(secondWearer, thirdWearer, secondHatId, 1, b);
     }
+
+    // TODO: test for a specific URI output
+    function testCreateUri() public {
+        string memory jsonUri = hats.uri(secondHatId);
+        console2.log("encoded URI", jsonUri);
+    }
+
+    // TODO: test for a specific URI output
+    function testCreateUriForTopHat() public {
+        string memory jsonUri = hats.uri(topHatId);
+        console2.log("encoded URI", jsonUri);
+    }
 }

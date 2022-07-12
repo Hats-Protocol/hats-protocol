@@ -795,13 +795,28 @@ contract Hats is ERC1155 {
     {
         Hat memory hat = hats[_hatId];
 
+        uint256 hatAdmin;
+        
+        if (isTopHat(_hatId)) { 
+            hatAdmin = _hatId;
+        } else {
+            hatAdmin = getAdminAtLevel(_hatId, getHatLevel(_hatId) - 1);
+        }
+            
+        // console2.log("current supply", hatSupply[_hatId]);
+        // console2.log("supply cap", hat.maxSupply);
+        // console2.log("hat level", getHatLevel(_hatId));
+        // console2.log("admin (hat)", hatAdmin);
+        // console2.log("oracle (address)", hat.oracle);
+        // console2.log("conditions (address)", hat.conditions);
+
         bytes memory properties = abi.encodePacked(
             '{"current supply": "',
             hatSupply[_hatId],
             '", "supply cap": "',
             hat.maxSupply,
             '", "admin (hat)": "',
-            getAdminAtLevel(_hatId, getHatLevel(_hatId) - 1),
+            hatAdmin,
             '", "oracle (address)": "',
             hat.oracle,
             '", "conditions (address)": "',
