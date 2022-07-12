@@ -199,7 +199,31 @@ contract MintHatsTest is TestSetup {
 }
 
 contract TransferHatTests is TestSetup2 {
+    // TODO: add expectRevert -> error OnlyAdminsCanTransfer()
+    function testFailTransferHatFromNonAdmin() public {
+        // 4-1. transfer from wearer / other wallet
+        vm.prank(address(nonWearer));
+        hats.transferHat(secondHatId, secondWearer, thirdWearer);
+    }
 
+    function testTransferHat() public {
+        uint32 hatSupply = hats.hatSupply(secondHatId);
+
+        // 4-2. transfer from admin
+        vm.prank(address(topHatWearer));
+        hats.transferHat(secondHatId, secondWearer, thirdWearer);
+
+        // assert secondWearer is no longer wearing
+        assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
+        assertTrue(hats.isInGoodStanding(secondWearer, secondHatId));
+
+        // assert thirdWearer is now wearing
+        assertTrue(hats.isWearerOfHat(thirdWearer, secondHatId));
+        assertTrue(hats.isInGoodStanding(thirdWearer, secondHatId));
+
+        // assert hatSupply is not incremented
+        assertEq(hats.hatSupply(secondHatId), hatSupply);
+    }
 }
 
 contract OracleSetHatsTests is TestSetup2 {
