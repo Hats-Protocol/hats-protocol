@@ -128,3 +128,26 @@ abstract contract TestSetup is Test, TestVariables {
         }
     }
 }
+
+// in addition to TestSetup, TestSetup2 creates and mints a second hat
+abstract contract TestSetup2 is TestSetup {
+     function setUp() public override {
+        
+        // expand on TestSetup
+        super.setUp();
+        
+        // create second Hat
+        vm.prank(topHatWearer);
+        secondHatId = hats.createHat(
+            topHatId,
+            "second hat",
+            2, // maxSupply
+            _oracle,
+            _conditions
+        );
+
+        // mint second hat
+        vm.prank(address(topHatWearer));
+        hats.mintHat(secondHatId, secondWearer);
+    }
+}

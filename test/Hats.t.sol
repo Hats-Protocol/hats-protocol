@@ -198,26 +198,11 @@ contract MintHatsTest is TestSetup {
     function testBatchMintHatsErrorArrayLength() public {}
 }
 
-contract OracleHatsTests is TestSetup {
-    function setUp() public override {
-        super.setUp();
-        // create second Hat
-        vm.prank(topHatWearer);
-        secondHatId = hats.createHat(
-            topHatId,
-            "second hat",
-            2, // maxSupply
-            _oracle,
-            _conditions
-        );
+contract TransferHatTests is TestSetup2 {
 
-        // mint second hat
-        vm.prank(address(topHatWearer));
-        hats.mintHat(secondHatId, secondWearer);
-    }
+}
 
-    // setHatWearerStatus tests
-
+contract OracleSetHatsTests is TestSetup2 {
     function testDoNotRevokeHatFromWearerInGoodStanding() public {
         // confirm second hat is worn by second Wearer
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
@@ -262,10 +247,10 @@ contract OracleHatsTests is TestSetup {
         assertFalse(hats.isInGoodStanding(secondWearer, secondHatId));
     }
 
+    // TODO: do we need to test the following functionality?
     // the following call should never happen:
     // setHatWearerStatus(secondHatId, secondWearer, false, false);
     // i.e. WearerStatus - wearing, in bad standing
-    // TODO: do we need to test this functionality?
 
     // TODO: update to best practice:
     // vm.expectRevert(hats.NotHatOracle.selector);
@@ -295,9 +280,9 @@ contract OracleHatsTests is TestSetup {
         // assert hatSupply is not incremented
         assertEq(hats.hatSupply(secondHatId), hatSupply);
     }
+}
 
-    // getHatWearerStatus tests
-
+contract OracleGetHatsTests is TestSetup2 {
     // TODO: should getHatWearerStanding fail in a different way when the Oracle contract doesn't have the function?
     // TODO: update to best practice with specific expectRevert
     function testFailGetHatWearerStandingNoFunctionInOracleContract() public {
@@ -307,7 +292,7 @@ contract OracleHatsTests is TestSetup {
 
     function testCheckOracleAndDoNotRevokeHatFromWearerInGoodStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
-        bytes4 select0r = 0xbd683872; // this works but I'm not sure why this is the selector...
+        bytes4 select0r = 0xbd683872; // TODO: do not hardcode selector
 
         // confirm second hat is worn by second Wearer
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
@@ -334,7 +319,7 @@ contract OracleHatsTests is TestSetup {
 
     function testCheckOracleToRevokeHatFromWearerInGoodStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
-        bytes4 select0r = 0xbd683872; // this works but I'm not sure why this is the selector...
+        bytes4 select0r = 0xbd683872; // TODO: do not hardcode selector
 
         // expectEmit WearerStatus - should not be wearing, in good standing
         vm.expectEmit(false, false, false, true);
@@ -358,7 +343,7 @@ contract OracleHatsTests is TestSetup {
 
     function testCheckOracleToRevokeHatFromWearerInBadStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
-        bytes4 select0r = 0xbd683872; // this works but I'm not sure why this is the selector...
+        bytes4 select0r = 0xbd683872; // TODO: do not hardcode selector
 
         // expectEmit WearerStatus - should not be wearing, in bad standing
         vm.expectEmit(false, false, false, true);
@@ -381,24 +366,7 @@ contract OracleHatsTests is TestSetup {
     }
 }
 
-contract RenounceHatsTest is TestSetup {
-    function setUp() public override {
-        super.setUp();
-        // create second Hat
-        vm.prank(topHatWearer);
-        secondHatId = hats.createHat(
-            topHatId,
-            "second hat",
-            2, // maxSupply
-            _oracle,
-            _conditions
-        );
-
-        // mint second hat
-        vm.prank(address(topHatWearer));
-        hats.mintHat(secondHatId, secondWearer);
-    }
-
+contract RenounceHatsTest is TestSetup2 {
     function testRenounceHat() public {
         // expectEmit HatRenounced
         vm.expectEmit(false, false, false, true);
@@ -420,26 +388,7 @@ contract RenounceHatsTest is TestSetup {
     }
 }
 
-contract ConditionsHatsTest is TestSetup {
-    function setUp() public override {
-        super.setUp();
-        // create second Hat
-        vm.prank(topHatWearer);
-        secondHatId = hats.createHat(
-            topHatId,
-            "second hat",
-            2, // maxSupply
-            _oracle,
-            _conditions
-        );
-
-        // mint second hat
-        vm.prank(address(topHatWearer));
-        hats.mintHat(secondHatId, secondWearer);
-    }
-
-    // setHatStatus tests
-
+contract ConditionsSetHatsTest is TestSetup2 {
     function testDeactivateHat() public {
         // confirm second hat is active
         assertTrue(hats.isActive(secondHatId));
@@ -505,9 +454,9 @@ contract ConditionsHatsTest is TestSetup {
         vm.prank(address(nonWearer));
         hats.setHatStatus(secondHatId, true);
     }
+}
 
-    // getHatStatus tests
-
+contract ConditionsGetHatsTest is TestSetup2 {
     // TODO: should getHatStatus fail in a different way when the Conditions contract doesn't have the function?
     // TODO: update to best practice with specific expectRevert
     function testFailGetHatStatusNoFunctionInConditionsContract() public {
