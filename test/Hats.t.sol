@@ -135,8 +135,7 @@ contract MintHatsTest is TestSetup {
         assertEq(lastHatId_post, lastHatId_pre);
     }
 
-    // TODO: update to best practice with specific expectRevert
-    function testFailMint2HatsToSameWearer() public {
+    function testCannotMint2HatsToSameWearer() public {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(thirdWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
@@ -146,18 +145,21 @@ contract MintHatsTest is TestSetup {
         vm.prank(address(topHatWearer));
         hats.mintHat(secondHatId, secondWearer);
 
-        // mint another of same id to a new wearer
+        // expect error AlreadyWearingHat()
+        vm.expectRevert(abi.encodeWithSelector(AlreadyWearingHat.selector));
+
+        // mint another of same id to the same wearer
         vm.prank(address(topHatWearer));
         hats.mintHat(secondHatId, secondWearer);
 
-        // assert balance is only incremented by 1 TODO
-        // assertEq(hats.balanceOf(secondWearer, secondHatId), ++balance_pre);
+        // assert balance is only incremented by 1
+        assertEq(hats.balanceOf(secondWearer, secondHatId), ++balance_pre);
 
         // assert isWearer is true
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
 
-        // assert hatSupply is incremented only by 1 TODO
-        // assertEq(hats.hatSupply(secondHatId), supply_pre + 1);
+        // assert hatSupply is incremented only by 1
+        assertEq(hats.hatSupply(secondHatId), supply_pre + 1);
 
         // assert admin's lastHatId is *not* incremented
         (, , , , , uint8 lastHatId_post, ) = hats.viewHat(topHatId);
@@ -176,7 +178,6 @@ contract MintHatsTest is TestSetup {
 
         // 2-1. try to mint hat from a non-wearer
         vm.prank(address(nonWearer));
-
         hats.mintHat(secondHatId, secondWearer);
 
         // assert hatSupply is not incremented
@@ -186,12 +187,38 @@ contract MintHatsTest is TestSetup {
         assertEq(hats.balanceOf(secondWearer, secondHatId), balance_pre);
     }
 
-    function testMintHatErrorAllHatsWorn() public {
-        // mint hat
-        // mint another
-        // 2-3. try to mint another of same id
-        // assert AllHatsWorn error thrown
-        // assert wearer balance is unchanged
+    function testCannotMintMoreThanMaxSupplyErrorAllHatsWorn() public {
+        // store prelim values
+        uint256 balance1_pre = hats.balanceOf(topHatWearer, secondHatId);
+        uint256 balance2_pre = hats.balanceOf(secondWearer, secondHatId);
+        uint256 balance3_pre = hats.balanceOf(thirdWearer, secondHatId);
+        uint32 supply_pre = hats.hatSupply(secondHatId);
+
+        // mint hat 1
+        vm.startPrank(address(topHatWearer));
+        hats.mintHat(secondHatId, secondWearer);
+
+        // mint hat 2
+        hats.mintHat(secondHatId, topHatWearer);
+
+        // expect error AllHatsWorn()
+        vm.expectRevert(abi.encodeWithSelector(AllHatsWorn.selector));
+
+        // 2-3. fail to mint hat 3
+        hats.mintHat(secondHatId, thirdWearer);
+
+        // assert balances are modified correctly
+        assertEq(hats.balanceOf(topHatWearer, secondHatId), ++balance1_pre);
+        assertEq(hats.balanceOf(secondWearer, secondHatId), ++balance2_pre);
+        assertEq(hats.balanceOf(thirdWearer, secondHatId), balance3_pre);
+
+        // assert correct Wearers is true
+        assertTrue(hats.isWearerOfHat(topHatWearer, secondHatId));
+        assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
+        assertFalse(hats.isWearerOfHat(thirdWearer, secondHatId));
+
+        // assert hatSupply is incremented only by 2
+        assertEq(hats.hatSupply(secondHatId), supply_pre + 2);
     }
 
     // function testBatchMintHats() public {}
