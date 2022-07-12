@@ -198,6 +198,75 @@ contract MintHatsTest is TestSetup {
     function testBatchMintHatsErrorArrayLength() public {}
 }
 
+contract ViewHatTests is TestSetup2 {
+    function testViewHat() public {
+        string memory retdetails;
+        uint32 retmaxSupply;
+        uint32 retsupply;
+        address retoracle;
+        address retconditions;
+        uint8 retlastHatId;
+        bool retactive;
+        
+        (retdetails,
+         retmaxSupply,
+         retsupply,
+         retoracle,
+         retconditions,
+         retlastHatId,
+         retactive) =
+            hats.viewHat(secondHatId);
+        
+        // 3-1. viewHat - displays params as expected
+        assertEq(retdetails, "second hat");
+        assertEq(retmaxSupply, 2);
+        assertEq(retsupply, 1);
+        assertEq(retoracle, address(555));
+        assertEq(retconditions, address(333));
+        assertEq(retlastHatId, 0);
+        assertEq(retactive, true);
+    }
+
+    function testViewHatOfTopHat() public {
+        string memory retdetails;
+        uint32 retmaxSupply;
+        uint32 retsupply;
+        address retoracle;
+        address retconditions;
+        uint8 retlastHatId;
+        bool retactive;
+        
+        (retdetails,
+         retmaxSupply,
+         retsupply,
+         retoracle,
+         retconditions,
+         retlastHatId,
+         retactive) =
+            hats.viewHat(topHatId);
+        
+        assertEq(retdetails, "");
+        assertEq(retmaxSupply, 1);
+        assertEq(retsupply, 1);
+        assertEq(retoracle, address(0));
+        assertEq(retconditions, address(0));
+        assertEq(retlastHatId, 1);
+        assertEq(retactive, true);
+    }
+
+    // TODO: do any other public functions need to be added here?
+    // many of the other public functions are tested in the assertions of other tests (e.g. getAdminAtLevel)
+
+    function testIsAdminOfHat() public {
+        assertTrue(hats.isAdminOfHat(topHatWearer, secondHatId));
+    }
+
+    function testGetHatLevel() public {
+        assertEq(hats.getHatLevel(topHatId), 0);
+        assertEq(hats.getHatLevel(secondHatId), 1);
+    }
+}
+
 contract TransferHatTests is TestSetup2 {
     // TODO: add expectRevert -> error OnlyAdminsCanTransfer()
     function testFailTransferHatFromNonAdmin() public {
