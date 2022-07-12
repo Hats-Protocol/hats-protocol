@@ -90,7 +90,7 @@ contract MintHatsTest is TestSetup {
             1
         );
 
-        // mint hat
+        // 2-2. mint hat
         vm.prank(address(topHatWearer));
         hats.mintHat(secondHatId, secondWearer);
 
@@ -168,12 +168,13 @@ contract MintHatsTest is TestSetup {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(secondWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
+        
         // expect NotAdmin Error
         vm.expectRevert(
             abi.encodeWithSelector(NotAdmin.selector, nonWearer, secondHatId)
         );
 
-        // try to mint hat from a non-wearer
+        // 2-1. try to mint hat from a non-wearer
         vm.prank(address(nonWearer));
 
         hats.mintHat(secondHatId, secondWearer);
@@ -188,14 +189,14 @@ contract MintHatsTest is TestSetup {
     function testMintHatErrorAllHatsWorn() public {
         // mint hat
         // mint another
-        // try to mint another of same id
+        // 2-3. try to mint another of same id
         // assert AllHatsWorn error thrown
         // assert wearer balance is unchanged
     }
 
-    function testBatchMintHats() public {}
+    // function testBatchMintHats() public {}
 
-    function testBatchMintHatsErrorArrayLength() public {}
+    // function testBatchMintHatsErrorArrayLength() public {}
 }
 
 contract ViewHatTests is TestSetup2 {
@@ -268,8 +269,10 @@ contract ViewHatTests is TestSetup2 {
 }
 
 contract TransferHatTests is TestSetup2 {
-    // TODO: add expectRevert -> error OnlyAdminsCanTransfer()
-    function testFailTransferHatFromNonAdmin() public {
+    function testCannotTransferHatFromNonAdmin() public {
+        // expect OnlyAdminsCanTransfer error
+        vm.expectRevert(abi.encodeWithSelector(OnlyAdminsCanTransfer.selector));
+
         // 4-1. transfer from wearer / other wallet
         vm.prank(address(nonWearer));
         hats.transferHat(secondHatId, secondWearer, thirdWearer);
@@ -345,10 +348,11 @@ contract OracleSetHatsTests is TestSetup2 {
     // setHatWearerStatus(secondHatId, secondWearer, false, false);
     // i.e. WearerStatus - wearing, in bad standing
 
-    // TODO: update to best practice:
-    // vm.expectRevert(hats.NotHatOracle.selector);
-    // rename function to testCannotRevokeHatAsNonWearer()
-    function testFailToRevokeHatAsNonWearer() public {
+    function testCannotRevokeHatAsNonWearer() public {
+        // expect NotHatOracle error
+        vm.expectRevert(abi.encodeWithSelector(NotHatOracle.selector));
+
+        // attempt to setHatWearerStatus as non-wearer
         vm.prank(address(nonWearer));
         hats.setHatWearerStatus(secondHatId, secondWearer, true, false);
     }
@@ -377,7 +381,7 @@ contract OracleSetHatsTests is TestSetup2 {
 
 contract OracleGetHatsTests is TestSetup2 {
     // TODO: should getHatWearerStanding fail in a different way when the Oracle contract doesn't have the function?
-    // TODO: update to best practice with specific expectRevert
+    // if so, update to best practice with specific expectRevert
     function testFailGetHatWearerStandingNoFunctionInOracleContract() public {
         bool standing;
         (, standing) = hats.getHatWearerStatus(secondHatId, secondWearer);
@@ -471,11 +475,11 @@ contract RenounceHatsTest is TestSetup2 {
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 
-    // TODO: update to best practice:
-    // vm.expectRevert(hats.NotHatWearer.selector);
-    // rename function to testCannotRenounceHatAsNonWearer()
-    function testFailToRenounceHatAsNonWearer() public {
-        //  6-1. attempt to renounce from admin / other wallet
+    function testCannotRenounceHatAsNonWearer() public {
+        // expect NotHatWearer error
+        vm.expectRevert(abi.encodeWithSelector(NotHatWearer.selector));
+
+        //  6-1. attempt to renounce from non-wearer
         vm.prank(address(nonWearer));
         hats.renounceHat(secondHatId);
     }
@@ -498,11 +502,11 @@ contract ConditionsSetHatsTest is TestSetup2 {
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 
-    // TODO: update to best practice:
-    // vm.expectRevert(hats.NotHatConditions.selector);
-    // rename function to testCannotDeactivateHatAsNonWearer()
-    function testFailToDeactivateHatAsNonWearer() public {
-        // 7-1. attempt to change Hat Status hat from wearer / other wallet / admin, should revert
+    function testCannotDeactivateHatAsNonWearer() public {
+        // expect NotHatConditions error
+        vm.expectRevert(abi.encodeWithSelector(NotHatConditions.selector));
+
+        // 7-1. attempt to change Hat Status hat from non-wearer
         vm.prank(address(nonWearer));
         hats.setHatStatus(secondHatId, false);
     }
@@ -535,13 +539,13 @@ contract ConditionsSetHatsTest is TestSetup2 {
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 
-    // TODO: update to best practice:
-    // vm.expectRevert(hats.NotHatConditions.selector);
-    // rename function to testCannotActivateDeactivatedHatAsNonWearer()
-    function testFailToActivateDeactivatedHatAsNonWearer() public {
+    function testCannotActivateDeactivatedHatAsNonWearer() public {
         // change Hat Status true->false via setHatStatus
         vm.prank(address(_conditions));
         hats.setHatStatus(secondHatId, false);
+
+        // expect NotHatConditions error
+        vm.expectRevert(abi.encodeWithSelector(NotHatConditions.selector));
 
         // 8-1. attempt to changeHatStatus hat from wearer / other wallet / admin
         vm.prank(address(nonWearer));
@@ -551,7 +555,7 @@ contract ConditionsSetHatsTest is TestSetup2 {
 
 contract ConditionsGetHatsTest is TestSetup2 {
     // TODO: should getHatStatus fail in a different way when the Conditions contract doesn't have the function?
-    // TODO: update to best practice with specific expectRevert
+    // if so, update to best practice with specific expectRevert
     function testFailGetHatStatusNoFunctionInConditionsContract() public {
         hats.getHatStatus(secondHatId);
     }
