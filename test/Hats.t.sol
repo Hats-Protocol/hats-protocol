@@ -170,7 +170,7 @@ contract MintHatsTest is TestSetup {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(secondWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
-        
+
         // expect NotAdmin Error
         vm.expectRevert(
             abi.encodeWithSelector(NotAdmin.selector, nonWearer, secondHatId)
@@ -236,7 +236,7 @@ contract MintHatsTest is TestSetup {
         // assert that the wearer does not have the hat
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
 
-        // assert that the hat supply increased 
+        // assert that the hat supply increased
         assertEq(++hatSupply_pre, hats.hatSupply(secondHatId));
     }
 
@@ -254,16 +254,17 @@ contract ViewHatTests is TestSetup2 {
         address retconditions;
         uint8 retlastHatId;
         bool retactive;
-        
-        (retdetails,
-         retmaxSupply,
-         retsupply,
-         retoracle,
-         retconditions,
-         retlastHatId,
-         retactive) =
-            hats.viewHat(secondHatId);
-        
+
+        (
+            retdetails,
+            retmaxSupply,
+            retsupply,
+            retoracle,
+            retconditions,
+            retlastHatId,
+            retactive
+        ) = hats.viewHat(secondHatId);
+
         // 3-1. viewHat - displays params as expected
         assertEq(retdetails, "second hat");
         assertEq(retmaxSupply, 2);
@@ -282,16 +283,17 @@ contract ViewHatTests is TestSetup2 {
         address retconditions;
         uint8 retlastHatId;
         bool retactive;
-        
-        (retdetails,
-         retmaxSupply,
-         retsupply,
-         retoracle,
-         retconditions,
-         retlastHatId,
-         retactive) =
-            hats.viewHat(topHatId);
-        
+
+        (
+            retdetails,
+            retmaxSupply,
+            retsupply,
+            retoracle,
+            retconditions,
+            retlastHatId,
+            retactive
+        ) = hats.viewHat(topHatId);
+
         assertEq(retdetails, "");
         assertEq(retmaxSupply, 1);
         assertEq(retsupply, 1);
@@ -429,8 +431,10 @@ contract OracleSetHatsTests is TestSetup2 {
 contract OracleGetHatsTests is TestSetup2 {
     function testCannotGetHatWearerStandingNoFunctionInOracleContract() public {
         // expect NotIHatsOracleContract error
-        vm.expectRevert(abi.encodeWithSelector(NotIHatsOracleContract.selector));
-        
+        vm.expectRevert(
+            abi.encodeWithSelector(NotIHatsOracleContract.selector)
+        );
+
         // fail attempt to pull wearer status from oracle
         hats.pullHatWearerStatusFromOracle(secondHatId, secondWearer);
     }
@@ -450,7 +454,7 @@ contract OracleGetHatsTests is TestSetup2 {
         vm.mockCall(
             address(_oracle),
             abi.encodeWithSignature(
-                "getWearerStatus(address,uint256)", 
+                "getWearerStatus(address,uint256)",
                 secondWearer,
                 secondHatId
             ),
@@ -563,18 +567,6 @@ contract ConditionsSetHatsTest is TestSetup2 {
         hats.setHatStatus(secondHatId, false);
     }
 
-    // function testFailFunctionCallsOnDeactivatedHat() public {
-    //     // change Hat Status true->false via setHatStatus
-    //     vm.prank(address(_conditions));
-    //     hats.setHatStatus(secondHatId, false);
-    //     assertFalse(hats.isActive(secondHatId));
-
-    //     // TODO: are there any functions in Hats.sol where we need to check if the hat is active
-    //     // before allowing the function to be called?
-    //     // 7-3. call various functions in deactivated state again as wearer / other wallet / admin, should revert
-    //     // ...
-    // }
-
     function testActivateDeactivatedHat() public {
         // change Hat Status true->false via setHatStatus
         vm.prank(address(_conditions));
@@ -606,9 +598,13 @@ contract ConditionsSetHatsTest is TestSetup2 {
 }
 
 contract ConditionsGetHatsTest is TestSetup2 {
-    function testCannotPullHatStatusFromConditionsNoFunctionInConditionsContract() public {
+    function testCannotPullHatStatusFromConditionsNoFunctionInConditionsContract()
+        public
+    {
         // expect NotIHatsOracleContract error
-        vm.expectRevert(abi.encodeWithSelector(NotIHatsConditionsContract.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(NotIHatsConditionsContract.selector)
+        );
 
         // fail attempt to pull Hat Status
         hats.pullHatStatusFromConditions(secondHatId);
@@ -618,7 +614,7 @@ contract ConditionsGetHatsTest is TestSetup2 {
         // expectEmit HatStatusChanged to false
         vm.expectEmit(false, false, false, true);
         emit HatStatusChanged(secondHatId, false);
-        
+
         // encode mock for function inside Conditions contract to return false
         vm.mockCall(
             address(_conditions),
@@ -640,7 +636,7 @@ contract ConditionsGetHatsTest is TestSetup2 {
         // expectEmit HatStatusChanged to true
         vm.expectEmit(false, false, false, true);
         emit HatStatusChanged(secondHatId, true);
-        
+
         // encode mock for function inside Conditions contract to return false
         vm.mockCall(
             address(_conditions),

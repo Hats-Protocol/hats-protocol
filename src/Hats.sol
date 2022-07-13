@@ -18,7 +18,6 @@ contract Hats is ERC1155 {
     //////////////////////////////////////////////////////////////*/
 
     // QUESTION should we add arguments to any of these errors? See github issue #21
-    error HatNotActive();
     error NotAdmin(address _user, uint256 _hatId);
     error AllHatsWorn();
     error AlreadyWearingHat();
@@ -73,8 +72,6 @@ contract Hats is ERC1155 {
     // for external contracts to check if Hat was revoked because the wearer is in bad standing
     mapping(uint256 => mapping(address => bool)) public badStandings; // key: hatId => value: (key: wearer => value: badStanding?)
 
-    // QUESTION do we need to store Hat wearing history on-chain? In other words, do other contracts need access to said history? See github issue #12.
-
     /*//////////////////////////////////////////////////////////////
                               HATS EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -97,8 +94,6 @@ contract Hats is ERC1155 {
     );
 
     event HatStatusChanged(uint256 hatId, bool newStatus);
-
-    // event HatSupplyChanged(uint256 hatId, uint256 newSupply);
 
     constructor() {
         // lastTopHatId = 0;
@@ -279,35 +274,6 @@ contract Hats is ERC1155 {
         return _admin | uint256(nextHatId);
     }
 
-    // TODO reimplement createHatsTree post-mvp
-    // /// @notice Creates a tree new Hats, where the root Hat is under admin control by the msg.sender. Especially useful for forking an existing Hat tree or initiating a template Hat tree structure.
-    // /// @dev The admin for each Hat must exist before the Hat is created, so Hats must be created before Hats for which they serve as admin
-    // /// @param _details Descriptions of the Hats
-    // /// @param _maxSupplies The total instances of the Hats that can be worn at once
-    // /// @param _firstAdmin The hatId of the admin of the first Hat to create; it must already exist
-    // /// @param _oracles The addresses that can report on the Hat wearers' status
-    // /// @param _conditions The addresses that can deactivate the Hats
-    // function createHatsTree(
-    //     string[] memory _details,
-    //     uint32[] memory _maxSupplies,
-    //     uint256 _firstAdmin,
-    //     address[] memory _oracles,
-    //     address[] memory _conditions
-    // ) public {
-    //     // check that array lengths match
-    //     uint256 length = _maxSupplies.length; // saves an MLOAD
-
-    //     bool lengthsCheck = ((_details.length == length) &&
-    //         (length == _oracles.length) &&
-    //         (length == _conditions.length));
-
-    //     if (!lengthsCheck) {
-    //         revert BatchArrayLengthMismatch();
-    //     }
-
-    //
-    // }
-
     /// @notice Mints an ERC1155 token of the Hat to a recipient, who then "wears" the hat
     /// @dev The msg.sender must wear the admin Hat of `_hatId`
     /// @param _hatId The id of the Hat to mint
@@ -329,29 +295,6 @@ contract Hats is ERC1155 {
         }
 
         _mint(_wearer, uint256(_hatId), 1, "");
-
-        return true;
-    }
-
-    /// @notice Mints a batch of ERC1155 tokens representing Hats to a set of recipients, who each then "wears" their respective Hat
-    /// @dev The msg.sender must serve as the admin for each of the Hats in `_hatIds`
-    /// @param _hatIds The ids of the Hats to mint
-    /// @param _wearers The addresses to which the Hats are minted
-    /// @return bool Whether the mints succeeded
-    function batchMintHats(uint256[] memory _hatIds, address[] memory _wearers)
-        public
-        returns (bool)
-    {
-        uint256 length = _hatIds.length;
-        if (length != _wearers.length) {
-            revert BatchArrayLengthMismatch();
-        }
-
-        for (uint256 i = 0; i < length; ++i) {
-            uint256 hatId = _hatIds[i];
-
-            mintHat(hatId, _wearers[i]); // QUESTION if this fails, how do mint revert errors bubble up here, if at all? See github issue #22
-        }
 
         return true;
     }
@@ -570,24 +513,6 @@ contract Hats is ERC1155 {
         emit TransferSingle(msg.sender, _from, _to, id, 1);
     }
 
-    function batchTransferHats(
-        uint256[] memory _hatIds,
-        address[] memory _froms,
-        address[] memory _tos
-    ) external {
-        uint256 length = _hatIds.length;
-        bool lengthsCheck = ((_froms.length == length) &&
-            (length == _tos.length));
-
-        if (!lengthsCheck) {
-            revert BatchArrayLengthMismatch();
-        }
-
-        for (uint256 i = 0; i < length; ) {
-            transferHat(_hatIds[i], _froms[i], _tos[i]);
-        }
-    }
-
     /*//////////////////////////////////////////////////////////////
                               HATS VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -661,37 +586,16 @@ contract Hats is ERC1155 {
         }
 
         uint8 adminHatLevel = getHatLevel(_hatId) - 1;
-        // console2.log("adminHatLevel", adminHatLevel);
 
         while (adminHatLevel >= 1) {
-            // console2.log(
-            //     "isWearerOfHat",
-            //     _user,
-            //     getAdminAtLevel(_hatId, adminHatLevel),
-            //     isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel))
-            // );
 
             if (isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel))) {
-                // console2.log("isWearerOfHat in if-statement", true);
                 return true;
             }
             adminHatLevel--;
         }
-        // console2.log("tophat", getAdminAtLevel(_hatId, 0));
         return isWearerOfHat(_user, getAdminAtLevel(_hatId, 0));
     }
-
-    // visualizing what's happening (to remove):
-    // (possible to display in hex instead of decimal for users?)
-    // level 0 hat (ie tophat):
-    // 0000 0001 00 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 = 269
-    // level 1 hat (ie "second hat"):
-    // 0000 0001 01 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 = 270...216
-    // level 1 hatId minus level 0 hatId
-    // 0000 0000 00 FF FF FF . FF FF FF FF FF FF FF FF . FF FF FF FF FF FF FF FF . FF FF FF FF FF FF FF FF = 105
-
-    // level 2 hat (ie "third hat"):
-    // 0000 0001 01 01 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 . 00 00 00 00 00 00 00 00 = 270...008
 
     function getHatLevel(uint256 _hatId) public pure returns (uint8 level) {
         // TODO: invert the order for optimization
@@ -745,8 +649,6 @@ contract Hats is ERC1155 {
         view
         returns (bool active)
     {
-        // console2.log("_isActive: function start", _hat.active);
-
         bytes memory data = abi.encodeWithSignature(
             "getHatStatus(uint256)",
             _hatId
@@ -828,13 +730,6 @@ contract Hats is ERC1155 {
         } else {
             hatAdmin = getAdminAtLevel(_hatId, getHatLevel(_hatId) - 1);
         }
-            
-        // console2.log("current supply", hatSupply[_hatId]);
-        // console2.log("supply cap", hat.maxSupply);
-        // console2.log("hat level", getHatLevel(_hatId));
-        // console2.log("admin (hat)", hatAdmin);
-        // console2.log("oracle (address)", hat.oracle);
-        // console2.log("conditions (address)", hat.conditions);
 
         bytes memory properties = abi.encodePacked(
             '{"current supply": "',
