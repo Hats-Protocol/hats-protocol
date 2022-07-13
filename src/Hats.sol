@@ -63,7 +63,7 @@ contract Hats is ERC1155 {
      * for 255 different hats.
      *
      */
-    mapping(uint256 => Hat) public hats;
+    mapping(uint256 => Hat) internal _hats;
 
     // string public baseImageURI = "https://images.hatsprotocol.xyz/"
 
@@ -176,11 +176,11 @@ contract Hats is ERC1155 {
         // create the new hat
         _createHat(newHatId, _details, _maxSupply, _oracle, _conditions);
         // increment _admin.lastHatId
-        ++hats[_admin].lastHatId;
+        ++_hats[_admin].lastHatId;
     }
 
     function _buildNextId(uint256 _admin) internal returns (uint256) {
-        uint8 nextHatId = hats[_admin].lastHatId + 1;
+        uint8 nextHatId = _hats[_admin].lastHatId + 1;
 
         if (uint224(_admin) == 0) {
             return _admin | (uint256(nextHatId) << 216);
@@ -268,8 +268,6 @@ contract Hats is ERC1155 {
             return _admin | (uint256(nextHatId) << 8);
         }
 
-        // hats[_admin].lastHatId = nextHatId;
-
         return _admin | uint256(nextHatId);
     }
 
@@ -279,7 +277,7 @@ contract Hats is ERC1155 {
     /// @param _wearer The address to which the Hat is minted
     /// @return bool Whether the mint succeeded
     function mintHat(uint256 _hatId, address _wearer) public returns (bool) {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
         // only the wearer of a hat's admin Hat can mint it
         if (!isAdminOfHat(msg.sender, _hatId)) {
             revert NotAdmin(msg.sender, _hatId);
@@ -306,7 +304,7 @@ contract Hats is ERC1155 {
         external
         returns (bool)
     {
-        Hat storage hat = hats[_hatId];
+        Hat storage hat = _hats[_hatId];
 
         if (msg.sender != hat.conditions) {
             revert NotHatConditions();
@@ -320,7 +318,7 @@ contract Hats is ERC1155 {
     /// @param _hatId The id of the Hat whose Conditions we are checking
     /// @return bool Whether there was a new status
     function pullHatStatusFromConditions(uint256 _hatId) external returns (bool) {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
         bool newStatus;
 
         bytes memory data = abi.encodeWithSignature(
@@ -354,7 +352,7 @@ contract Hats is ERC1155 {
         bool _revoke,
         bool _wearerStanding
     ) external returns (bool) {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
 
         if (msg.sender != hat.oracle) {
             revert NotHatOracle();
@@ -373,7 +371,7 @@ contract Hats is ERC1155 {
         public
         returns (bool)
     {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
         bool revoke;
         bool wearerStanding;
 
@@ -437,7 +435,7 @@ contract Hats is ERC1155 {
         hat.conditions = _conditions;
         hat.active = true;
 
-        hats[_id] = hat;
+        _hats[_id] = hat;
 
         emit HatCreated(_id, _details, _maxSupply, _oracle, _conditions);
     }
@@ -448,7 +446,7 @@ contract Hats is ERC1155 {
         bool _newStatus
     ) internal returns (bool updated) {
         // optimize later
-        Hat storage hat = hats[_hatId];
+        Hat storage hat = _hats[_hatId];
 
         if (_newStatus != hat.active) {
             hat.active = _newStatus;
@@ -538,7 +536,7 @@ contract Hats is ERC1155 {
             bool active
         )
     {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
         details = hat.details;
         maxSupply = hat.maxSupply;
         supply = hatSupply[_hatId];
@@ -587,7 +585,6 @@ contract Hats is ERC1155 {
         uint8 adminHatLevel = getHatLevel(_hatId) - 1;
 
         while (adminHatLevel >= 1) {
-
             if (isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel))) {
                 return true;
             }
@@ -669,7 +666,7 @@ contract Hats is ERC1155 {
     /// @param _hatId The id of the hat
     /// @return bool The active status of the hat
     function isActive(uint256 _hatId) public view returns (bool) {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
         return _isActive(hat, _hatId);
     }
 
@@ -682,7 +679,7 @@ contract Hats is ERC1155 {
         address _wearer,
         Hat memory _hat,
         uint256 _hatId
-    ) public view returns (bool standing) {
+    ) internal view returns (bool standing) {
         bytes memory data = abi.encodeWithSignature(
             "getWearerStatus(address,uint256)",
             _wearer,
@@ -708,7 +705,7 @@ contract Hats is ERC1155 {
         view
         returns (bool)
     {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
         return _isInGoodStanding(_wearer, hat, _hatId);
     }
 
@@ -720,7 +717,7 @@ contract Hats is ERC1155 {
         view
         returns (string memory uri_)
     {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
 
         uint256 hatAdmin;
         
@@ -784,7 +781,7 @@ contract Hats is ERC1155 {
         override
         returns (uint256 balance)
     {
-        Hat memory hat = hats[hatId];
+        Hat memory hat = _hats[hatId];
 
         balance = 0;
 
