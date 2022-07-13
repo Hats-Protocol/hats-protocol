@@ -119,7 +119,6 @@ contract Hats is ERC1155 {
             address(0), // there is no oracle
             address(0) // it has no conditions
         );
-        ++lastTopHatId;
 
         _mint(_target, topHatId, 1, "");
     }
