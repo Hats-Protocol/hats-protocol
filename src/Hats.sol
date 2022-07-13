@@ -27,6 +27,8 @@ contract Hats is ERC1155 {
     error NotHatWearer();
     error NotHatConditions();
     error NotHatOracle();
+    error NotIHatsConditionsContract();
+    error NotIHatsOracleContract();
     error BatchArrayLengthMismatch();
     error SafeTransfersNotNecessary();
     error MaxTreeDepthReached();
@@ -93,8 +95,6 @@ contract Hats is ERC1155 {
         bool revoke,
         bool wearerStanding
     );
-
-    // event HatRevoked(uint256 hatId, address wearer);
 
     event HatStatusChanged(uint256 hatId, bool newStatus);
 
@@ -370,31 +370,33 @@ contract Hats is ERC1155 {
             revert NotHatConditions();
         }
 
-        if (newStatus != hat.active) {
-            hat.active = newStatus;
-            emit HatStatusChanged(_hatId, newStatus);
-            return true;
-        } else return false;
+        return _processHatStatus(_hatId, newStatus);
     }
 
     /// @notice Checks a hat's Conditions and, if new, toggle's the hat's status
     /// @dev // TODO
     /// @param _hatId The id of the Hat whose Conditions we are checking
-    /// @return bool Whether the check succeeded
-    function getHatStatus(uint256 _hatId) external returns (bool) {
-        Hat storage hat = hats[_hatId];
+    /// @return bool Whether there was a new status
+    function pullHatStatusFromConditions(uint256 _hatId) external returns (bool) {
+        Hat memory hat = hats[_hatId];
+        bool newStatus;
 
-        IHatsConditions CONDITIONS = IHatsConditions(hat.conditions);
+        bytes memory data = abi.encodeWithSignature(
+            "getHatStatus(uint256)",
+            _hatId
+        );
 
-        // FIXME what happens if CONDITIONS doesn't have a getHatStatus() function?
-        // likely answer: the whole thing reverts, which is actually what we want
-        bool newStatus = CONDITIONS.getHatStatus(_hatId);
+        (bool success, bytes memory returndata) = hat.conditions.staticcall(data);
 
-        if (newStatus != hat.active) {
-            hat.active = newStatus;
-            emit HatStatusChanged(_hatId, newStatus);
-            return true;
-        } else return false;
+        // if function call succeeds with data of length > 0
+        // then we know the contract exists and has the getWearerStatus function
+        if (success && returndata.length > 0) {
+            newStatus = abi.decode(returndata, (bool));
+        } else {
+            revert NotIHatsConditionsContract();
+        }
+
+        return _processHatStatus(_hatId, newStatus);
     }
 
     /// @notice Report from a hat's Oracle on the status of one of its wearers and, if `false`, revoke their hat
@@ -416,11 +418,7 @@ contract Hats is ERC1155 {
             revert NotHatOracle();
         }
 
-        if (_revoke) {
-            _revokeHat(_hatId, _wearer, _wearerStanding);
-        }
-
-        emit WearerStatus(_hatId, _wearer, _revoke, _wearerStanding);
+        _processHatWearerStatus(_hatId, _wearer, _revoke, _wearerStanding);
 
         return true;
     }
@@ -429,22 +427,31 @@ contract Hats is ERC1155 {
     /// @dev Burns the wearer's hat, if revoked
     /// @param _hatId The id of the hat
     /// @param _wearer The address of the Hat wearer whose status report is being requested
-    function getHatWearerStatus(uint256 _hatId, address _wearer)
+    function pullHatWearerStatusFromOracle(uint256 _hatId, address _wearer)
         public
-        returns (bool revoke, bool wearerStanding)
+        returns (bool)
     {
         Hat memory hat = hats[_hatId];
-        IHatsOracle ORACLE = IHatsOracle(hat.oracle);
+        bool revoke;
+        bool wearerStanding;
 
-        // FIXME what happens if ORACLE doesn't have a getWearerStatus() function?
-        // likely answer: the whole thing reverts, which is actually what we want
-        (revoke, wearerStanding) = ORACLE.getWearerStatus(_wearer, _hatId);
+        bytes memory data = abi.encodeWithSignature(
+            "getWearerStatus(address,uint256)",
+            _wearer,
+            _hatId
+        );
 
-        if (revoke) {
-            _revokeHat(_hatId, _wearer, wearerStanding);
+        (bool success, bytes memory returndata) = hat.oracle.staticcall(data);
+
+        // if function call succeeds with data of length > 0
+        // then we know the contract exists and has the getWearerStatus function
+        if (success && returndata.length > 0) {
+            (revoke, wearerStanding) = abi.decode(returndata, (bool, bool));
+        } else {
+            revert NotIHatsOracleContract();
         }
 
-        emit WearerStatus(_hatId, _wearer, revoke, wearerStanding);
+        return _processHatWearerStatus(_hatId, _wearer, revoke, wearerStanding);
     }
 
     /// @notice Stop wearing a hat, aka "renounce" it
@@ -493,25 +500,51 @@ contract Hats is ERC1155 {
         emit HatCreated(_id, _details, _maxSupply, _oracle, _conditions);
     }
 
+    // TODO write comment
+    function _processHatStatus(
+        uint256 _hatId,
+        bool _newStatus
+    ) internal returns (bool updated) {
+        // optimize later
+        Hat storage hat = hats[_hatId];
+
+        if (_newStatus != hat.active) {
+            hat.active = _newStatus;
+            emit HatStatusChanged(_hatId, _newStatus);
+            updated = true;
+        }
+    }
+
     /// @notice Internal call to revoke a Hat from a wearer
     /// @dev Burns the wearer's Hat token
     /// @param _hatId The id of the Hat to revoke
     /// @param _wearer The address of the wearer from whom to revoke the hat
     /// @param _wearerStanding Whether or to make a record of the revocation on-chain for other contracts to use
-    function _revokeHat(
+    function _processHatWearerStatus(
         uint256 _hatId,
         address _wearer,
+        bool _revoke,
         bool _wearerStanding
-    ) internal {
-        // revoke the Hat by burning it
-        _burn(_wearer, _hatId, 1);
-
-        if (!_wearerStanding) {
-            // record revocation for use by other contracts
-            badStandings[_hatId][_wearer] = true;
+    ) internal returns (bool updated) {
+        if (_revoke) {
+            // revoke the Hat by burning it
+            _burn(_wearer, _hatId, 1);
         }
 
-        // emit HatRevoked(_hatId, _wearer);
+        // record standing for use by other contracts
+        // note: here, wearerStanding and badStandings are opposite
+        // i.e. if wearerStanding (true = good standing)
+        // then badStandings[_hatId][wearer] will be false
+        // if they are different, then something has changed, and we need to update
+        // badStandings marker
+        if (_wearerStanding == badStandings[_hatId][_wearer]) {
+            badStandings[_hatId][_wearer] = !_wearerStanding;
+            updated = true;
+        }
+
+        emit WearerStatus(_hatId, _wearer, _revoke, _wearerStanding);
+
+        return updated;
     }
 
     function transferHat(
@@ -725,10 +758,8 @@ contract Hats is ERC1155 {
 
         if (success && returndata.length > 0) {
             active = abi.decode(returndata, (bool));
-            // console2.log("_isActive: success && returndata > 0", active);
         } else {
             active = _hat.active;
-            // console2.log("_isActive: other returndata", active);
         }
     }
 
@@ -761,13 +792,8 @@ contract Hats is ERC1155 {
 
         if (success && returndata.length > 0) {
             (, standing) = abi.decode(returndata, (bool, bool));
-            // console2.log(
-            //     "_isInGoodStanding: success && returndata > 0",
-            //     standing
-            // );
         } else {
             standing = !badStandings[_hatId][_wearer];
-            // console2.log("_isInGoodStanding: other returndata", standing);
         }
     }
 

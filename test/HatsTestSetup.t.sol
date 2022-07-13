@@ -55,6 +55,8 @@ abstract contract TestVariables {
     error NotHatWearer();
     error NotHatConditions();
     error NotHatOracle();
+    error NotIHatsConditionsContract();
+    error NotIHatsOracleContract();
     error BatchArrayLengthMismatch();
     error SafeTransfersNotNecessary();
     error MaxTreeDepthReached();

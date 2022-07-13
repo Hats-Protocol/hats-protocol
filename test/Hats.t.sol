@@ -371,9 +371,10 @@ contract OracleSetHatsTests is TestSetup2 {
     }
 
     // TODO: do we need to test the following functionality?
-    // the following call should never happen:
-    // setHatWearerStatus(secondHatId, secondWearer, false, false);
-    // i.e. WearerStatus - wearing, in bad standing
+    // in the MVP, the following call should never happen:
+    //  setHatWearerStatus(secondHatId, secondWearer, false, false);
+    //  i.e. WearerStatus - wearing, in bad standing
+    // in a future state, this call could happen if there were less severe penalities than revocations
 
     function testCannotRevokeHatAsNonWearer() public {
         // expect NotHatOracle error
@@ -407,11 +408,12 @@ contract OracleSetHatsTests is TestSetup2 {
 }
 
 contract OracleGetHatsTests is TestSetup2 {
-    // TODO: should getHatWearerStanding fail in a different way when the Oracle contract doesn't have the function?
-    // if so, update to best practice with specific expectRevert
-    function testFailGetHatWearerStandingNoFunctionInOracleContract() public {
-        bool standing;
-        (, standing) = hats.getHatWearerStatus(secondHatId, secondWearer);
+    function testCannotGetHatWearerStandingNoFunctionInOracleContract() public {
+        // expect NotIHatsOracleContract error
+        vm.expectRevert(abi.encodeWithSelector(NotIHatsOracleContract.selector));
+        
+        // fail attempt to pull wearer status from oracle
+        hats.pullHatWearerStatusFromOracle(secondHatId, secondWearer);
     }
 
     function testCheckOracleAndDoNotRevokeHatFromWearerInGoodStanding() public {
@@ -421,23 +423,27 @@ contract OracleGetHatsTests is TestSetup2 {
         // confirm second hat is worn by second Wearer
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
 
-        // expectEmit WearerStatus - should not be wearing, in good standing
+        // expectEmit WearerStatus - should be wearing, in good standing
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, false, true);
 
         // mock calls to Oracle contract to return (false, true)
         vm.mockCall(
             address(_oracle),
-            abi.encodeWithSelector(select0r),
+            abi.encodeWithSignature(
+                "getWearerStatus(address,uint256)", 
+                secondWearer,
+                secondHatId
+            ),
             abi.encode(false, true)
         );
 
-        // 5-1. call getHatStatus - no revocation
-        hats.getHatWearerStatus(secondHatId, secondWearer);
+        // 5-1. call pullHatStatusFromConditions - no revocation
+        hats.pullHatWearerStatusFromOracle(secondHatId, secondWearer);
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
         assertTrue(hats.isInGoodStanding(secondWearer, secondHatId));
 
-        // assert hatSupply is not decremented
+        // assert hatSupply is *not* decremented
         assertEq(hats.hatSupply(secondHatId), hatSupply);
     }
 
@@ -456,8 +462,8 @@ contract OracleGetHatsTests is TestSetup2 {
             abi.encode(true, true)
         );
 
-        // 5-3a. call getHatStatus to revoke
-        hats.getHatWearerStatus(secondHatId, secondWearer);
+        // 5-3a. call pullHatStatusFromConditions to revoke
+        hats.pullHatWearerStatusFromOracle(secondHatId, secondWearer);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
         assertTrue(hats.isInGoodStanding(secondWearer, secondHatId));
 
@@ -480,8 +486,8 @@ contract OracleGetHatsTests is TestSetup2 {
             abi.encode(true, false)
         );
 
-        // 5-3b. call getHatStatus to revoke
-        hats.getHatWearerStatus(secondHatId, secondWearer);
+        // 5-3b. call pullHatStatusFromConditions to revoke
+        hats.pullHatWearerStatusFromOracle(secondHatId, secondWearer);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
         assertFalse(hats.isInGoodStanding(secondWearer, secondHatId));
 
@@ -581,10 +587,12 @@ contract ConditionsSetHatsTest is TestSetup2 {
 }
 
 contract ConditionsGetHatsTest is TestSetup2 {
-    // TODO: should getHatStatus fail in a different way when the Conditions contract doesn't have the function?
-    // if so, update to best practice with specific expectRevert
-    function testFailGetHatStatusNoFunctionInConditionsContract() public {
-        hats.getHatStatus(secondHatId);
+    function testCannotPullHatStatusFromConditionsNoFunctionInConditionsContract() public {
+        // expect NotIHatsOracleContract error
+        vm.expectRevert(abi.encodeWithSelector(NotIHatsConditionsContract.selector));
+
+        // fail attempt to pull Hat Status
+        hats.pullHatStatusFromConditions(secondHatId);
     }
 
     function testCheckConditionsToDeactivateHat() public {
@@ -592,15 +600,15 @@ contract ConditionsGetHatsTest is TestSetup2 {
         vm.expectEmit(false, false, false, true);
         emit HatStatusChanged(secondHatId, false);
         
-        // mock getHatStatus calls to Conditions contract to return false
+        // encode mock for function inside Conditions contract to return false
         vm.mockCall(
             address(_conditions),
-            abi.encodeWithSelector(hats.getHatStatus.selector),
+            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
             abi.encode(false)
         );
 
-        // call getHatStatus to deactivate
-        hats.getHatStatus(secondHatId);
+        // call mocked function within pullHatStatusFromConditions to deactivate
+        hats.pullHatStatusFromConditions(secondHatId);
         assertFalse(hats.isActive(secondHatId));
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
     }
@@ -614,15 +622,15 @@ contract ConditionsGetHatsTest is TestSetup2 {
         vm.expectEmit(false, false, false, true);
         emit HatStatusChanged(secondHatId, true);
         
-        // mock getHatStatus calls to Conditions contract to return true
+        // encode mock for function inside Conditions contract to return false
         vm.mockCall(
             address(_conditions),
-            abi.encodeWithSelector(hats.getHatStatus.selector),
+            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
             abi.encode(true)
         );
 
-        // call getHatStatus to activate
-        hats.getHatStatus(secondHatId);
+        // call mocked function within pullHatStatusFromConditions to reactivate
+        hats.pullHatStatusFromConditions(secondHatId);
         assertTrue(hats.isActive(secondHatId));
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
     }
