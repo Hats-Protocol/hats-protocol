@@ -221,6 +221,25 @@ contract MintHatsTest is TestSetup {
         assertEq(hats.hatSupply(secondHatId), supply_pre + 2);
     }
 
+    function testMintInactiveHat() public {
+        // capture pre-values
+        uint256 hatSupply_pre = hats.hatSupply(secondHatId);
+
+        // deactivate the hat
+        vm.prank(_conditions);
+        hats.setHatStatus(secondHatId, false);
+
+        // mint the hat to wearer
+        vm.prank(topHatWearer);
+        hats.mintHat(secondHatId, secondWearer);
+
+        // assert that the wearer does not have the hat
+        assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
+
+        // assert that the hat supply increased 
+        assertEq(++hatSupply_pre, hats.hatSupply(secondHatId));
+    }
+
     // function testBatchMintHats() public {}
 
     // function testBatchMintHatsErrorArrayLength() public {}
