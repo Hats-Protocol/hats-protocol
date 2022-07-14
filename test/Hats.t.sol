@@ -441,7 +441,6 @@ contract OracleGetHatsTests is TestSetup2 {
 
     function testCheckOracleAndDoNotRevokeHatFromWearerInGoodStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
-        bytes4 select0r = 0xbd683872; // TODO: do not hardcode selector
 
         // confirm second hat is worn by second Wearer
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
@@ -472,16 +471,19 @@ contract OracleGetHatsTests is TestSetup2 {
 
     function testCheckOracleToRevokeHatFromWearerInGoodStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
-        bytes4 select0r = 0xbd683872; // TODO: do not hardcode selector
 
         // expectEmit WearerStatus - should not be wearing, in good standing
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, true, true);
 
-        // mock calls to Oracle contract to return (true, true)
+        // mock calls to Oracle contract to return (false, true)
         vm.mockCall(
             address(_oracle),
-            abi.encodeWithSelector(select0r),
+            abi.encodeWithSignature(
+                "getWearerStatus(address,uint256)",
+                secondWearer,
+                secondHatId
+            ),
             abi.encode(true, true)
         );
 
@@ -496,16 +498,19 @@ contract OracleGetHatsTests is TestSetup2 {
 
     function testCheckOracleToRevokeHatFromWearerInBadStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
-        bytes4 select0r = 0xbd683872; // TODO: do not hardcode selector
 
         // expectEmit WearerStatus - should not be wearing, in bad standing
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, true, false);
 
-        // mock calls to Oracle contract to return (true, false)
+        // mock calls to Oracle contract to return (false, true)
         vm.mockCall(
             address(_oracle),
-            abi.encodeWithSelector(select0r),
+            abi.encodeWithSignature(
+                "getWearerStatus(address,uint256)",
+                secondWearer,
+                secondHatId
+            ),
             abi.encode(true, false)
         );
 
