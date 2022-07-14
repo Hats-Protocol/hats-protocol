@@ -2,6 +2,8 @@
 pragma solidity >=0.8.13;
 
 import {ERC1155} from "solmate/tokens/ERC1155.sol";
+// do we need an interface for Hatter / admin?
+import "forge-std/Test.sol"; //remove after testing
 import "./HatsConditions/IHatsConditions.sol";
 import "./HatsOracles/IHatsOracle.sol";
 import "utils/BASE64.sol";
@@ -16,8 +18,7 @@ contract Hats is ERC1155 {
     //////////////////////////////////////////////////////////////*/
 
     // QUESTION should we add arguments to any of these errors? See github issue #21
-    error HatNotActive();
-    error NotAdmin();
+    error NotAdmin(address _user, uint256 _hatId);
     error AllHatsWorn();
     error AlreadyWearingHat();
     error NoApprovalsNeeded();
@@ -25,6 +26,8 @@ contract Hats is ERC1155 {
     error NotHatWearer();
     error NotHatConditions();
     error NotHatOracle();
+    error NotIHatsConditionsContract();
+    error NotIHatsOracleContract();
     error BatchArrayLengthMismatch();
     error SafeTransfersNotNecessary();
     error MaxTreeDepthReached();
@@ -60,7 +63,7 @@ contract Hats is ERC1155 {
      * for 255 different hats.
      *
      */
-    mapping(uint256 => Hat) public hats;
+    mapping(uint256 => Hat) internal _hats;
 
     // string public baseImageURI = "https://images.hatsprotocol.xyz/"
 
@@ -68,8 +71,6 @@ contract Hats is ERC1155 {
 
     // for external contracts to check if Hat was revoked because the wearer is in bad standing
     mapping(uint256 => mapping(address => bool)) public badStandings; // key: hatId => value: (key: wearer => value: badStanding?)
-
-    // QUESTION do we need to store Hat wearing history on-chain? In other words, do other contracts need access to said history? See github issue #12.
 
     /*//////////////////////////////////////////////////////////////
                               HATS EVENTS
@@ -92,11 +93,7 @@ contract Hats is ERC1155 {
         bool wearerStanding
     );
 
-    event HatRevoked(uint256 hatId, address wearer);
-
     event HatStatusChanged(uint256 hatId, bool newStatus);
-
-    // event HatSupplyChanged(uint256 hatId, uint256 newSupply);
 
     constructor() {
         // lastTopHatId = 0;
@@ -115,7 +112,7 @@ contract Hats is ERC1155 {
 
         topHatId = uint256(++lastTopHatId) << 224;
 
-        createHat(
+        _createHat(
             topHatId,
             "", // details
             1, // maxSupply = 1
@@ -169,7 +166,7 @@ contract Hats is ERC1155 {
     ) public returns (uint256 newHatId) {
         // to create a hat, you must be wearing the Hat of its admin
         if (!isWearerOfHat(msg.sender, _admin)) {
-            revert NotAdmin();
+            revert NotAdmin(msg.sender, _admin);
         }
         if (uint8(_admin) > 0) {
             revert MaxTreeDepthReached();
@@ -178,10 +175,12 @@ contract Hats is ERC1155 {
         newHatId = _buildNextId(_admin);
         // create the new hat
         _createHat(newHatId, _details, _maxSupply, _oracle, _conditions);
+        // increment _admin.lastHatId
+        ++_hats[_admin].lastHatId;
     }
 
     function _buildNextId(uint256 _admin) internal returns (uint256) {
-        uint8 nextHatId = hats[_admin].lastHatId++;
+        uint8 nextHatId = _hats[_admin].lastHatId + 1;
 
         if (uint224(_admin) == 0) {
             return _admin | (uint256(nextHatId) << 216);
@@ -272,75 +271,27 @@ contract Hats is ERC1155 {
         return _admin | uint256(nextHatId);
     }
 
-    // TODO reimplement createHatsTree post-mvp
-    // /// @notice Creates a tree new Hats, where the root Hat is under admin control by the msg.sender. Especially useful for forking an existing Hat tree or initiating a template Hat tree structure.
-    // /// @dev The admin for each Hat must exist before the Hat is created, so Hats must be created before Hats for which they serve as admin
-    // /// @param _details Descriptions of the Hats
-    // /// @param _maxSupplies The total instances of the Hats that can be worn at once
-    // /// @param _firstAdmin The hatId of the admin of the first Hat to create; it must already exist
-    // /// @param _oracles The addresses that can report on the Hat wearers' status
-    // /// @param _conditions The addresses that can deactivate the Hats
-    // function createHatsTree(
-    //     string[] memory _details,
-    //     uint32[] memory _maxSupplies,
-    //     uint256 _firstAdmin,
-    //     address[] memory _oracles,
-    //     address[] memory _conditions
-    // ) public {
-    //     // check that array lengths match
-    //     uint256 length = _maxSupplies.length; // saves an MLOAD
-
-    //     bool lengthsCheck = ((_details.length == length) &&
-    //         (length == _oracles.length) &&
-    //         (length == _conditions.length));
-
-    //     if (!lengthsCheck) {
-    //         revert BatchArrayLengthMismatch();
-    //     }
-
-    //
-    // }
-
     /// @notice Mints an ERC1155 token of the Hat to a recipient, who then "wears" the hat
     /// @dev The msg.sender must wear the admin Hat of `_hatId`
     /// @param _hatId The id of the Hat to mint
     /// @param _wearer The address to which the Hat is minted
     /// @return bool Whether the mint succeeded
     function mintHat(uint256 _hatId, address _wearer) public returns (bool) {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
         // only the wearer of a hat's admin Hat can mint it
-        if (isAdminOfHat(msg.sender, _hatId)) {
-            revert NotAdmin();
+        if (!isAdminOfHat(msg.sender, _hatId)) {
+            revert NotAdmin(msg.sender, _hatId);
         }
 
         if (hatSupply[_hatId] >= hat.maxSupply) {
             revert AllHatsWorn();
         }
 
+        if (isWearerOfHat(_wearer, _hatId)) {
+            revert AlreadyWearingHat();
+        }
+
         _mint(_wearer, uint256(_hatId), 1, "");
-
-        return true;
-    }
-
-    /// @notice Mints a batch of ERC1155 tokens representing Hats to a set of recipients, who each then "wears" their respective Hat
-    /// @dev The msg.sender must serve as the admin for each of the Hats in `_hatIds`
-    /// @param _hatIds The ids of the Hats to mint
-    /// @param _wearers The addresses to which the Hats are minted
-    /// @return bool Whether the mints succeeded
-    function batchMintHats(uint256[] memory _hatIds, address[] memory _wearers)
-        public
-        returns (bool)
-    {
-        uint256 length = _hatIds.length;
-        if (length != _wearers.length) {
-            revert BatchArrayLengthMismatch();
-        }
-
-        for (uint256 i = 0; i < length; ++i) {
-            uint256 hatId = _hatIds[i];
-
-            mintHat(hatId, _wearers[i]); // QUESTION if this fails, how do mint revert errors bubble up here, if at all? See github issue #22
-        }
 
         return true;
     }
@@ -353,37 +304,39 @@ contract Hats is ERC1155 {
         external
         returns (bool)
     {
-        Hat storage hat = hats[_hatId];
+        Hat storage hat = _hats[_hatId];
 
         if (msg.sender != hat.conditions) {
             revert NotHatConditions();
         }
 
-        if (newStatus != hat.active) {
-            hat.active = newStatus;
-            emit HatStatusChanged(_hatId, newStatus);
-            return true;
-        } else return false;
+        return _processHatStatus(_hatId, newStatus);
     }
 
     /// @notice Checks a hat's Conditions and, if new, toggle's the hat's status
     /// @dev // TODO
     /// @param _hatId The id of the Hat whose Conditions we are checking
-    /// @return bool Whether the check succeeded
-    function getHatStatus(uint256 _hatId) external returns (bool) {
-        Hat storage hat = hats[_hatId];
+    /// @return bool Whether there was a new status
+    function pullHatStatusFromConditions(uint256 _hatId) external returns (bool) {
+        Hat memory hat = _hats[_hatId];
+        bool newStatus;
 
-        IHatsConditions CONDITIONS = IHatsConditions(hat.conditions);
+        bytes memory data = abi.encodeWithSignature(
+            "getHatStatus(uint256)",
+            _hatId
+        );
 
-        // FIXME what happens if CONDITIONS doesn't have a getHatStatus() function?
-        // likely answer: the whole thing reverts, which is actually what we want
-        bool newStatus = CONDITIONS.getHatStatus(_hatId);
+        (bool success, bytes memory returndata) = hat.conditions.staticcall(data);
 
-        if (newStatus != hat.active) {
-            hat.active = newStatus;
-            emit HatStatusChanged(_hatId, newStatus);
-            return true;
-        } else return false;
+        // if function call succeeds with data of length > 0
+        // then we know the contract exists and has the getWearerStatus function
+        if (success && returndata.length > 0) {
+            newStatus = abi.decode(returndata, (bool));
+        } else {
+            revert NotIHatsConditionsContract();
+        }
+
+        return _processHatStatus(_hatId, newStatus);
     }
 
     /// @notice Report from a hat's Oracle on the status of one of its wearers and, if `false`, revoke their hat
@@ -399,17 +352,13 @@ contract Hats is ERC1155 {
         bool _revoke,
         bool _wearerStanding
     ) external returns (bool) {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
 
         if (msg.sender != hat.oracle) {
             revert NotHatOracle();
         }
 
-        if (_revoke) {
-            _revokeHat(_hatId, _wearer, _wearerStanding);
-        }
-
-        emit WearerStatus(_hatId, _wearer, _revoke, _wearerStanding);
+        _processHatWearerStatus(_hatId, _wearer, _revoke, _wearerStanding);
 
         return true;
     }
@@ -418,22 +367,31 @@ contract Hats is ERC1155 {
     /// @dev Burns the wearer's hat, if revoked
     /// @param _hatId The id of the hat
     /// @param _wearer The address of the Hat wearer whose status report is being requested
-    function getHatWearerStatus(uint256 _hatId, address _wearer)
+    function pullHatWearerStatusFromOracle(uint256 _hatId, address _wearer)
         public
-        returns (bool revoke, bool wearerStanding)
+        returns (bool)
     {
-        Hat memory hat = hats[_hatId];
-        IHatsOracle ORACLE = IHatsOracle(hat.oracle);
+        Hat memory hat = _hats[_hatId];
+        bool revoke;
+        bool wearerStanding;
 
-        // FIXME what happens if ORACLE doesn't have a getWearerStatus() function?
-        // likely answer: the whole thing reverts, which is actually what we want
-        (revoke, wearerStanding) = ORACLE.getWearerStatus(_wearer, _hatId);
+        bytes memory data = abi.encodeWithSignature(
+            "getWearerStatus(address,uint256)",
+            _wearer,
+            _hatId
+        );
 
-        if (revoke) {
-            _revokeHat(_hatId, _wearer, wearerStanding);
+        (bool success, bytes memory returndata) = hat.oracle.staticcall(data);
+
+        // if function call succeeds with data of length > 0
+        // then we know the contract exists and has the getWearerStatus function
+        if (success && returndata.length > 0) {
+            (revoke, wearerStanding) = abi.decode(returndata, (bool, bool));
+        } else {
+            revert NotIHatsOracleContract();
         }
 
-        emit WearerStatus(_hatId, _wearer, revoke, wearerStanding);
+        return _processHatWearerStatus(_hatId, _wearer, revoke, wearerStanding);
     }
 
     /// @notice Stop wearing a hat, aka "renounce" it
@@ -476,11 +434,25 @@ contract Hats is ERC1155 {
 
         hat.conditions = _conditions;
         hat.active = true;
-        hats[_id] = hat;
 
-        // may also need to add to mapping
+        _hats[_id] = hat;
 
         emit HatCreated(_id, _details, _maxSupply, _oracle, _conditions);
+    }
+
+    // TODO write comment
+    function _processHatStatus(
+        uint256 _hatId,
+        bool _newStatus
+    ) internal returns (bool updated) {
+        // optimize later
+        Hat storage hat = _hats[_hatId];
+
+        if (_newStatus != hat.active) {
+            hat.active = _newStatus;
+            emit HatStatusChanged(_hatId, _newStatus);
+            updated = true;
+        }
     }
 
     /// @notice Internal call to revoke a Hat from a wearer
@@ -488,20 +460,31 @@ contract Hats is ERC1155 {
     /// @param _hatId The id of the Hat to revoke
     /// @param _wearer The address of the wearer from whom to revoke the hat
     /// @param _wearerStanding Whether or to make a record of the revocation on-chain for other contracts to use
-    function _revokeHat(
+    function _processHatWearerStatus(
         uint256 _hatId,
         address _wearer,
+        bool _revoke,
         bool _wearerStanding
-    ) internal {
-        // revoke the Hat by burning it
-        _burn(_wearer, _hatId, 1);
-
-        if (_wearerStanding) {
-            // record revocation for use by other contracts
-            badStandings[_hatId][_wearer] = true;
+    ) internal returns (bool updated) {
+        if (_revoke) {
+            // revoke the Hat by burning it
+            _burn(_wearer, _hatId, 1);
         }
 
-        // emit HatRevoked(_hatId, _wearer);
+        // record standing for use by other contracts
+        // note: here, wearerStanding and badStandings are opposite
+        // i.e. if wearerStanding (true = good standing)
+        // then badStandings[_hatId][wearer] will be false
+        // if they are different, then something has changed, and we need to update
+        // badStandings marker
+        if (_wearerStanding == badStandings[_hatId][_wearer]) {
+            badStandings[_hatId][_wearer] = !_wearerStanding;
+            updated = true;
+        }
+
+        emit WearerStatus(_hatId, _wearer, _revoke, _wearerStanding);
+
+        return updated;
     }
 
     function transferHat(
@@ -527,24 +510,6 @@ contract Hats is ERC1155 {
         emit TransferSingle(msg.sender, _from, _to, id, 1);
     }
 
-    function batchTransferHats(
-        uint256[] memory _hatIds,
-        address[] memory _froms,
-        address[] memory _tos
-    ) external {
-        uint256 length = _hatIds.length;
-        bool lengthsCheck = ((_froms.length == length) &&
-            (length == _tos.length));
-
-        if (!lengthsCheck) {
-            revert BatchArrayLengthMismatch();
-        }
-
-        for (uint256 i = 0; i < length; ) {
-            transferHat(_hatIds[i], _froms[i], _tos[i]);
-        }
-    }
-
     /*//////////////////////////////////////////////////////////////
                               HATS VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -556,6 +521,7 @@ contract Hats is ERC1155 {
     /// @return supply The number of current wearers of this Hat
     /// @return oracle The Oracle address for this Hat
     /// @return conditions The Conditions address for this Hat
+    /// @return lastHatId The most recently created Hat with this Hat as admin; also the count of Hats with this Hat as admin
     /// @return active Whether the Hat is current active, as read from `_isActive`
     function viewHat(uint256 _hatId)
         public
@@ -566,15 +532,17 @@ contract Hats is ERC1155 {
             uint32 supply,
             address oracle,
             address conditions,
+            uint8 lastHatId,
             bool active
         )
     {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
         details = hat.details;
         maxSupply = hat.maxSupply;
         supply = hatSupply[_hatId];
         oracle = hat.oracle;
         conditions = hat.conditions;
+        lastHatId = hat.lastHatId;
         active = _isActive(hat, _hatId);
     }
 
@@ -614,47 +582,47 @@ contract Hats is ERC1155 {
             return false;
         }
 
-        uint8 adminHatLevel = getHatLevel(_hatId);
+        uint8 adminHatLevel = getHatLevel(_hatId) - 1;
 
-        while (adminHatLevel >= 0) {
+        while (adminHatLevel >= 1) {
             if (isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel))) {
                 return true;
             }
             adminHatLevel--;
         }
-        return false;
+        return isWearerOfHat(_user, getAdminAtLevel(_hatId, 0));
     }
 
     function getHatLevel(uint256 _hatId) public pure returns (uint8 level) {
         // TODO: invert the order for optimization
-        if (_hatId < 2**8) return 28;
-        if (_hatId < 2**16) return 27;
-        if (_hatId < 2**24) return 26;
-        if (_hatId < 2**32) return 25;
-        if (_hatId < 2**40) return 24;
-        if (_hatId < 2**48) return 23;
-        if (_hatId < 2**56) return 22;
-        if (_hatId < 2**64) return 21;
-        if (_hatId < 2**72) return 20;
-        if (_hatId < 2**80) return 19;
-        if (_hatId < 2**88) return 18;
-        if (_hatId < 2**96) return 17;
-        if (_hatId < 2**104) return 16;
-        if (_hatId < 2**112) return 15;
-        if (_hatId < 2**120) return 14;
-        if (_hatId < 2**128) return 13;
-        if (_hatId < 2**136) return 12;
-        if (_hatId < 2**144) return 11;
-        if (_hatId < 2**152) return 10;
-        if (_hatId < 2**160) return 9;
-        if (_hatId < 2**168) return 8;
-        if (_hatId < 2**176) return 7;
-        if (_hatId < 2**184) return 6;
-        if (_hatId < 2**192) return 5;
-        if (_hatId < 2**200) return 4;
-        if (_hatId < 2**208) return 3;
-        if (_hatId < 2**216) return 2;
-        if (_hatId < 2**224) return 1;
+        if (uint8(_hatId) > 0) return 28;
+        if (uint16(_hatId) > 0) return 27;
+        if (uint24(_hatId) > 0) return 26;
+        if (uint32(_hatId) > 0) return 25;
+        if (uint40(_hatId) > 0) return 24;
+        if (uint48(_hatId) > 0) return 23;
+        if (uint56(_hatId) > 0) return 22;
+        if (uint64(_hatId) > 0) return 21;
+        if (uint72(_hatId) > 0) return 20;
+        if (uint80(_hatId) > 0) return 19;
+        if (uint88(_hatId) > 0) return 18;
+        if (uint96(_hatId) > 0) return 17;
+        if (uint104(_hatId) > 0) return 16;
+        if (uint112(_hatId) > 0) return 15;
+        if (uint120(_hatId) > 0) return 14;
+        if (uint128(_hatId) > 0) return 13;
+        if (uint136(_hatId) > 0) return 12;
+        if (uint144(_hatId) > 0) return 11;
+        if (uint152(_hatId) > 0) return 10;
+        if (uint160(_hatId) > 0) return 9;
+        if (uint168(_hatId) > 0) return 8;
+        if (uint176(_hatId) > 0) return 7;
+        if (uint184(_hatId) > 0) return 6;
+        if (uint192(_hatId) > 0) return 5;
+        if (uint200(_hatId) > 0) return 4;
+        if (uint208(_hatId) > 0) return 3;
+        if (uint216(_hatId) > 0) return 2;
+        if (uint224(_hatId) > 0) return 1;
         return 0;
     }
 
@@ -663,7 +631,9 @@ contract Hats is ERC1155 {
         pure
         returns (uint256 admin)
     {
-        return uint256(_hatId - 2**(8 * (28 - _level)) - 1);
+        uint256 operAND = type(uint256).max << (8 * (28 - _level));
+
+        return _hatId & operAND;
     }
 
     /// @notice Checks the active status of a hat
@@ -675,12 +645,18 @@ contract Hats is ERC1155 {
         view
         returns (bool active)
     {
-        IHatsConditions CONDITIONS = IHatsConditions(_hat.conditions);
+        bytes memory data = abi.encodeWithSignature(
+            "getHatStatus(uint256)",
+            _hatId
+        );
 
-        try CONDITIONS.getHatStatus(_hatId) returns (bool status_) {
-            active = status_;
-        } catch {
-            // if the external call reverts, default to the existing state
+        (bool success, bytes memory returndata) = _hat.conditions.staticcall(
+            data
+        );
+
+        if (success && returndata.length > 0) {
+            active = abi.decode(returndata, (bool));
+        } else {
             active = _hat.active;
         }
     }
@@ -690,7 +666,7 @@ contract Hats is ERC1155 {
     /// @param _hatId The id of the hat
     /// @return bool The active status of the hat
     function isActive(uint256 _hatId) public view returns (bool) {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
         return _isActive(hat, _hatId);
     }
 
@@ -703,17 +679,19 @@ contract Hats is ERC1155 {
         address _wearer,
         Hat memory _hat,
         uint256 _hatId
-    ) public view returns (bool standing) {
-        IHatsOracle ORACLE = IHatsOracle(_hat.oracle);
+    ) internal view returns (bool standing) {
+        bytes memory data = abi.encodeWithSignature(
+            "getWearerStatus(address,uint256)",
+            _wearer,
+            _hatId
+        );
 
-        try ORACLE.getWearerStatus(_wearer, _hatId) returns (
-            bool revoke_,
-            bool standing_
-        ) {
-            standing = standing_;
-        } catch {
-            // if the external call reverts, default to the existing state
-            standing = badStandings[_hatId][_wearer];
+        (bool success, bytes memory returndata) = _hat.oracle.staticcall(data);
+
+        if (success && returndata.length > 0) {
+            (, standing) = abi.decode(returndata, (bool, bool));
+        } else {
+            standing = !badStandings[_hatId][_wearer];
         }
     }
 
@@ -727,7 +705,7 @@ contract Hats is ERC1155 {
         view
         returns (bool)
     {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
         return _isInGoodStanding(_wearer, hat, _hatId);
     }
 
@@ -739,7 +717,15 @@ contract Hats is ERC1155 {
         view
         returns (string memory uri_)
     {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
+
+        uint256 hatAdmin;
+        
+        if (isTopHat(_hatId)) { 
+            hatAdmin = _hatId;
+        } else {
+            hatAdmin = getAdminAtLevel(_hatId, getHatLevel(_hatId) - 1);
+        }
 
         bytes memory properties = abi.encodePacked(
             '{"current supply": "',
@@ -747,7 +733,7 @@ contract Hats is ERC1155 {
             '", "supply cap": "',
             hat.maxSupply,
             '", "admin (hat)": "',
-            getAdminAtLevel(_hatId, getHatLevel(_hatId) - 1),
+            hatAdmin,
             '", "oracle (address)": "',
             hat.oracle,
             '", "conditions (address)": "',
@@ -795,7 +781,7 @@ contract Hats is ERC1155 {
         override
         returns (uint256 balance)
     {
-        Hat memory hat = hats[hatId];
+        Hat memory hat = _hats[hatId];
 
         balance = 0;
 
@@ -836,7 +822,7 @@ contract Hats is ERC1155 {
         uint256 id,
         uint256 amount
     ) internal override {
-        //_balanceOf[from][id] -= amount;
+        _balanceOf[from][id] -= amount;
 
         // decrement Hat supply counter
         --hatSupply[uint256(id)];
