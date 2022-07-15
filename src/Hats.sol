@@ -7,6 +7,7 @@ import "forge-std/Test.sol"; //remove after testing
 import "./HatsConditions/IHatsConditions.sol";
 import "./HatsOracles/IHatsOracle.sol";
 import "utils/BASE64.sol";
+import "utils/Strings.sol";
 
 /// @title Hats Protocol
 /// @notice Hats are DAO-native revocable roles that are represented as semi-fungable tokens for composability
@@ -317,7 +318,10 @@ contract Hats is ERC1155 {
     /// @dev // TODO
     /// @param _hatId The id of the Hat whose Conditions we are checking
     /// @return bool Whether there was a new status
-    function pullHatStatusFromConditions(uint256 _hatId) external returns (bool) {
+    function pullHatStatusFromConditions(uint256 _hatId)
+        external
+        returns (bool)
+    {
         Hat memory hat = _hats[_hatId];
         bool newStatus;
 
@@ -326,7 +330,9 @@ contract Hats is ERC1155 {
             _hatId
         );
 
-        (bool success, bytes memory returndata) = hat.conditions.staticcall(data);
+        (bool success, bytes memory returndata) = hat.conditions.staticcall(
+            data
+        );
 
         // if function call succeeds with data of length > 0
         // then we know the contract exists and has the getWearerStatus function
@@ -441,10 +447,10 @@ contract Hats is ERC1155 {
     }
 
     // TODO write comment
-    function _processHatStatus(
-        uint256 _hatId,
-        bool _newStatus
-    ) internal returns (bool updated) {
+    function _processHatStatus(uint256 _hatId, bool _newStatus)
+        internal
+        returns (bool updated)
+    {
         // optimize later
         Hat storage hat = _hats[_hatId];
 
@@ -720,24 +726,30 @@ contract Hats is ERC1155 {
         Hat memory hat = _hats[_hatId];
 
         uint256 hatAdmin;
-        
-        if (isTopHat(_hatId)) { 
+
+        if (isTopHat(_hatId)) {
             hatAdmin = _hatId;
         } else {
             hatAdmin = getAdminAtLevel(_hatId, getHatLevel(_hatId) - 1);
         }
 
+        string memory domain = Strings.toString(
+            getAdminAtLevel(_hatId, 0) >> (8 * 28)
+        );
+
         bytes memory properties = abi.encodePacked(
             '{"current supply": "',
-            hatSupply[_hatId],
+            Strings.toString(hatSupply[_hatId]),
             '", "supply cap": "',
-            hat.maxSupply,
-            '", "admin (hat)": "',
-            hatAdmin,
-            '", "oracle (address)": "',
-            hat.oracle,
-            '", "conditions (address)": "',
-            hat.conditions,
+            Strings.toString(hat.maxSupply),
+            '", "admin (id)": "',
+            Strings.toString(hatAdmin),
+            '", "admin (pretty id)": "',
+            Strings.toHexString(hatAdmin, 32),
+            '", "oracle address": "',
+            Strings.toHexString(hat.oracle),
+            '", "conditions address": "',
+            Strings.toHexString(hat.conditions),
             '"}'
         );
         string memory status = (_isActive(hat, _hatId) ? "active" : "inactive");
@@ -748,8 +760,12 @@ contract Hats is ERC1155 {
                     abi.encodePacked(
                         '{"name & description": "',
                         hat.details, // alternatively, could point to a URI for offchain flexibility
+                        '", "domain": "',
+                        domain,
                         '", "id": "',
-                        _hatId,
+                        Strings.toString(_hatId),
+                        '", "pretty id": "',
+                        Strings.toHexString(_hatId, 32),
                         '", "status": "',
                         status,
                         //'", "image": "',
