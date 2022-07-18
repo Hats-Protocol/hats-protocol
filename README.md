@@ -150,7 +150,7 @@ Since batch Hats transfers can be made from and to multiple wearers, batch trans
 The wearer of a Hat can "take off" their Hat via `Hats.renounceHat`. This burns the token and revokes any associated authorities and responsibilities, but does not record a revocation.
 
 ## Latest Deployments
-- Goerli (chain id #5) &mdash; `0xe81597289a249ae725c2d80e7848dbfa9708c22d`
+- Goerli (chain id #5) &mdash; `0xb7019c3670f5d4dd99166727a7d29f8a16f4f20a`
 
 ## How to Contribute
 
