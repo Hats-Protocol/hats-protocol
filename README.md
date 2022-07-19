@@ -40,7 +40,7 @@ Each Hat has several properties:
 
 For more information on each property, refer to the detailed sections below.
 
-#### Hat Struct Variable Packing
+### Hat Struct Variable Packing
 Within the contract, each Hat is represented by a struct. To minimize storage costs (gas) associated with creating a new Hat, variables in these structs are tightly packed into just three storage slots. This is accomplished by limiting the following variable types to less than 264 bits (32 bytes):
 - `hatId` is typed as uint64 (8 bytes)
 - `maxSupply` is typed as to uint32 (4 bytes)
@@ -87,6 +87,33 @@ Within a given branch of a hat tree, Hats closer to the root of the tree have ad
 Tophats are the one exception to the rule that a Hat's admin must be another hat. A Tophat is a Hat that serves as its own admin. 
 
 The root of a Hat tree is always a Tophat. Typically, a DAO will wear the Tophat that serves as admin for the tree of Hats related to the DAO's operations.
+
+### Addressable Hat Ids
+Hat ids are uint256 bitmaps that create an "address" &mdash; more like an web or IP address than an Ethereum address &mdash; that includes information about the entire branch of admins for a given hat.
+
+The 32 bytes of a hat's id are structured as follows:
+- The first 4 bytes are reserved for the top hat id. Since top hat ids are unique across a given deployment of Hats Protocol, we can also think of them as the top level "domain" for a hat tree. 
+- Each of the next 28 bytes refer to a single "Hat Level". 
+
+This means there are 29 hat levels, beginning with the top hat at level 0 and going up to level 28. At hat at level 6 will have 6 admins in its branch of the tree, and therefore its id will have non-zero values at levels 0-5 as well as its own level. Since these values correspond to its admins, all that is needed to know which hats have admin authorities over a given hat is to know that given hat's id.
+
+#### Hat Tree Space
+A hat tree can have up to 28 levels, plus the top hat (tree root). Within those 28 levels are 224 bits of address space (remember, one level is one byte), so the maximum number of hats in a single hat tree is $2^{224} + 1 \approx ~2.696 * 10^{67}$, or well beyond the number of stars in the universe.
+
+#### Displaying Hat Ids
+Unfortunately, the rich information embedded within a hat id is hard to see when the id is converted to base 10, which is how most applications and front ends display uint256 numbers read from smart contracts.
+
+It is recommended for front ends to instead convert hat ids to hexidecimal, revealing the values of the bytes &mdash; and therefore the hat levels &mdash; directly.
+
+For example, instead of a hat id looking like this under base 10: `27065670334958527282875471856998940443582285201907529987323758379008`
+
+...under hexidecimal it would look like this: `0x0000000101010000000000000000000000000000000000000000000000000000`
+
+In this second version, you can clearly see that this hat is...
+- a level 2 hat
+- is in the first hat tree (top hat id = 1)
+- is the first hat created at level 2 within this tree
+- admin'd by the first hat created at level 2 within this tree
 
 ### Oracles
 Oracles have authority to rule on the good standing of wearers of a given Hat. This authority is reflected in an oracle's ability to trigger revocation of a Hat from a wearer, which burns the wearer's Hat token.
@@ -154,4 +181,7 @@ The wearer of a Hat can "take off" their Hat via `Hats.renounceHat`. This burns 
 
 ## How to Contribute
 
-TODO
+- Fork this repo
+- [Install Forge](https://book.getfoundry.sh/getting-started/installation)
+
+To compile the contracts, run `forge build`, and to test, run `forge test`. To deploy, use the [Hats.s.sol script](script/Hats.s.sol) and follow the [Foundry scripting instructions](https://book.getfoundry.sh/tutorials/solidity-scripting).
