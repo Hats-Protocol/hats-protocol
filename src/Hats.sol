@@ -746,7 +746,7 @@ contract Hats is ERC1155 {
             '", "admin (id)": "',
             Strings.toString(hatAdmin),
             '", "admin (pretty id)": "',
-            Strings.toHexString(hatAdmin, 32),
+            toPrettyHatId(hatAdmin),
             '", "oracle address": "',
             Strings.toHexString(hat.oracle),
             '", "conditions address": "',
@@ -766,7 +766,7 @@ contract Hats is ERC1155 {
                         '", "id": "',
                         Strings.toString(_hatId),
                         '", "pretty id": "',
-                        Strings.toHexString(_hatId, 32),
+                        toPrettyHatId(_hatId),
                         '", "status": "',
                         status,
                         //'", "image": "',
@@ -782,6 +782,49 @@ contract Hats is ERC1155 {
         uri_ = string(abi.encodePacked("data:application/json;base64,", json));
 
         return uri_;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              HAT ID CONVERSION
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Converts a raw hat id to a "pretty" human-readable address-style id, with dots separating the hat levels
+    /// @param _hatId The raw hat id
+    /// @return string The pretty id
+    function toPrettyHatId(uint256 _hatId) public pure returns (string memory) {
+        // initialize with the domain
+        // this should be a hex string with 8 characters, eg 00000001 for the first topHat
+        string memory prettyId = Strings.toHexStringClean(
+            _hatId >> (28 * 8),
+            4
+        );
+
+        // get hat level
+        uint8 hatLevel = getHatLevel(_hatId);
+
+        // if _hatId is a tophat, then return just the domain
+        if (hatLevel == 0) return prettyId;
+
+        string memory separator = ".";
+
+        // else, loop through and add levels to prettyId
+        for (uint256 i = 1; i <= hatLevel; ++i) {
+            uint256 shifter = 8 * (28 - i);
+
+            // find id at level
+            uint256 nextLevelId = (_hatId & (0xff << shifter)) >> shifter;
+
+            // convert to hex and concatenate along with "."
+            string memory nextLevelString = string.concat(
+                separator,
+                Strings.toHexStringClean(nextLevelId)
+            );
+
+            // append
+            prettyId = string.concat(prettyId, nextLevelString);
+        }
+
+        return prettyId;
     }
 
     /*//////////////////////////////////////////////////////////////

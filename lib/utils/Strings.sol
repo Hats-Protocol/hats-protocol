@@ -71,6 +71,45 @@ library Strings {
     }
 
     /**
+     * @dev Converts a `uint256` to its ASCII `string` hexadecimal representation, without the `0x` prefix.
+     */
+    function toHexStringClean(uint256 value)
+        internal
+        pure
+        returns (string memory)
+    {
+        if (value == 0) {
+            return "0x00";
+        }
+        uint256 temp = value;
+        uint256 length = 0;
+        while (temp != 0) {
+            length++;
+            temp >>= 8;
+        }
+        return toHexStringClean(value, length);
+    }
+
+    /**
+     * @dev Converts a `uint256` to its ASCII `string` hexadecimal representation with fixed length, without the `0x` prefix.
+     */
+    function toHexStringClean(uint256 value, uint256 length)
+        internal
+        pure
+        returns (string memory)
+    {
+        bytes memory buffer = new bytes(2 * length);
+        // buffer[0] = "0";
+        // buffer[1] = "x";
+        for (uint256 i = 2 * length; i > 0; --i) {
+            buffer[i - 1] = _HEX_SYMBOLS[value & 0xf];
+            value >>= 4;
+        }
+        require(value == 0, "Strings: hex length insufficient");
+        return string(buffer);
+    }
+
+    /**
      * @dev Converts an `address` with fixed length of 20 bytes to its not checksummed ASCII `string` hexadecimal representation.
      */
     function toHexString(address addr) internal pure returns (string memory) {
