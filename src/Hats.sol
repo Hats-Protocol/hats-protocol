@@ -765,7 +765,6 @@ contract Hats is ERC1155 {
                         '", "id": "',
                         Strings.toString(_hatId),
                         '", "pretty id": "',
-                        // Strings.toHexString(_hatId, 32),
                         toPrettyHatId(_hatId),
                         '", "status": "',
                         status,
