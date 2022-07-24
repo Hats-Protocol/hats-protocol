@@ -691,6 +691,7 @@ contract Hats is ERC1155 {
             _wearer,
             _hatId
         );
+        // test comment
 
         (bool success, bytes memory returndata) = _hat.oracle.staticcall(data);
 
