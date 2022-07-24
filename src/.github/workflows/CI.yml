@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - mvp
   pull_request:
 
 
