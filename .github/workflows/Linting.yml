@@ -17,5 +17,5 @@ jobs:
       - name: Lint Code Base
         uses: docker://avtodev/markdown-lint:v1
         with:
-          args: "**/*.md" "fix"
+          args: "**/*.md"
           rules: '/.markdownrc'
