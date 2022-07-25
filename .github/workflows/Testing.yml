@@ -24,6 +24,3 @@ jobs:
 
       - name: Run tests
         run: forge test -vvv
-
-      - name: Run snapshot
-        run: forge snapshot
