@@ -1,11 +1,10 @@
-name: CI
+name: Testing
 
 on:
   push:
     branches:
       - main
       - mvp
-      - feat/pretty-ids
   pull_request:
 
 
