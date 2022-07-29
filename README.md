@@ -35,7 +35,7 @@ Hat admins are the one exception to the rule that authorities are external to th
 Each Hat has several properties:
 
 - `id` - the integer identifier for the Hat, which also serves as the ERC1155 token id (see three paragraphs below)
-- `details` - metadata about the Hat; such as a name, description, and other properties like
+- `details` - metadata about the Hat; such as a name, description, and other properties like roles and responsibilities associated with the Hat
 - `maxSupply` - the maximum number of addresses that can wear the Hat at once
 - `admin` - the Hat that controls who can wear the Hat
 - `oracle` - the address that controls whether a given wearer of the Hat is in good standing
@@ -76,7 +76,7 @@ Any address can wear a Hat, including:
 
 The admin of every Hat is another Hat. This means that the authority to perform admin functions for a given Hat is assigned to the wearer of its admin Hat.
 
-The scope of authority for a Hat's admin is to determine who can wear it. This is reflected in the ability create the Hat and to to mint or transfer the Hat's token.
+The scope of authority for a Hat's admin is to determine who can wear it. This is reflected in the ability create the Hat and to mint or transfer the Hat's token.
 
 #### Hatter Contracts
 
@@ -110,7 +110,7 @@ The 32 bytes of a hat's id are structured as follows:
 - The first 4 bytes are reserved for the top hat id. Since top hat ids are unique across a given deployment of Hats Protocol, we can also think of them as the top level "domain" for a hat tree.
 - Each of the next 28 bytes refer to a single "Hat Level".
 
-This means there are 29 hat levels, beginning with the top hat at level 0 and going up to level 28. At hat at level 6 will have 6 admins in its branch of the tree, and therefore its id will have non-zero values at levels 0-5 as well as its own level. Since these values correspond to its admins, all that is needed to know which hats have admin authorities over a given hat is to know that given hat's id.
+This means there are 29 hat levels, beginning with the top hat at level 0 and going up to level 28. A hat at level 6 will have 6 admins in its branch of the tree, and therefore its id will have non-zero values at levels 0-5 as well as its own level. Since these values correspond to its admins, all that is needed to know which hats have admin authorities over a given hat is to know that given hat's id.
 
 #### Hat Tree Space
 
@@ -165,9 +165,9 @@ Creating a Tophat (a Hat that serves as its own admin) requires a special functi
 
 #### Creating a Hat Tree
 
-In some scenarios, a DAO may want to create an entire tree of Hats at once. This is particularly useful when setting up an initial structure for a DAO or working group (e.g., from a Hats template) or when forking an existing Hats structure from a
+In some scenarios, a DAO may want to create an entire tree of Hats at once. This is particularly useful when setting up an initial structure for a DAO or working group (e.g., from a Hats template) or when forking an existing Hats structure from a template.
 
-Enabling this latter forking/exit scenario is an important protection for Hat wearers against potentialy abuse of power by their DAO.
+Enabling this latter forking/exit scenario is an important protection for Hat wearers against potential abuse of power by their DAO.
 
 To create a Hat tree, a DAO can call the `Hats.createHatsTree()` function. This function takes arrays as its arguments, from which it constructs multiple Hats. As long as each of these Hats is part of the same tree of Hats &mdash; i.e., they either have the same existing Hat or any of the newly created Hats as admin(s) &mdash; they can all be created together.
 
@@ -181,13 +181,13 @@ A Hat's admin can mint its token individually by calling `Hats.mintHat`.
 
 #### Batch Minting
 
-Ad adminc can also mint multiple Hats by calling `Hats.batchMintHats`. This enables an admin to mint instances of the same hat to multiple wearers, to mint several Hat at once, or even to mint an entire Hats tree it just created.
+An admin can also mint multiple Hats by calling `Hats.batchMintHats`. This enables an admin to mint instances of the same hat to multiple wearers, to mint several Hats at once, or even to mint an entire Hats tree it just created.
 
 ### Transfers
 
 Only a Hat's admin can transfer its token(s) to new wearer(s).
 
-Unlike typical tokens, the wearer of a Hat cannot transfer theirs. This is because the authorities and responsibilities associated with a Hat are delegated to, not owned by, the wearer.
+Unlike typical tokens, the wearer of a Hat cannot transfer the Hat to another wallet. This is because the authorities and responsibilities associated with a Hat are delegated to, not owned by, the wearer.
 
 As a result, there is no need for safe transfers (transfers which check whether the recipient supports ERC1155) or to pass data to recipient `on1155Received` or `onERC1155BatchReceived` hooks.
 
