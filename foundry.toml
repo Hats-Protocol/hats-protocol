@@ -4,5 +4,7 @@ out = 'out'
 libs = ['lib']
 optimizer_runs = 1000000
 gas_reports = ["*"]
+auto_detect_solc = false
+solc = "0.8.15"
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
