@@ -146,8 +146,6 @@ contract Hats is ERC1155 {
             _oracle,
             _conditions
         );
-
-        return (topHatId, firstHatId);
     }
 
     /// @notice Creates a new hat. The msg.sender must wear the `_admin` hat.
@@ -489,8 +487,6 @@ contract Hats is ERC1155 {
         }
 
         emit WearerStatus(_hatId, _wearer, _revoke, _wearerStanding);
-
-        return updated;
     }
 
     function transferHat(
@@ -635,7 +631,7 @@ contract Hats is ERC1155 {
     function getAdminAtLevel(uint256 _hatId, uint8 _level)
         public
         pure
-        returns (uint256 admin)
+        returns (uint256)
     {
         uint256 operAND = type(uint256).max << (8 * (28 - _level));
 
@@ -779,8 +775,6 @@ contract Hats is ERC1155 {
         );
 
         uri_ = string(abi.encodePacked("data:application/json;base64,", json));
-
-        return uri_;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -804,8 +798,6 @@ contract Hats is ERC1155 {
         if (_isActive(hat, hatId) && _isInGoodStanding(wearer, hat, hatId)) {
             balance = super.balanceOf(wearer, hatId);
         }
-
-        return balance;
     }
 
     /// @notice Mints a Hat token to `to`
