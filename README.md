@@ -43,17 +43,6 @@ Each Hat has several properties:
 
 For more information on each property, refer to the detailed sections below.
 
-### Hat Struct Variable Packing
-
-Within the contract, each Hat is represented by a struct. To minimize storage costs (gas) associated with creating a new Hat, variables in these structs are tightly packed into just three storage slots. This is accomplished by limiting the following variable types to less than 264 bits (32 bytes):
-
-- `hatId` is typed as uint64 (8 bytes)
-- `maxSupply` is typed as to uint32 (4 bytes)
-
-This limits the total number of Hats that can exist to 2^64 (over 1 quintillion) and the max supply of any given Hat to 2^32 (over 2 billion). Both limits are plenty sufficient to support the use of Hats Protocol for many many years.
-
-This also requires that the contract we do some casting of `hatId`s when working with ERC1155 functions, since ERC1155 token ids uint256 for
-
 ### Wearing a Hat
 
 The wearer of a given Hat is assigned the authorities and responsibilities associated with the Hat.
