@@ -4,7 +4,7 @@ pragma solidity >=0.8.13;
 
 import "../HatsOracles/IHatsOracle.sol";
 import "../IHats.sol";
-import "solmate/auth/Auth.sol";
+import "utils/Auth.sol";
 
 /// @notice designed to serve as the admin for multiple hats
 abstract contract SampleMultiHatter is Auth {

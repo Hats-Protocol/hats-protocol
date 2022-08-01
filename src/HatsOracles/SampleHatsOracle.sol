@@ -4,7 +4,7 @@ pragma solidity >=0.8.13;
 
 import "./IHatsOracle.sol";
 import "../IHats.sol";
-import "solmate/auth/Auth.sol";
+import "utils/Auth.sol";
 
 abstract contract OwnableHatsOracle is IHats, IHatsOracle, Auth {
     event HatStandingSet(address _wearer, uint256 _hatId, bool _revoke, bool _standing);

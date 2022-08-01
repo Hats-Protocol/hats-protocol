@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: CC0
 pragma solidity >=0.8.13;
 
-import {ERC1155} from "solmate/tokens/ERC1155.sol";
+import {ERC1155} from "ERC1155/ERC1155.sol";
 // do we need an interface for Hatter / admin?
 import "forge-std/Test.sol"; //remove after testing
 import "./HatsConditions/IHatsConditions.sol";

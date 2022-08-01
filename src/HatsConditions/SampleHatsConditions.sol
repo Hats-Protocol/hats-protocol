@@ -4,7 +4,7 @@ pragma solidity >=0.8.13;
 
 import "./IHatsConditions.sol";
 import "../IHats.sol";
-import "solmate/auth/Auth.sol";
+import "utils/Auth.sol";
 
 abstract contract ExpiringHatsConditions is IHatsConditions {
     event HatExpirySet(uint256 _hatId, uint256 _expiry);
