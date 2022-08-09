@@ -4,19 +4,20 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import "../src/Hats.sol";
 import "./HatsTestSetup.t.sol";
+import "utils/Strings.sol";
 
 contract CreateTopHatTest is TestSetup {
     function setUp() public override {
         setUpVariables();
         // instantiate Hats contract
-        hats = new Hats();
+        hats = new Hats(_baseImageURI);
     }
 
     function testTopHatCreated() public {
         vm.expectEmit(false, false, false, true);
-        emit HatCreated(2**224, "", 1, address(0), address(0));
+        emit HatCreated(2**224, "", 1, address(0), address(0), topHatImageURI);
 
-        topHatId = hats.mintTopHat(topHatWearer);
+        topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
 
         assertTrue(hats.isTopHat(topHatId));
         assertEq(2**224, topHatId);
@@ -27,7 +28,7 @@ contract CreateTopHatTest is TestSetup {
 
         emit TransferSingle(address(this), address(0), topHatWearer, 2**224, 1);
 
-        topHatId = hats.mintTopHat(topHatWearer);
+        topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
 
         assertTrue(hats.isWearerOfHat(topHatWearer, topHatId));
         assertFalse(hats.isWearerOfHat(nonWearer, topHatId));
@@ -37,26 +38,85 @@ contract CreateTopHatTest is TestSetup {
 contract CreateHatsTest is TestSetup {
     function testHatCreated() public {
         // get prelim values
-        (, , , , , uint8 lastHatId, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastHatId, ) = hats.viewHat(topHatId);
 
-        topHatId = hats.mintTopHat(topHatWearer);
+        topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
         vm.prank(address(topHatWearer));
-        hats.createHat(topHatId, _details, _maxSupply, _oracle, _conditions);
+        hats.createHat(
+            topHatId,
+            _details,
+            _maxSupply,
+            _oracle,
+            _conditions,
+            secondHatImageURI
+        );
 
         // assert admin's lastHatId is incremented
-        (, , , , , uint8 lastHatIdPost, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastHatIdPost, ) = hats.viewHat(topHatId);
         assertEq(++lastHatId, lastHatIdPost);
     }
 
     function testHatsBranchCreated() public {
         // mint TopHat
-        topHatId = hats.mintTopHat(topHatWearer);
+        topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
 
-        (uint256[] memory ids, address[] memory wearers) = createHatsBranch(3);
+        (uint256[] memory ids, address[] memory wearers) = createHatsBranch(3, topHatId, topHatWearer);
         assertEq(hats.getHatLevel(ids[2]), 3);
         assertEq(hats.getAdminAtLevel(ids[0], 0), topHatId);
         assertEq(hats.getAdminAtLevel(ids[1], 1), ids[0]);
         assertEq(hats.getAdminAtLevel(ids[2], 2), ids[1]);
+    }
+}
+
+contract ImageURITest is TestSetup2 {
+    function testTopHatImageURI() public {
+        string memory uri = hats.getImageURIForHat(topHatId);
+
+        assertEq(string.concat(topHatImageURI, "0"), uri);
+    }
+
+    function testHatImageURI() public {
+        string memory uri = hats.getImageURIForHat(secondHatId);
+
+        assertEq(string.concat(secondHatImageURI, "0"), uri);
+    }
+
+    function testEmptyHatImageURI() public {
+        // create third Hat
+        vm.prank(secondWearer);
+        thirdHatId = hats.createHat(
+            secondHatId,
+            "third hat",
+            2, // maxSupply
+            _oracle,
+            _conditions,
+            ""
+        );
+
+        string memory uri3 = hats.getImageURIForHat(thirdHatId);
+
+        assertEq(
+            uri3,
+            string.concat(secondHatImageURI, Strings.toString(thirdHatId))
+        );
+    }
+
+    function testEmptyTopHatImageURI() public {
+        uint256 topHat = hats.mintTopHat(topHatWearer, "");
+
+        string memory uri = hats.getImageURIForHat(topHat);
+
+        assertEq(uri, string.concat(_baseImageURI, Strings.toString(topHat)));
+    }
+
+    function testEmptyHatBrancheImageURI() public {
+        uint256 topHat = hats.mintTopHat(topHatWearer, "");
+
+        (uint256[] memory ids, ) = createHatsBranch(5, topHat, topHatWearer);
+
+        string memory uri = hats.getImageURIForHat(ids[4]);
+
+        assertEq(uri, string.concat(_baseImageURI, Strings.toString(ids[4])));
     }
 }
 
@@ -70,7 +130,8 @@ contract MintHatsTest is TestSetup {
             "second hat",
             2, // maxSupply
             _oracle,
-            _conditions
+            _conditions,
+            secondHatImageURI
         );
     }
 
@@ -111,7 +172,7 @@ contract MintHatsTest is TestSetup {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(thirdWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
-        (, , , , , uint8 lastHatId_pre, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastHatId_pre, ) = hats.viewHat(topHatId);
 
         // mint hat
         vm.prank(address(topHatWearer));
@@ -131,7 +192,7 @@ contract MintHatsTest is TestSetup {
         assertEq(hats.hatSupply(secondHatId), supply_pre + 2);
 
         // assert admin's lastHatId is *not* incremented
-        (, , , , , uint8 lastHatId_post, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastHatId_post, ) = hats.viewHat(topHatId);
         assertEq(lastHatId_post, lastHatId_pre);
     }
 
@@ -139,7 +200,7 @@ contract MintHatsTest is TestSetup {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(thirdWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
-        (, , , , , uint8 lastHatId_pre, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastHatId_pre, ) = hats.viewHat(topHatId);
 
         // mint hat
         vm.prank(address(topHatWearer));
@@ -162,7 +223,7 @@ contract MintHatsTest is TestSetup {
         assertEq(hats.hatSupply(secondHatId), supply_pre + 1);
 
         // assert admin's lastHatId is *not* incremented
-        (, , , , , uint8 lastHatId_post, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastHatId_post, ) = hats.viewHat(topHatId);
         assertEq(lastHatId_post, lastHatId_pre);
     }
 
@@ -252,6 +313,7 @@ contract ViewHatTests is TestSetup2 {
         uint32 retsupply;
         address retoracle;
         address retconditions;
+        string memory retimageURI;
         uint8 retlastHatId;
         bool retactive;
 
@@ -261,6 +323,7 @@ contract ViewHatTests is TestSetup2 {
             retsupply,
             retoracle,
             retconditions,
+            retimageURI,
             retlastHatId,
             retactive
         ) = hats.viewHat(secondHatId);
@@ -271,6 +334,7 @@ contract ViewHatTests is TestSetup2 {
         assertEq(retsupply, 1);
         assertEq(retoracle, address(555));
         assertEq(retconditions, address(333));
+        assertEq(retimageURI, string.concat(secondHatImageURI, "0"));
         assertEq(retlastHatId, 0);
         assertEq(retactive, true);
     }
@@ -281,6 +345,7 @@ contract ViewHatTests is TestSetup2 {
         uint32 retsupply;
         address retoracle;
         address retconditions;
+        string memory retimageURI;
         uint8 retlastHatId;
         bool retactive;
 
@@ -290,6 +355,7 @@ contract ViewHatTests is TestSetup2 {
             retsupply,
             retoracle,
             retconditions,
+            retimageURI,
             retlastHatId,
             retactive
         ) = hats.viewHat(topHatId);

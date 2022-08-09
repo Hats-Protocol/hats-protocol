@@ -5,10 +5,12 @@ import "forge-std/Script.sol";
 import "../src/Hats.sol";
 
 contract DeployHats is Script {
+    string public imageURI = "mvp:";
+
     function run() external {
         vm.startBroadcast();
 
-        Hats hats = new Hats();
+        Hats hats = new Hats(imageURI);
 
         vm.stopBroadcast();
     }

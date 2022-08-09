@@ -47,6 +47,8 @@ contract Hats is ERC1155 {
         address conditions; // controls when Hat is active; 20 bytes (+20)
         // 3rd+ storage slot
         string details;
+        // optional
+        string imageURI;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -54,6 +56,8 @@ contract Hats is ERC1155 {
     //////////////////////////////////////////////////////////////*/
 
     uint32 public lastTopHatId; // initialized at 0
+
+    string public baseImageURI;
 
     /**
      * Hat IDs act like addresses. The top level consists of 4 bytes and references all tophats
@@ -65,8 +69,6 @@ contract Hats is ERC1155 {
      *
      */
     mapping(uint256 => Hat) internal _hats;
-
-    // string public baseImageURI = "https://images.hatsprotocol.xyz/"
 
     mapping(uint256 => uint32) public hatSupply; // key: hatId => value: supply
 
@@ -82,7 +84,8 @@ contract Hats is ERC1155 {
         string details,
         uint32 maxSupply,
         address oracle,
-        address conditions
+        address conditions,
+        string imageURI
     );
 
     event HatRenounced(uint256 hatId, address wearer);
@@ -96,8 +99,8 @@ contract Hats is ERC1155 {
 
     event HatStatusChanged(uint256 hatId, bool newStatus);
 
-    constructor() {
-        // lastTopHatId = 0;
+    constructor(string memory _baseImageURI) {
+        baseImageURI = _baseImageURI;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -107,8 +110,13 @@ contract Hats is ERC1155 {
     /// @notice Creates and mints a Hat that is its own admin, i.e. a "topHat"
     /// @dev A topHat has no oracle and no conditions
     /// @param _target The address to which the newly created topHat is minted
+    /// @param _imageURI The image uri for this top hat and the fallback for its
+    ///                  children hats [optional]
     /// @return topHatId The id of the newly created topHat
-    function mintTopHat(address _target) public returns (uint256 topHatId) {
+    function mintTopHat(address _target, string memory _imageURI)
+        public
+        returns (uint256 topHatId)
+    {
         // create hat
 
         topHatId = uint256(++lastTopHatId) << 224;
@@ -118,7 +126,8 @@ contract Hats is ERC1155 {
             "", // details
             1, // maxSupply = 1
             address(0), // there is no oracle
-            address(0) // it has no conditions
+            address(0), // it has no conditions
+            _imageURI
         );
 
         _mint(_target, topHatId, 1, "");
@@ -128,23 +137,30 @@ contract Hats is ERC1155 {
     /// @param _details A description of the hat
     /// @param _maxSupply The total instances of the Hat that can be worn at once
     /// @param _oracle The address that can report on the Hat wearer's standing
-    /// @param _conditions The address that can deactivate the hat
+    /// @param _conditions The address that can deactivate the hat [optional]
+    /// @param _topHatImageURI The image uri for this top hat and the fallback for its
+    ///                        children hats [optional]
+    /// @param _firstHatImageURI The image uri for the first hat and the fallback for its
+    ///                        children hats [optional]
     /// @return topHatId The id of the newly created topHat
     /// @return firstHatId The id of the other newly created hat
     function createTopHatAndHat(
         string memory _details, // encode as bytes32 ??
         uint32 _maxSupply,
         address _oracle,
-        address _conditions
+        address _conditions,
+        string memory _topHatImageURI,
+        string memory _firstHatImageURI
     ) public returns (uint256 topHatId, uint256 firstHatId) {
-        topHatId = mintTopHat(msg.sender);
+        topHatId = mintTopHat(msg.sender, _topHatImageURI);
 
         firstHatId = createHat(
             topHatId,
             _details,
             _maxSupply,
             _oracle,
-            _conditions
+            _conditions,
+            _firstHatImageURI
         );
     }
 
@@ -155,13 +171,16 @@ contract Hats is ERC1155 {
     /// @param _admin The id of the Hat that will control who wears the newly created hat
     /// @param _oracle The address that can report on the Hat wearer's status
     /// @param _conditions The address that can deactivate the Hat
+    /// @param _imageURI The image uri for this hat and the fallback for its
+    ///                  children hats [optional]
     /// @return newHatId The id of the newly created Hat
     function createHat(
         uint256 _admin,
         string memory _details, // encode as bytes32 ??
         uint32 _maxSupply,
         address _oracle,
-        address _conditions
+        address _conditions,
+        string memory _imageURI
     ) public returns (uint256 newHatId) {
         // to create a hat, you must be wearing the Hat of its admin
         if (!isWearerOfHat(msg.sender, _admin)) {
@@ -173,7 +192,14 @@ contract Hats is ERC1155 {
 
         newHatId = _buildNextId(_admin);
         // create the new hat
-        _createHat(newHatId, _details, _maxSupply, _oracle, _conditions);
+        _createHat(
+            newHatId,
+            _details,
+            _maxSupply,
+            _oracle,
+            _conditions,
+            _imageURI
+        );
         // increment _admin.lastHatId
         ++_hats[_admin].lastHatId;
     }
@@ -421,14 +447,17 @@ contract Hats is ERC1155 {
     /// @param _details A description of the hat
     /// @param _maxSupply The total instances of the Hat that can be worn at once
     /// @param _oracle The address that can report on the Hat wearer's status
-    /// @param _conditions The address that can deactivate the hat
+    /// @param _conditions The address that can deactivate the hat [optional]
+    /// @param _imageURI The image uri for this top hat and the fallback for its
+    ///                  children hats [optional]
     /// @return hat The contents of the newly created hat
     function _createHat(
         uint256 _id,
         string memory _details, // encode as bytes32 ??
         uint32 _maxSupply,
         address _oracle,
-        address _conditions
+        address _conditions,
+        string memory _imageURI
     ) internal returns (Hat memory hat) {
         hat.details = _details;
 
@@ -437,11 +466,19 @@ contract Hats is ERC1155 {
         hat.oracle = _oracle;
 
         hat.conditions = _conditions;
+        hat.imageURI = _imageURI;
         hat.active = true;
 
         _hats[_id] = hat;
 
-        emit HatCreated(_id, _details, _maxSupply, _oracle, _conditions);
+        emit HatCreated(
+            _id,
+            _details,
+            _maxSupply,
+            _oracle,
+            _conditions,
+            _imageURI
+        );
     }
 
     // TODO write comment
@@ -523,6 +560,7 @@ contract Hats is ERC1155 {
     /// @return supply The number of current wearers of this Hat
     /// @return oracle The Oracle address for this Hat
     /// @return conditions The Conditions address for this Hat
+    /// @return imageURI The image URI used for this Hat
     /// @return lastHatId The most recently created Hat with this Hat as admin; also the count of Hats with this Hat as admin
     /// @return active Whether the Hat is current active, as read from `_isActive`
     function viewHat(uint256 _hatId)
@@ -534,6 +572,7 @@ contract Hats is ERC1155 {
             uint32 supply,
             address oracle,
             address conditions,
+            string memory imageURI,
             uint8 lastHatId,
             bool active
         )
@@ -544,6 +583,7 @@ contract Hats is ERC1155 {
         supply = hatSupply[_hatId];
         oracle = hat.oracle;
         conditions = hat.conditions;
+        imageURI = getImageURIForHat(_hatId);
         lastHatId = hat.lastHatId;
         active = _isActive(hat, _hatId);
     }
@@ -641,6 +681,7 @@ contract Hats is ERC1155 {
     /// @notice Checks the active status of a hat
     /// @dev For internal use instead of `isActive` when passing Hat as param is preferable
     /// @param _hat The Hat struct
+    /// @param _hatId The id of the hat
     /// @return active The active status of the hat
     function _isActive(Hat memory _hat, uint256 _hatId)
         internal
@@ -711,6 +752,47 @@ contract Hats is ERC1155 {
         return _isInGoodStanding(_wearer, hat, _hatId);
     }
 
+    /// @notice Gets the imageURI for a given hat
+    /// @dev If this hat does not have an imageURI set, recursively get the imageURI from
+    ///      its admin
+    /// @param _hatId The hat whose imageURI we're looking for
+    /// @return imageURI The imageURI of this hat or, if empty, its admin
+    function getImageURIForHat(uint256 _hatId)
+        public
+        view
+        returns (string memory)
+    {
+        // check _hatId first to potentially avoid the `getHatLevel` call
+        Hat memory hat = _hats[_hatId];
+
+        string memory imageURI = hat.imageURI; // save 1 SLOAD
+
+        if (bytes(imageURI).length > 0) {
+            // since there's only one hat with this imageURI at this level, by convention
+            // we refer to it with `id = 0`
+            return string.concat(imageURI, "0");
+        }
+
+        // if _hatId doesn't have an imageURI, we fall back to its admin treep
+        uint256 level = getHatLevel(_hatId);
+
+        // already checked at `level`, so we start the loop at `level - 1`
+        for (uint256 i = level; i > 0; --i) {
+            uint256 id = getAdminAtLevel(_hatId, uint8(i - 1));
+            hat = _hats[id];
+            imageURI = hat.imageURI;
+
+            if (bytes(imageURI).length > 0) {
+                // since there are multiple hats with this imageURI at _hatId's level,
+                // we need to use _hatId to disambiguate
+                return string.concat(imageURI, Strings.toString(_hatId));
+            }
+        }
+
+        // if no hat in _hatId's admin tre has an imageURI, we fall back to the global image uri
+        return string.concat(baseImageURI, Strings.toString(_hatId));
+    }
+
     /// @notice Constructs the URI for a Hat, using data from the Hat struct
     /// @param _hatId The id of the Hat
     /// @return uri_ An ERC1155-compatible JSON string
@@ -764,8 +846,8 @@ contract Hats is ERC1155 {
                         Strings.toHexString(_hatId, 32),
                         '", "status": "',
                         status,
-                        //'", "image": "',
-                        // some image URI,
+                        '", "image": "',
+                        getImageURIForHat(_hatId),
                         '", "properties": ',
                         properties,
                         "}"

@@ -80,6 +80,11 @@ interface IHats {
         view
         returns (bool);
 
+    function getImageURIForHat(uint256 _hatId)
+        external
+        view
+        returns (string memory);
+
     function balanceOf(address wearer, uint256 hatId)
         external
         view
