@@ -324,6 +324,8 @@ contract Hats is ERC1155 {
         return true;
     }
 
+    function changeHatImageURI(uint256 _hatId, string memory _newURI)
+
     /// @notice Toggles a Hat's status from active to deactive, or vice versa
     /// @dev The msg.sender must be set as the hat's Conditions
     /// @param _hatId The id of the Hat for which to adjust status

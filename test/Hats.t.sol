@@ -125,7 +125,24 @@ contract ImageURITest is TestSetup2 {
 
         assertEq(uri, string.concat(_baseImageURI, Strings.toString(ids[4])));
     }
+
+    function testChangeHatImageURI() public {
+        // only a hat's admin can change the hat's imageURI
+    }
+
+    function testNonAdminCannotChangeHatImageURI() public {
+        //
+    }
+
+    function testChangeGlobalBaseImageURI() public {
+        // only the Hats.sol contract owner can change it
+    }
+
+    function testNonOwnerCannotChangeGlobalBaseImageURI() public {
+        //
+    }
 }
+
 
 contract MintHatsTest is TestSetup {
     function setUp() public override {
