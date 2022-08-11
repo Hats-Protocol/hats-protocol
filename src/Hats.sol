@@ -1,431 +1,566 @@
 // SPDX-License-Identifier: CC0
 pragma solidity >=0.8.13;
 
-import "solmate/tokens/ERC1155.sol";
+import {ERC1155} from "ERC1155/ERC1155.sol";
+// do we need an interface for Hatter / admin?
+import "forge-std/Test.sol"; //remove after testing
 import "./HatsConditions/IHatsConditions.sol";
 import "./HatsOracles/IHatsOracle.sol";
-import "./HatsEligibility/IHatsEligibility.sol";
 import "utils/BASE64.sol";
+import "utils/Strings.sol";
 
+/// @title Hats Protocol
+/// @notice Hats are DAO-native revocable roles that are represented as semi-fungable tokens for composability
+/// @dev This contract can manage all Hats for a given chain
+/// @author Hats Protocol
 contract Hats is ERC1155 {
     /*//////////////////////////////////////////////////////////////
                               HATS ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    // QUESTION should we add arguments to any of these errors?
-    error NotOfferAccepter();
-    error NotHatsEligibility();
-    error NotHatOracle();
-    error CannotRuleOnHat();
+    // QUESTION should we add arguments to any of these errors? See github issue #21
+    error NotAdmin(address _user, uint256 _hatId);
+    error AllHatsWorn();
+    error AlreadyWearingHat();
+    error NoApprovalsNeeded();
+    error OnlyAdminsCanTransfer();
+    error NotHatWearer();
     error NotHatConditions();
-    error CannotDeactivateHat();
-    error NotEligible();
-    error HatNotActive();
-    error AllHatsFilled();
-    error OfferNotActive();
-    error NotOfferSubmitter();
-    error TriggerAccountabilityFailed();
-    error NoTransfersAllowed();
+    error NotHatOracle();
+    error NotIHatsConditionsContract();
+    error NotIHatsOracleContract();
+    error BatchArrayLengthMismatch();
+    error SafeTransfersNotNecessary();
+    error MaxTreeDepthReached();
 
     /*//////////////////////////////////////////////////////////////
                               HATS DATA MODELS
     //////////////////////////////////////////////////////////////*/
 
-    // TODO can probably figure out a way to pack all this stuff into fewer storage slots. Most of it doesn't change, anyways
     struct Hat {
-        string name; // QUESTION do we need to store this?
-        string details; // QUESTION do we need to store this?
-        uint256 id; // will be used as the 1155 token ID
-        uint256 maxSupply; // the max number of identical hats that can exist
-        uint256 eligibilityThreshold; // the required amount from HatsEligibility
-        address eligibility; // eligibility contract
-        bytes20 owner; // can accept Offers to wear this hat; can convert to address via address(owner)
-        bytes20 oracle; // rules on
-        bytes20 conditions;
-        bool active; // can be altered by conditions, via deactivateHat()
-    }
-
-    enum OfferStatus {
-        Empty,
-        Active,
-        Accepted,
-        Withdrawn
-    }
-
-    struct Offer {
-        uint256 hat; // the hat to wear
-        address submitter; // the prospective wearer
-        uint256 amount; // the amount of eligibility "offered"; can be higher than the eligibility threshold
-        OfferStatus status; // 0:Empty, 1:Active, 2:Accepted, 3:Withdrawn
+        // 1st storage slot
+        address oracle; // can revoke Hat based on ruling; 20 bytes (+20)
+        uint32 maxSupply; // the max number of identical hats that can exist; 24 bytes (+4)
+        bool active; // can be altered by conditions, via setHatStatus(); 25 bytes (+1)
+        uint8 lastHatId; // indexes how many different hats an admin is holding; 26 bytes (+1)
+        // 2nd storage slot
+        address conditions; // controls when Hat is active; 20 bytes (+20)
+        // 3rd+ storage slot
+        string details;
     }
 
     /*//////////////////////////////////////////////////////////////
                               HATS STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    uint256 public nextHatId; // initialized at 0
-    uint256 public nextOfferId; // initialized at 0; QUESTION Or should this be some kind of concatenation w/ hatId so its easier to retrieve the hat from the offerId?
+    uint32 public lastTopHatId; // initialized at 0
 
-    // holding zone for inactive hats ("hat rack")
-    address private constant HAT_RACK = address(0x4a15); // 0xhats :)
+    /**
+     * Hat IDs act like addresses. The top level consists of 4 bytes and references all tophats
+     * Each level below consists of 1 byte, which can contain up to 255 types of hats.
+     *
+     * A uint256 contains 4 bytes of space for tophat addresses and 28 bytes of space
+     * for 28 levels of heirarchy of ownership, with the admin at each level having space
+     * for 255 different hats.
+     *
+     */
+    mapping(uint256 => Hat) internal _hats;
 
-    // we don't need to pass data into ERC1155 mint or transfer functions
-    bytes private constant EMPTY_DATA = "";
+    // string public baseImageURI = "https://images.hatsprotocol.xyz/"
 
-    Hat[] private hats; // can retrieve hat info via viewHat(hatId) or via uri(hatId);
+    mapping(uint256 => uint32) public hatSupply; // key: hatId => value: supply
 
-    Offer[] public offers;
-
-    mapping(uint256 => uint256) public hatSupply; // key: hatId => value: supply
-
-    mapping(uint256 => mapping(address => bool)) hatWearers; // hatId => (wearer => true/false)
-
-    // QUESTION do we need to store Hat wearing history on-chain? In other words, do other contracts need access to said history?
+    // for external contracts to check if Hat was revoked because the wearer is in bad standing
+    mapping(uint256 => mapping(address => bool)) public badStandings; // key: hatId => value: (key: wearer => value: badStanding?)
 
     /*//////////////////////////////////////////////////////////////
                               HATS EVENTS
     //////////////////////////////////////////////////////////////*/
 
     event HatCreated(
-        string name,
-        string details,
         uint256 id,
-        uint256 maxSupply,
-        uint256 eligibilityThreshold,
-        address eligibility,
-        bytes20 owner,
-        bytes20 oracle,
-        bytes20 conditions
+        string details,
+        uint32 maxSupply,
+        address oracle,
+        address conditions
     );
 
-    event OfferSubmitted(
+    event HatRenounced(uint256 hatId, address wearer);
+
+    event WearerStatus(
         uint256 hatId,
-        address submitter,
-        uint256 amount,
-        uint256 offerId
+        address wearer,
+        bool revoke,
+        bool wearerStanding
     );
 
-    event OfferAccepted(uint256 offerId); // QUESTION do we need this? In theory, the subgraph can know this from the 1155 transfer event
-
-    event HatRelinquished(uint256 hatId, address wearer);
-
-    event Ruling(uint256 hatId, address wearer, bool ruling);
-
-    event HatDeactivated(uint256 hatId);
-
-    // event HatSupplyChanged(uint256 hatId, uint256 newSupply);
-
-    /*//////////////////////////////////////////////////////////////
-                              HATS VIEW FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
+    event HatStatusChanged(uint256 hatId, bool newStatus);
 
     constructor() {
-        // nextHatId = 0;
-        // nextOfferId = 0;
+        // lastTopHatId = 0;
     }
 
     /*//////////////////////////////////////////////////////////////
                               HATS LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function setAddressUp(address _target) public returns (uint256 hatId) {
-        // check if already has first hat???
+    /// @notice Creates and mints a Hat that is its own admin, i.e. a "topHat"
+    /// @dev A topHat has no oracle and no conditions
+    /// @param _target The address to which the newly created topHat is minted
+    /// @return topHatId The id of the newly created topHat
+    function mintTopHat(address _target) public returns (uint256 topHatId) {
         // create hat
-        // hat.owner = hat.id
-        // mint hat to target
-        // return hat.id
-        // TODO
+
+        topHatId = uint256(++lastTopHatId) << 224;
+
+        _createHat(
+            topHatId,
+            "", // details
+            1, // maxSupply = 1
+            address(0), // there is no oracle
+            address(0) // it has no conditions
+        );
+
+        _mint(_target, topHatId, 1, "");
     }
 
-    function setupAndCreateHat(params)
-        public
-        returns (uint256 firstHatId, uint256 hatId)
-    {
-        // setYourselfUp();
-        // createHat(params);
-        // TODO
-    }
-
-    function createHat(
-        string memory _name, // encode as bytes32 ??
+    /// @notice Mints a topHat to the msg.sender and creates another Hat admin'd by the topHat
+    /// @param _details A description of the hat
+    /// @param _maxSupply The total instances of the Hat that can be worn at once
+    /// @param _oracle The address that can report on the Hat wearer's standing
+    /// @param _conditions The address that can deactivate the hat
+    /// @return topHatId The id of the newly created topHat
+    /// @return firstHatId The id of the other newly created hat
+    function createTopHatAndHat(
         string memory _details, // encode as bytes32 ??
-        uint256 _maxSupply,
-        uint256 _eligibilityThreshold,
-        address _eligibility,
-        bytes20 _owner,
-        bytes20 _oracle,
-        bytes20 _conditions
-    ) public returns (uint256 hatId) {
-        Hat memory hat;
-        hat.name = _name;
-        hat.details = _details;
+        uint32 _maxSupply,
+        address _oracle,
+        address _conditions
+    ) public returns (uint256 topHatId, uint256 firstHatId) {
+        topHatId = mintTopHat(msg.sender);
 
-        hatId = nextHatId; // QUESTION maybe saves an SLOAD??
-        ++nextHatId; // increment the next Hat id
-
-        hat.id = hatId;
-
-        hat.maxSupply = _maxSupply;
-        hat.eligibilityThreshold = _eligibilityThreshold;
-        hat.eligibility = _eligibility;
-        // hat.wearer initializes as 0 (the 0x address)
-
-        // if _owner is 20 bytes, then hat.owner = setAddressUp()
-        // if _owner is <20 bytes, then hat.owner = uint256(_owner) // hatId
-        hat.owner = _owner;
-
-        // if _oracle is 20 bytes, then hat.oracle = setAddressUp()
-        // if _oracle is <20 bytes, then hat.oracle = uint256(_oracle) // hatId
-        hat.oracle = _oracle;
-
-        // if _conditions is 20 bytes, then hat.conditions = setAddressUp()
-        // if _conditions is <20 bytes, then hat.conditions = uint256(_conditions) // hatId
-        hat.conditions = _conditions;
-        hat.active = true;
-
-        hats.push(hat);
-        // may also need to add to mapping
-
-        emit HatCreated(
-            _name,
+        firstHatId = createHat(
+            topHatId,
             _details,
-            hatId,
             _maxSupply,
-            _eligibilityThreshold,
-            _eligibility,
-            _owner,
             _oracle,
             _conditions
         );
     }
 
-    function recordOffer(
-        uint256 _hatId,
-        address _submitter,
-        uint256 _amount
-    ) external onlyHatsEligibility(_hatId) returns (uint256 offerId) {
-        if (!isEligible(_submitter, _hatId)) {
-            revert NotEligible();
+    /// @notice Creates a new hat. The msg.sender must wear the `_admin` hat.
+    /// @dev Initializes a new Hat struct, but does not mint any tokens.
+    /// @param _details A description of the Hat
+    /// @param _maxSupply The total instances of the Hat that can be worn at once
+    /// @param _admin The id of the Hat that will control who wears the newly created hat
+    /// @param _oracle The address that can report on the Hat wearer's status
+    /// @param _conditions The address that can deactivate the Hat
+    /// @return newHatId The id of the newly created Hat
+    function createHat(
+        uint256 _admin,
+        string memory _details, // encode as bytes32 ??
+        uint32 _maxSupply,
+        address _oracle,
+        address _conditions
+    ) public returns (uint256 newHatId) {
+        // to create a hat, you must be wearing the Hat of its admin
+        if (!isWearerOfHat(msg.sender, _admin)) {
+            revert NotAdmin(msg.sender, _admin);
+        }
+        if (uint8(_admin) > 0) {
+            revert MaxTreeDepthReached();
         }
 
-        offerId = nextOfferId;
-        // increment next offer id
-        ++nextOfferId;
-
-        Offer memory offer;
-        offer.hat = _hatId;
-        offer.submitter = _submitter;
-        offer.amount = _amount;
-        offer.status = OfferStatus.Active;
-
-        offers.push(offer);
-
-        emit OfferSubmitted(_hatId, _submitter, _amount, offerId);
-
-        return offerId;
+        newHatId = _buildNextId(_admin);
+        // create the new hat
+        _createHat(newHatId, _details, _maxSupply, _oracle, _conditions);
+        // increment _admin.lastHatId
+        ++_hats[_admin].lastHatId;
     }
 
-    function recordOfferWithdrawal(uint256 offerId, address _submitter)
+    function _buildNextId(uint256 _admin) internal returns (uint256) {
+        uint8 nextHatId = _hats[_admin].lastHatId + 1;
+
+        if (uint224(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 216);
+        }
+        if (uint216(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 208);
+        }
+        if (uint208(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 200);
+        }
+        if (uint200(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 192);
+        }
+        if (uint192(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 184);
+        }
+        if (uint184(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 176);
+        }
+        if (uint176(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 168);
+        }
+        if (uint168(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 160);
+        }
+        if (uint160(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 152);
+        }
+        if (uint152(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 144);
+        }
+        if (uint144(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 136);
+        }
+        if (uint136(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 128);
+        }
+        if (uint128(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 120);
+        }
+        if (uint120(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 112);
+        }
+        if (uint112(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 104);
+        }
+        if (uint104(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 96);
+        }
+        if (uint96(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 88);
+        }
+        if (uint88(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 80);
+        }
+        if (uint80(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 72);
+        }
+        if (uint72(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 64);
+        }
+        if (uint64(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 56);
+        }
+        if (uint56(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 48);
+        }
+        if (uint48(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 40);
+        }
+
+        if (uint40(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 32);
+        }
+
+        if (uint32(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 24);
+        }
+
+        if (uint24(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 16);
+        }
+
+        if (uint16(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 8);
+        }
+
+        return _admin | uint256(nextHatId);
+    }
+
+    /// @notice Mints an ERC1155 token of the Hat to a recipient, who then "wears" the hat
+    /// @dev The msg.sender must wear the admin Hat of `_hatId`
+    /// @param _hatId The id of the Hat to mint
+    /// @param _wearer The address to which the Hat is minted
+    /// @return bool Whether the mint succeeded
+    function mintHat(uint256 _hatId, address _wearer) public returns (bool) {
+        Hat memory hat = _hats[_hatId];
+        // only the wearer of a hat's admin Hat can mint it
+        if (!isAdminOfHat(msg.sender, _hatId)) {
+            revert NotAdmin(msg.sender, _hatId);
+        }
+
+        if (hatSupply[_hatId] >= hat.maxSupply) {
+            revert AllHatsWorn();
+        }
+
+        if (isWearerOfHat(_wearer, _hatId)) {
+            revert AlreadyWearingHat();
+        }
+
+        _mint(_wearer, uint256(_hatId), 1, "");
+
+        return true;
+    }
+
+    /// @notice Toggles a Hat's status from active to deactive, or vice versa
+    /// @dev The msg.sender must be set as the hat's Conditions
+    /// @param _hatId The id of the Hat for which to adjust status
+    /// @return bool Whether the status was toggled
+    function setHatStatus(uint256 _hatId, bool newStatus)
         external
         returns (bool)
     {
-        Offer storage offer = offers[offerId];
-        Hat memory hat = hats[offer.hat];
+        Hat storage hat = _hats[_hatId];
 
-        if (msg.sender != hat.eligibility) {
-            revert NotHatsEligibility();
+        if (msg.sender != hat.conditions) {
+            revert NotHatConditions();
         }
 
-        if (_submitter != offer.submitter) {
-            revert NotOfferSubmitter();
-        }
-
-        offer.status = OfferStatus.Withdrawn;
-
-        return true;
+        return _processHatStatus(_hatId, newStatus);
     }
 
-    function acceptOffer(uint256 offerId) external returns (bool) {
-        Offer storage offer = offers[offerId];
+    /// @notice Checks a hat's Conditions and, if new, toggle's the hat's status
+    /// @dev // TODO
+    /// @param _hatId The id of the Hat whose Conditions we are checking
+    /// @return bool Whether there was a new status
+    function pullHatStatusFromConditions(uint256 _hatId)
+        external
+        returns (bool)
+    {
+        Hat memory hat = _hats[_hatId];
+        bool newStatus;
 
-        // offer must be active
-        if (offer.status != OfferStatus.Active) {
-            revert OfferNotActive();
+        bytes memory data = abi.encodeWithSignature(
+            "getHatStatus(uint256)",
+            _hatId
+        );
+
+        (bool success, bytes memory returndata) = hat.conditions.staticcall(
+            data
+        );
+
+        // if function call succeeds with data of length > 0
+        // then we know the contract exists and has the getWearerStatus function
+        if (success && returndata.length > 0) {
+            newStatus = abi.decode(returndata, (bool));
+        } else {
+            revert NotIHatsConditionsContract();
         }
 
-        uint256 hatId = offer.hat;
-        Hat memory hat = hats[hatId];
-
-        // hat must be active
-        if (!_isActive(hat)) {
-            revert HatNotActive();
-
-            // QUESTION do we want to destroy any other offers on the same hat?
-        }
-
-        // only the hat owner can accept an offer; might be either an explicit address or the wearer of some other hat
-        if (msg.sender != _hatOfferAccepter(hat)) {
-            revert NotOfferAccepter();
-        }
-
-        // hat max supply must not be reached
-        if (hatSupply[hatId] == hat.maxSupply) {
-            revert AllHatsFilled();
-        }
-
-        address submitter = offer.submitter;
-
-        // Submitter must be eligible for Hat
-        if (!_isEligible(submitter, hat)) {
-            revert NotEligible();
-        }
-
-        // now we can finally accept the offer!
-        // update Offer status
-        offer.status = OfferStatus.Accepted;
-
-        // mint Hat token to submitter
-        _mintHat(hatId, submitter);
-
-        // emit OfferAccepted event
-        emit OfferAccepted(offerId);
-
-        return true;
+        return _processHatStatus(_hatId, newStatus);
     }
 
-    // DECISION out of scope for mvp
-    // function changeHatSupply(uint256 _hatId, uint256 _newSupply)
-    //     external
-    //     returns (bool)
-    // {
-    //     // TODO revert if not hat owner
-    //     // TODO revert if hatSupply(_hatId) > _newSupply
-    //     // TODO revert if hats[_hatId].supply == _newSupply
-
-    //     emit HatSupplyChanged(_hatId, _newSupply);
-
-    //     return true;
-    // }
-
-    function deactivateHat(uint256 _hatId) external returns (bool) {
-        Hat storage hat = hats[_hatId];
-
-        if (msg.sender != _hatDeactivator(hat)) {
-            revert CannotDeactivateHat();
-        }
-
-        hat.active = false;
-
-        return true;
-
-        // QUESTION do we also destroy any offers associated with this hat? A: probably not worth the gas to do so
-    }
-
-    function requestOracleRuling(uint256 _hatId) public returns (bool) {
-        // TODO
-    }
-
-    function ruleOnHatWearer(
+    /// @notice Report from a hat's Oracle on the status of one of its wearers and, if `false`, revoke their hat
+    /// @dev Burns the wearer's hat, if revoked
+    /// @param _hatId The id of the hat
+    /// @param _wearer The address of the hat wearer whose status is being reported
+    /// @param _revoke True if the wearer should no longer wear the hat
+    /// @param _wearerStanding False if the wearer is no longer in good standing (and potentially should be penalized)
+    /// @return bool Whether the report succeeded
+    function setHatWearerStatus(
         uint256 _hatId,
         address _wearer,
-        bool _ruling // return false if the wearar is not fulfilling the duties of the hat
+        bool _revoke,
+        bool _wearerStanding
     ) external returns (bool) {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
 
-        if (msg.sender != hatRuler(hat)) {
-            revert CannotRuleOnHat();
+        if (msg.sender != hat.oracle) {
+            revert NotHatOracle();
         }
 
-        if (!_ruling) {
-            // take away the hat by burning it
-            _burnHat(_hatId, _wearer);
-
-            // penalize the wearer
-            _triggerAccountability(hat, _wearer);
-        }
-
-        emit Ruling(_hatId, _wearer, _ruling);
+        _processHatWearerStatus(_hatId, _wearer, _revoke, _wearerStanding);
 
         return true;
     }
 
-    function recordRelinquishment(uint256 _hatId, address _wearer)
-        external
-        onlyHatsEligibility(_hatId)
+    /// @notice Check a hat's Oracle for a report on the status of one of the hat's wearers and, if `false`, revoke their hat
+    /// @dev Burns the wearer's hat, if revoked
+    /// @param _hatId The id of the hat
+    /// @param _wearer The address of the Hat wearer whose status report is being requested
+    function pullHatWearerStatusFromOracle(uint256 _hatId, address _wearer)
+        public
         returns (bool)
     {
+        Hat memory hat = _hats[_hatId];
+        bool revoke;
+        bool wearerStanding;
+
+        bytes memory data = abi.encodeWithSignature(
+            "getWearerStatus(address,uint256)",
+            _wearer,
+            _hatId
+        );
+
+        (bool success, bytes memory returndata) = hat.oracle.staticcall(data);
+
+        // if function call succeeds with data of length > 0
+        // then we know the contract exists and has the getWearerStatus function
+        if (success && returndata.length > 0) {
+            (revoke, wearerStanding) = abi.decode(returndata, (bool, bool));
+        } else {
+            revert NotIHatsOracleContract();
+        }
+
+        return _processHatWearerStatus(_hatId, _wearer, revoke, wearerStanding);
+    }
+
+    /// @notice Stop wearing a hat, aka "renounce" it
+    /// @dev Burns the msg.sender's hat
+    /// @param _hatId The id of the Hat being renounced
+    function renounceHat(uint256 _hatId) external {
+        if (!isWearerOfHat(msg.sender, _hatId)) {
+            revert NotHatWearer();
+        }
         // remove the hat
-        _burnHat(_hatId, _wearer);
+        _burn(msg.sender, _hatId, 1);
 
-        // hat.eligibilty will handle the unlocking of eligibility
-
-        return true;
+        emit HatRenounced(_hatId, msg.sender);
     }
 
     /*//////////////////////////////////////////////////////////////
                               HATS INTERNAL LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function _mintHat(uint256 _hatId, address _wearer) internal {
-        _mint(_wearer, _hatId, 1, EMPTY_DATA);
+    /// @notice Internal call for creating a new hat
+    /// @dev Initializes a new Hat struct, but does not mint any tokens
+    /// @param _id ID of the hat to be stored
+    /// @param _details A description of the hat
+    /// @param _maxSupply The total instances of the Hat that can be worn at once
+    /// @param _oracle The address that can report on the Hat wearer's status
+    /// @param _conditions The address that can deactivate the hat
+    /// @return hat The contents of the newly created hat
+    function _createHat(
+        uint256 _id,
+        string memory _details, // encode as bytes32 ??
+        uint32 _maxSupply,
+        address _oracle,
+        address _conditions
+    ) internal returns (Hat memory hat) {
+        hat.details = _details;
 
-        // increment Hat supply
-        ++hatSupply[_hatId];
+        hat.maxSupply = _maxSupply;
+
+        hat.oracle = _oracle;
+
+        hat.conditions = _conditions;
+        hat.active = true;
+
+        _hats[_id] = hat;
+
+        emit HatCreated(_id, _details, _maxSupply, _oracle, _conditions);
     }
 
-    // QUESTION do we want the ability to batch mint hats?
+    // TODO write comment
+    function _processHatStatus(uint256 _hatId, bool _newStatus)
+        internal
+        returns (bool updated)
+    {
+        // optimize later
+        Hat storage hat = _hats[_hatId];
 
-    function _burnHat(uint256 _hatId, address _wearer) internal {
-        _burn(_wearer, _hatId, 1, EMPTY_DATA);
-
-        // decrement Hat supply
-        --hatSupply[_hatId];
-    }
-
-    function _triggerAccountability(uint256 _hatId, address _wearer) internal {
-        IHatsEligibility ELIGIBILITY = IHatsEligibility(hat.eligibility);
-        bool success = ELIGIBILITY.triggerAccountability(_wearer, _hatId);
-        if (!success) {
-            revert TriggerAccountabilityFailed();
+        if (_newStatus != hat.active) {
+            hat.active = _newStatus;
+            emit HatStatusChanged(_hatId, _newStatus);
+            updated = true;
         }
+    }
+
+    /// @notice Internal call to revoke a Hat from a wearer
+    /// @dev Burns the wearer's Hat token
+    /// @param _hatId The id of the Hat to revoke
+    /// @param _wearer The address of the wearer from whom to revoke the hat
+    /// @param _wearerStanding Whether or to make a record of the revocation on-chain for other contracts to use
+    function _processHatWearerStatus(
+        uint256 _hatId,
+        address _wearer,
+        bool _revoke,
+        bool _wearerStanding
+    ) internal returns (bool updated) {
+        if (_revoke) {
+            // revoke the Hat by burning it
+            _burn(_wearer, _hatId, 1);
+        }
+
+        // record standing for use by other contracts
+        // note: here, wearerStanding and badStandings are opposite
+        // i.e. if wearerStanding (true = good standing)
+        // then badStandings[_hatId][wearer] will be false
+        // if they are different, then something has changed, and we need to update
+        // badStandings marker
+        if (_wearerStanding == badStandings[_hatId][_wearer]) {
+            badStandings[_hatId][_wearer] = !_wearerStanding;
+            updated = true;
+        }
+
+        emit WearerStatus(_hatId, _wearer, _revoke, _wearerStanding);
+    }
+
+    function transferHat(
+        uint256 _hatId,
+        address _from,
+        address _to
+    ) public {
+        if (!isAdminOfHat(msg.sender, _hatId)) {
+            revert OnlyAdminsCanTransfer();
+        }
+
+        uint256 id = uint256(_hatId);
+
+        // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
+        if (balanceOf(_from, id) < 1) {
+            revert NotHatWearer();
+        }
+
+        //Adjust balances
+        --_balanceOf[_from][id];
+        ++_balanceOf[_to][id];
+
+        emit TransferSingle(msg.sender, _from, _to, id, 1);
     }
 
     /*//////////////////////////////////////////////////////////////
                               HATS VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice View the properties of a given Hat
+    /// @param _hatId The id of the Hat
+    /// @return details The details of the Hat
+    /// @return maxSupply The max supply of tokens for this Hat
+    /// @return supply The number of current wearers of this Hat
+    /// @return oracle The Oracle address for this Hat
+    /// @return conditions The Conditions address for this Hat
+    /// @return lastHatId The most recently created Hat with this Hat as admin; also the count of Hats with this Hat as admin
+    /// @return active Whether the Hat is current active, as read from `_isActive`
     function viewHat(uint256 _hatId)
         public
         view
         returns (
-            string memory name,
             string memory details,
-            uint256 id,
-            uint256 maxSupply,
-            uint256 supply,
-            uint256 eligibilityThreshold,
-            address eligibility,
-            address owner,
+            uint32 maxSupply,
+            uint32 supply,
             address oracle,
             address conditions,
+            uint8 lastHatId,
             bool active
         )
     {
-        Hat memory hat = hats[_hatId];
-        name = hat.name;
+        Hat memory hat = _hats[_hatId];
         details = hat.details;
-        id = _hatId;
         maxSupply = hat.maxSupply;
         supply = hatSupply[_hatId];
-        eligibilityThreshold = hat.eligibilityThreshold;
-        eligibility = hat.eligibility;
-        owner = hat.owner;
         oracle = hat.oracle;
         conditions = hat.conditions;
-        active = _isActive(hat);
+        lastHatId = hat.lastHatId;
+        active = _isActive(hat, _hatId);
     }
 
-    // alternative name: `wearsHat`
+    /// @notice Chcecks whether a Hat is a topHat
+    /// @dev For use when passing a Hat object is not appropriate
+    /// @param _hatId The Hat in question
+    /// @return bool Whether the Hat is a topHat
+    function isTopHat(uint256 _hatId) public pure returns (bool) {
+        return _hatId > 0 && uint224(_hatId) == 0;
+    }
+
+    /// @notice Checks whether a given address wears a given Hat
+    /// @dev Convenience function that wraps `balanceOf`
+    /// @param _user The address in question
+    /// @param _hatId The id of the Hat that the `_user` might wear
+    /// @return bool Whether the `_user` wears the Hat.
     function isWearerOfHat(address _user, uint256 _hatId)
         public
         view
@@ -434,122 +569,199 @@ contract Hats is ERC1155 {
         return (balanceOf(_user, _hatId) >= 1);
     }
 
-    // Hat is deemed active if both Conditions contract and hat's active property are TRUE
-    // FIXME this may cause issues for hats whose status goes from inactive to active based on programmatic Conditions.
-    // for use internally (can pass Hat object)
-    function _isActive(Hat memory _hat) internal view returns (bool) {
-        IHatsConditions CONDITIONS = IHatsConditions(_hat.conditions);
-        return (CONDITIONS.checkConditions(_hat.id) && _hat.active); // FIXME what happens if the `checkConditions` call reverts, eg if the conditions address is humanistic
+    /// @notice Checks whether a given address serves as the admin of a given Hat
+    /// @dev Recursively checks if `_user` wears the admin Hat of the Hat in question. This is recursive since there may be a string of Hats as admins of Hats.
+    /// @param _user The address in question
+    /// @param _hatId The id of the Hat for which the `_user` might be the admin
+    /// @return bool Whether the `_user` has admin rights for the Hat
+    function isAdminOfHat(address _user, uint256 _hatId)
+        public
+        view
+        returns (bool)
+    {
+        // if Hat is a topHat, then the _user cannot be the admin
+        if (isTopHat(_hatId)) {
+            return false;
+        }
+
+        uint8 adminHatLevel = getHatLevel(_hatId) - 1;
+
+        while (adminHatLevel >= 1) {
+            if (isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel))) {
+                return true;
+            }
+            adminHatLevel--;
+        }
+        return isWearerOfHat(_user, getAdminAtLevel(_hatId, 0));
     }
 
-    // for use externally (when can't pass Hat object)
-    function isActive(uint256 _hatId) public view returns (bool) {
-        Hat memory hat = hats[_hatId];
-        return _isActive(hat);
+    function getHatLevel(uint256 _hatId) public pure returns (uint8 level) {
+        // TODO: invert the order for optimization
+        if (uint8(_hatId) > 0) return 28;
+        if (uint16(_hatId) > 0) return 27;
+        if (uint24(_hatId) > 0) return 26;
+        if (uint32(_hatId) > 0) return 25;
+        if (uint40(_hatId) > 0) return 24;
+        if (uint48(_hatId) > 0) return 23;
+        if (uint56(_hatId) > 0) return 22;
+        if (uint64(_hatId) > 0) return 21;
+        if (uint72(_hatId) > 0) return 20;
+        if (uint80(_hatId) > 0) return 19;
+        if (uint88(_hatId) > 0) return 18;
+        if (uint96(_hatId) > 0) return 17;
+        if (uint104(_hatId) > 0) return 16;
+        if (uint112(_hatId) > 0) return 15;
+        if (uint120(_hatId) > 0) return 14;
+        if (uint128(_hatId) > 0) return 13;
+        if (uint136(_hatId) > 0) return 12;
+        if (uint144(_hatId) > 0) return 11;
+        if (uint152(_hatId) > 0) return 10;
+        if (uint160(_hatId) > 0) return 9;
+        if (uint168(_hatId) > 0) return 8;
+        if (uint176(_hatId) > 0) return 7;
+        if (uint184(_hatId) > 0) return 6;
+        if (uint192(_hatId) > 0) return 5;
+        if (uint200(_hatId) > 0) return 4;
+        if (uint208(_hatId) > 0) return 3;
+        if (uint216(_hatId) > 0) return 2;
+        if (uint224(_hatId) > 0) return 1;
+        return 0;
     }
 
-    // Wearer is deemed eligible if Eligibilty contract says so
-    // for use internally (can pass Hat object)
-    function _isEligible(address _wearer, Hat memory _hat)
+    function getAdminAtLevel(uint256 _hatId, uint8 _level)
+        public
+        pure
+        returns (uint256)
+    {
+        uint256 operAND = type(uint256).max << (8 * (28 - _level));
+
+        return _hatId & operAND;
+    }
+
+    /// @notice Checks the active status of a hat
+    /// @dev For internal use instead of `isActive` when passing Hat as param is preferable
+    /// @param _hat The Hat struct
+    /// @return active The active status of the hat
+    function _isActive(Hat memory _hat, uint256 _hatId)
         internal
         view
-        returns (bool)
+        returns (bool active)
     {
-        IHatsEligibility ELIGIBILITY = IHatsEligibility(_hat.eligibility);
-        return (ELIGIBILITY.checkEligibility(_wearer, _hat.id));
+        bytes memory data = abi.encodeWithSignature(
+            "getHatStatus(uint256)",
+            _hatId
+        );
+
+        (bool success, bytes memory returndata) = _hat.conditions.staticcall(
+            data
+        );
+
+        if (success && returndata.length > 0) {
+            active = abi.decode(returndata, (bool));
+        } else {
+            active = _hat.active;
+        }
     }
 
-    // for use externally (when can't pass Hat object)
-    function isEligible(address _wearer, uint256 _hatId)
-        public
-        view
-        returns (bool)
-    {
-        Hat memory hat = hats[_hatId];
-        return _isEligible(_wearer, hat);
+    /// @notice Checks the active status of a hat
+    /// @dev Use `_isActive` for internal calls that can take a Hat as a param
+    /// @param _hatId The id of the hat
+    /// @return bool The active status of the hat
+    function isActive(uint256 _hatId) public view returns (bool) {
+        Hat memory hat = _hats[_hatId];
+        return _isActive(hat, _hatId);
     }
 
-    function _isInGoodStanding(address _wearer, Hat memory _hat)
-        public
-        view
-        returns (bool)
-    {
-        IHatsOracle ORACLE = IHatsOracle(_hat.oracle);
-        return (ORACLE.checkWearerStanding(_wearer, _hat.id));
+    /// @notice Internal call to check whether a wearer of a Hat is in good standing
+    /// @dev Tries an external call to the Hat's Conditions address, defaulting to existing badStandings state if the call fails (ie if the Conditions address does not conform to it IConditions interface)
+    /// @param _hat The Hat object
+    /// @param _wearer The address of the Hat wearer
+    /// @return standing Whether the wearer is in good standing
+    function _isInGoodStanding(
+        address _wearer,
+        Hat memory _hat,
+        uint256 _hatId
+    ) internal view returns (bool standing) {
+        bytes memory data = abi.encodeWithSignature(
+            "getWearerStatus(address,uint256)",
+            _wearer,
+            _hatId
+        );
+
+        (bool success, bytes memory returndata) = _hat.oracle.staticcall(data);
+
+        if (success && returndata.length > 0) {
+            (, standing) = abi.decode(returndata, (bool, bool));
+        } else {
+            standing = !badStandings[_hatId][_wearer];
+        }
     }
 
+    /// @notice Checks whether a wearer of a Hat is in good standing
+    /// @dev Public function for use when passing a Hat object is not possible or preferable
+    /// @param _hatId The id of the Hat
+    /// @param _wearer The address of the Hat wearer
+    /// @return bool
     function isInGoodStanding(address _wearer, uint256 _hatId)
         public
         view
         returns (bool)
     {
-        Hat memory hat = hats[_hatsId];
-        return _isInGoodStanding(_wearer, hat);
+        Hat memory hat = _hats[_hatId];
+        return _isInGoodStanding(_wearer, hat, _hatId);
     }
 
-    function _hatOfferAccepter(Hat memory _hat)
-        internal
-        view
-        returns (address)
-    {
-        // if _hat.owner is 20 bytes (i.e. an address), check if _user == _hat.owner
-        // if _hat.owner is <20 bytes, check if _user wears _hat.owner , ie
-        //      isWearerOfHat(_user, _hat.owner) // only works using the sequential integer hat id model
-        // TODO
-    }
-
-    function _hatRuler(Hat memory _hat) internal view returns (address) {
-        // if _hat.owner is 20 bytes (i.e. an address), check if _user == _hat.oracle
-        // if _hat.owner is <20 bytes, check if _user wears _hat.oracle , ie
-        //      isWearerOfHat(_user, _hat.oracle) // only works using the sequential integer hat id model
-        // TODO
-    }
-
-    function _hatDeactivator(Hat memory _hat) internal view returns (address) {
-        // if _hat.owner is 20 bytes (i.e. an address), check if _user == _hat.conditions
-        // if _hat.owner is <20 bytes, check if _user wears _hat.conditions , ie
-        //      isWearerOfHat(_user, _hat.conditions) // only works using the sequential integer hat id model
-        // TODO
-    }
-
-    // effectively a wrapper around `viewHat` that formats the output as a json string
+    /// @notice Constructs the URI for a Hat, using data from the Hat struct
+    /// @param _hatId The id of the Hat
+    /// @return uri_ An ERC1155-compatible JSON string
     function _constructURI(uint256 _hatId)
         internal
         view
         returns (string memory uri_)
     {
-        Hat memory hat = hats[_hatId];
+        Hat memory hat = _hats[_hatId];
+
+        uint256 hatAdmin;
+
+        if (isTopHat(_hatId)) {
+            hatAdmin = _hatId;
+        } else {
+            hatAdmin = getAdminAtLevel(_hatId, getHatLevel(_hatId) - 1);
+        }
+
+        string memory domain = Strings.toString(
+            getAdminAtLevel(_hatId, 0) >> (8 * 28)
+        );
 
         bytes memory properties = abi.encodePacked(
             '{"current supply": "',
-            hatSupply[_hatId],
+            Strings.toString(hatSupply[_hatId]),
             '", "supply cap": "',
-            hat.maxSupply,
-            '", "eligibility threshold": "',
-            hat.eligibilityThreshold,
-            '", "eligibility contract": "',
-            hat.eligibility,
-            '", "owner": "',
-            hat.owner,
-            '", "oracle": "',
-            hat.oracle,
-            '", "conditions": "',
-            hat.conditions,
+            Strings.toString(hat.maxSupply),
+            '", "admin (id)": "',
+            Strings.toString(hatAdmin),
+            '", "admin (pretty id)": "',
+            Strings.toHexString(hatAdmin, 32),
+            '", "oracle address": "',
+            Strings.toHexString(hat.oracle),
+            '", "conditions address": "',
+            Strings.toHexString(hat.conditions),
             '"}'
         );
-
-        string memory status = (_isActive(hat) ? "active" : "inactive");
+        string memory status = (_isActive(hat, _hatId) ? "active" : "inactive");
 
         string memory json = Base64.encode(
             bytes(
                 string(
                     abi.encodePacked(
-                        '{"name": "',
-                        hat.name, // alternatively, could point to a URI for offchain flexibility
-                        '", "description": "',
+                        '{"name & description": "',
                         hat.details, // alternatively, could point to a URI for offchain flexibility
+                        '", "domain": "',
+                        domain,
                         '", "id": "',
-                        _hatId,
+                        Strings.toString(_hatId),
+                        '", "pretty id": "',
+                        Strings.toHexString(_hatId, 32),
                         '", "status": "',
                         status,
                         //'", "image": "',
@@ -563,86 +775,105 @@ contract Hats is ERC1155 {
         );
 
         uri_ = string(abi.encodePacked("data:application/json;base64,", json));
-
-        return uri_;
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                              HATS MODIFIERS
-    //////////////////////////////////////////////////////////////*/
-
-    modifier onlyHatsEligibility(uint256 _hatId) {
-        //
-        Hat memory hat = hats[_hatId];
-        if (msg.sender != hat.eligibility) {
-            revert NotHatsEligibility();
-        }
-        _;
     }
 
     /*//////////////////////////////////////////////////////////////
                               ERC1155 OVERRIDES
     //////////////////////////////////////////////////////////////*/
 
-    function balanceOf(address owner, uint256 id)
+    /// @notice Gets the Hat token balance of a user for a given Hat
+    /// @param wearer The address whose balance is being checked
+    /// @param hatId The id of the Hat
+    /// @return balance The `_user`'s balance of the Hat tokens. Will typically not be greater than 1.
+    function balanceOf(address wearer, uint256 hatId)
         public
+        view
         override
-        returns (uint256)
+        returns (uint256 balance)
     {
-        Hat memory hat = hats[id];
+        Hat memory hat = _hats[hatId];
 
-        uint256 balance = 0;
+        balance = 0;
 
-        if (
-            _isActive(hat) &&
-            _isEligible(owner, hat) &&
-            _isInGoodStanding(owner, hat)
-        ) {
-            balance = balanceOf[_user][_hatId];
+        if (_isActive(hat, hatId) && _isInGoodStanding(wearer, hat, hatId)) {
+            balance = super.balanceOf(wearer, hatId);
         }
+    }
 
-        return balance;
+    /// @notice Mints a Hat token to `to`
+    /// @dev Overrides ERC1155._mint: skips the typical 1155TokenReceiver hook since Hat wearers don't control their own Hat, and adds Hats-specific state changes
+    /// @param to The wearer of the Hat and the recipient of the newly minted token
+    /// @param id The id of the Hat to mint, cast to uint256
+    /// @param amount Must always be 1, since it's not possible wear >1 Hat
+    /// @param data Can be empty since we skip the 1155TokenReceiver hook
+    function _mint(
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    ) internal override {
+        _balanceOf[to][id] += amount;
+
+        // increment Hat supply counter
+        ++hatSupply[uint256(id)];
+
+        emit TransferSingle(msg.sender, address(0), to, id, amount);
+    }
+
+    /// @notice Burns a wearer's (`from`'s) Hat token
+    /// @dev Overrides ERC1155._burn: adds Hats-specific state change
+    /// @param from The wearer from which to burn the Hat token
+    /// @param id The id of the Hat to burn, cast to uint256
+    /// @param amount Must always be 1, since it's not possible wear >1 Hat
+    function _burn(
+        address from,
+        uint256 id,
+        uint256 amount
+    ) internal override {
+        _balanceOf[from][id] -= amount;
+
+        // decrement Hat supply counter
+        --hatSupply[uint256(id)];
+
+        emit TransferSingle(msg.sender, from, address(0), id, amount);
     }
 
     function setApprovalForAll(address operator, bool approved)
         public
+        pure
         override
     {
-        revert NoTransfersAllowed();
+        revert NoApprovalsNeeded();
     }
 
+    /// @notice Safe transfers are not necessary for Hats since transfers are not handled by the wearer
+    /// @dev Use `Hats.TransferHat()` instead
     function safeTransferFrom(
         address from,
         address to,
         uint256 id,
         uint256 amount,
         bytes calldata data
-    ) public override {
-        revert NoTransfersAllowed();
+    ) public pure override {
+        revert SafeTransfersNotNecessary();
     }
 
+    /// @notice Safe transfers are not necessary for Hats since transfers are not handled by the wearer
+    /// @dev Use `Hats.BatchTransferHats()` instead
     function safeBatchTransferFrom(
         address from,
         address to,
         uint256[] calldata ids,
         uint256[] calldata amounts,
         bytes calldata data
-    ) public override {
-        revert NoTransfersAllowed();
+    ) public pure override {
+        revert SafeTransfersNotNecessary();
     }
 
+    /// @notice View the uri for a Hat
+    /// @param id The id of the Hat
+    /// @return string An 1155-compatible JSON object
     function uri(uint256 id) public view override returns (string memory) {
-        return _constructURI(id);
+        return _constructURI(uint256(id));
     }
-
-    // function playNiceWithFrontEnds(uint256 hatId) external returns (bool) {
-    //     // check for ownerOf changes
-    //     // if changed, fire transfer event
-    //     if (hats[hatId].wearer != ownerOf(hatId)) {
-    //         // QUESTION how do we handle the case where there's a new wearer?
-    //         // emit transfer event
-    //     }
-
-    //     // no need to actually do any transfering or state changes
-    // }
 }
