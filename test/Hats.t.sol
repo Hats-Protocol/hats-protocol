@@ -5,11 +5,18 @@ import "forge-std/Test.sol";
 import "../src/Hats.sol";
 import "./HatsTestSetup.t.sol";
 
+contract DeployTest is TestSetup {
+    function testDeployWithParams() public {
+        assertEq(hats.name(), name);
+    }
+}
+
 contract CreateTopHatTest is TestSetup {
     function setUp() public override {
         setUpVariables();
+
         // instantiate Hats contract
-        hats = new Hats();
+        hats = new Hats(name);
     }
 
     function testTopHatCreated() public {

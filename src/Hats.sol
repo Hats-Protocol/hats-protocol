@@ -53,6 +53,8 @@ contract Hats is ERC1155 {
                               HATS STORAGE
     //////////////////////////////////////////////////////////////*/
 
+    string public name;
+
     uint32 public lastTopHatId; // initialized at 0
 
     /**
@@ -96,8 +98,8 @@ contract Hats is ERC1155 {
 
     event HatStatusChanged(uint256 hatId, bool newStatus);
 
-    constructor() {
-        // lastTopHatId = 0;
+    constructor(string memory _name) {
+        name = _name;
     }
 
     /*//////////////////////////////////////////////////////////////

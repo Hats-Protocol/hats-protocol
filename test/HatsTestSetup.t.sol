@@ -23,6 +23,8 @@ abstract contract TestVariables {
     uint256 internal secondHatId;
     uint256 internal thirdHatId;
 
+    string internal name;
+
     event HatCreated(
         uint256 id,
         string details,
@@ -66,7 +68,7 @@ abstract contract TestSetup is Test, TestVariables {
     function setUp() public virtual {
         setUpVariables();
         // instantiate Hats contract
-        hats = new Hats();
+        hats = new Hats(name);
 
         // create TopHat
         createTopHat();
@@ -84,6 +86,8 @@ abstract contract TestSetup is Test, TestVariables {
         _maxSupply = 1;
         _oracle = address(555);
         _conditions = address(333);
+
+        name = "Hats Test Contract";
     }
 
     function createTopHat() internal {
@@ -133,11 +137,10 @@ abstract contract TestSetup is Test, TestVariables {
 
 // in addition to TestSetup, TestSetup2 creates and mints a second hat
 abstract contract TestSetup2 is TestSetup {
-     function setUp() public override {
-        
+    function setUp() public override {
         // expand on TestSetup
         super.setUp();
-        
+
         // create second Hat
         vm.prank(topHatWearer);
         secondHatId = hats.createHat(
