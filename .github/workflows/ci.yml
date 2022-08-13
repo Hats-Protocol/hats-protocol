@@ -1,14 +1,25 @@
-name: Testing
+name: ci
 
 on:
   push:
     branches:
       - main
+      - beta
   pull_request:
 
-
 jobs:
-  check:
+  
+  lint:
+    name: "Markdown linting"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        name: Check out the code
+      - name: Lint Code Base
+        uses: docker://avtodev/markdown-lint:v1
+        with:
+          args: "**/*.md"
+  test:
     name: Foundry project
     runs-on: ubuntu-latest
     steps:
