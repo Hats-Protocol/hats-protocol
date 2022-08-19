@@ -6,5 +6,10 @@ optimizer_runs = 1000000
 gas_reports = ["*"]
 auto_detect_solc = false
 solc = "0.8.15"
+remappings = [
+  "ds-test/=lib/forge-std/lib/ds-test/src/",
+  "forge-std/=lib/forge-std/src/",
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
+]
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
