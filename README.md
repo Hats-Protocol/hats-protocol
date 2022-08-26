@@ -197,6 +197,7 @@ The wearer of a Hat can "take off" their Hat via `Hats.renounceHat`. This burns 
 ## Latest Deployments
 
 - Goerli (chain id #5) &mdash; `0xb7019c3670f5d4dd99166727a7d29f8a16f4f20a`
+- Rinkeby (chain id #4) &mdash; `0xf55228444742e6812535bcda350167cd965121b7`
 
 ## How to Contribute
 

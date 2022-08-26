@@ -8,10 +8,13 @@ contract DeployHats is Script {
     function run() external {
         vm.startBroadcast();
 
-        string memory name = "Hats Protocol - Beta 2"; // increment this each test deployment
+        string memory name = "Hats Protocol - Beta 1"; // increment this each test deployment
 
         Hats hats = new Hats(name);
 
         vm.stopBroadcast();
     }
+
+    // forge script script/Hats.s.sol:DeployHats--rpc-url $RINKEBY_RPC --private-key $PRIVATE_KEY --verify --etherscan-api-key $ETHERSCAN_KEY --broadcast
+    // "https://rinkeby.infura.io/v3/2c9885dfbf00441393ec7afae72363d5"
 }
