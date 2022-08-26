@@ -6,9 +6,16 @@ import "../src/Hats.sol";
 import "./HatsTestSetup.t.sol";
 import "utils/Strings.sol";
 
+contract DeployTest is TestSetup {
+    function testDeployWithParams() public {
+        assertEq(hats.name(), name);
+    }
+}
+
 contract CreateTopHatTest is TestSetup {
     function setUp() public override {
         setUpVariables();
+
         // instantiate Hats contract
         hats = new Hats(name, _baseImageURI);
     }

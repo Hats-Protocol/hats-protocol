@@ -73,6 +73,11 @@ interface IHats {
 
     function getHatLevel(uint256 _hatId) external pure returns (uint8 level);
 
+    function getAdminAtLevel(uint256 _hatId, uint8 _level)
+        external
+        pure
+        returns (uint256);
+
     function isActive(uint256 _hatId) external view returns (bool);
 
     function isInGoodStanding(address _wearer, uint256 _hatId)

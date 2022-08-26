@@ -6,8 +6,8 @@ import {ERC1155} from "ERC1155/ERC1155.sol";
 import "forge-std/Test.sol"; //remove after testing
 import "./HatsConditions/IHatsConditions.sol";
 import "./HatsOracles/IHatsOracle.sol";
-import "utils/BASE64.sol";
-import "utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Base64.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 /// @title Hats Protocol
 /// @notice Hats are DAO-native revocable roles that are represented as semi-fungable tokens for composability
