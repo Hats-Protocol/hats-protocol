@@ -101,7 +101,7 @@ contract Hats is ERC1155 {
 
     event HatStatusChanged(uint256 hatId, bool newStatus);
 
-    constructor(string memory _base, string memory ImageURI) {
+    constructor(string memory _name, string memory _baseImageURI) {
         name = _name;
         baseImageURI = _baseImageURI;
     }

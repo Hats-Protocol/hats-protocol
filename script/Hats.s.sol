@@ -12,7 +12,7 @@ contract DeployHats is Script {
 
         string memory name = "Hats Protocol - Beta 1"; // increment this each test deployment
 
-        Hats hats = new Hats(imageURIname);
+        Hats hats = new Hats(name, imageURI);
 
         vm.stopBroadcast();
     }
