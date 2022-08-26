@@ -10,7 +10,7 @@ contract CreateTopHatTest is TestSetup {
     function setUp() public override {
         setUpVariables();
         // instantiate Hats contract
-        hats = new Hats(_baseImageURI);
+        hats = new Hats(name, _baseImageURI);
     }
 
     function testTopHatCreated() public {

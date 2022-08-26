@@ -28,6 +28,8 @@ abstract contract TestVariables {
     uint256 internal secondHatId;
     uint256 internal thirdHatId;
 
+    string internal name;
+
     event HatCreated(
         uint256 id,
         string details,
@@ -72,7 +74,7 @@ abstract contract TestSetup is Test, TestVariables {
     function setUp() public virtual {
         setUpVariables();
         // instantiate Hats contract
-        hats = new Hats(_baseImageURI);
+        hats = new Hats(name, _baseImageURI);
 
         // create TopHat
         createTopHat();
@@ -97,6 +99,7 @@ abstract contract TestSetup is Test, TestVariables {
         topHatImageURI = "http://www.tophat.com/";
         secondHatImageURI = "http://www.second.com/";
         thirdHatImageURI = "http://www.third.com/";
+        name = "Hats Test Contract";
     }
 
     function createTopHat() internal {

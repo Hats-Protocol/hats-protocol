@@ -10,7 +10,9 @@ contract DeployHats is Script {
     function run() external {
         vm.startBroadcast();
 
-        Hats hats = new Hats(imageURI);
+        string memory name = "Hats Protocol - Beta 1"; // increment this each test deployment
+
+        Hats hats = new Hats(name, imageURI);
 
         vm.stopBroadcast();
     }
