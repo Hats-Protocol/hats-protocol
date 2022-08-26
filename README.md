@@ -199,7 +199,7 @@ The wearer of a hat can "take off" their Hat via `Hats.renounceHat`. This burns 
 
 Each hat can be created to include an image URI, which points to media for apps to display along with the hat token.
 
-If the image URI for a given hat was not unspecified upon hat creation, the image URI for that hat defaults to the URI specified for it's admin hat. This fallback happens recursively, traversing the hat's tree of admins until a specified URI is found. If there is no specified URI within that tree of admins, the image URI defaults to the global `_baseImageURI`.
+If the image URI for a given hat was not specified upon hat creation, the image URI for that hat defaults to the URI specified for it's admin hat. This fallback happens recursively, traversing the hat's tree of admins until a specified URI is found. If there is no specified URI within that tree of admins, the image URI defaults to the global `_baseImageURI`.
 
 This architecture allows DAOs and other hat creators to add custom images to their organization's hats without requiring them to do so. There is no additional gas cost imposed on hat creators choosing not to specify a custom image URI.
 

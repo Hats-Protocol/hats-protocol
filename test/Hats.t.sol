@@ -116,7 +116,7 @@ contract ImageURITest is TestSetup2 {
         assertEq(uri, string.concat(_baseImageURI, Strings.toString(topHat)));
     }
 
-    function testEmptyHatBrancheImageURI() public {
+    function testEmptyHatBranchImageURI() public {
         uint256 topHat = hats.mintTopHat(topHatWearer, "");
 
         (uint256[] memory ids, ) = createHatsBranch(5, topHat, topHatWearer);
@@ -130,19 +130,10 @@ contract ImageURITest is TestSetup2 {
         // only a hat's admin can change the hat's imageURI
     }
 
-    function testNonAdminCannotChangeHatImageURI() public {
-        //
-    }
-
-    function testChangeGlobalBaseImageURI() public {
-        // only the Hats.sol contract owner can change it
-    }
-
-    function testNonOwnerCannotChangeGlobalBaseImageURI() public {
-        //
-    }
+    // function testNonOwnerCannotChangeGlobalBaseImageURI() public {
+    //     //
+    // }
 }
-
 
 contract MintHatsTest is TestSetup {
     function setUp() public override {
