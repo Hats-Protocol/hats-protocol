@@ -321,8 +321,6 @@ contract Hats is ERC1155 {
         return true;
     }
 
-    function changeHatImageURI(uint256 _hatId, string memory _newURI)
-
     /// @notice Toggles a Hat's status from active to deactive, or vice versa
     /// @dev The msg.sender must be set as the hat's Conditions
     /// @param _hatId The id of the Hat for which to adjust status
@@ -775,7 +773,7 @@ contract Hats is ERC1155 {
             return string.concat(imageURI, "0");
         }
 
-        // if _hatId doesn't have an imageURI, we fall back to its admin treep
+        // if _hatId doesn't have an imageURI, we fall back to its admin tree
         uint256 level = getHatLevel(_hatId);
 
         // already checked at `level`, so we start the loop at `level - 1`
