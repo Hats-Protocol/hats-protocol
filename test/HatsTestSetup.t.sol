@@ -99,6 +99,8 @@ abstract contract TestSetup is Test, TestVariables {
         topHatImageURI = "http://www.tophat.com/";
         secondHatImageURI = "http://www.second.com/";
         thirdHatImageURI = "http://www.third.com/";
+
+        name = "Hats Test Contract";
     }
 
     function createTopHat() internal {
