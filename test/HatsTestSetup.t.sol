@@ -18,6 +18,11 @@ abstract contract TestVariables {
     uint32 internal _maxSupply;
     address internal _oracle;
     address internal _conditions;
+    string internal _baseImageURI;
+
+    string internal topHatImageURI;
+    string internal secondHatImageURI;
+    string internal thirdHatImageURI;
 
     uint256 internal topHatId;
     uint256 internal secondHatId;
@@ -30,7 +35,8 @@ abstract contract TestVariables {
         string details,
         uint32 maxSupply,
         address oracle,
-        address conditions
+        address conditions,
+        string imageURI
     );
     event HatRenounced(uint256 hatId, address wearer);
     event WearerStatus(
@@ -68,13 +74,16 @@ abstract contract TestSetup is Test, TestVariables {
     function setUp() public virtual {
         setUpVariables();
         // instantiate Hats contract
-        hats = new Hats(name);
+        hats = new Hats(name, _baseImageURI);
 
         // create TopHat
         createTopHat();
     }
 
     function setUpVariables() internal {
+        // set variables: deploy
+        _baseImageURI = "https://www.images.hats.work/";
+
         // set variables: addresses
         topHatWearer = address(1);
         secondWearer = address(2);
@@ -87,19 +96,25 @@ abstract contract TestSetup is Test, TestVariables {
         _oracle = address(555);
         _conditions = address(333);
 
+        topHatImageURI = "http://www.tophat.com/";
+        secondHatImageURI = "http://www.second.com/";
+        thirdHatImageURI = "http://www.third.com/";
+
         name = "Hats Test Contract";
     }
 
     function createTopHat() internal {
         // create TopHat
-        topHatId = hats.mintTopHat(topHatWearer);
+        topHatId = hats.mintTopHat(topHatWearer, "http://www.tophat.com/");
     }
 
     /// @dev assumes a tophat has already been created
-    function createHatsBranch(uint256 _length)
-        internal
-        returns (uint256[] memory ids, address[] memory wearers)
-    {
+    /// @dev doesn't apply any imageURIs
+    function createHatsBranch(
+        uint256 _length,
+        uint256 _topHatId,
+        address _topHatWearer
+    ) internal returns (uint256[] memory ids, address[] memory wearers) {
         uint256 id;
         address wearer;
         uint256 admin;
@@ -109,9 +124,9 @@ abstract contract TestSetup is Test, TestVariables {
         wearers = new address[](_length);
 
         for (uint256 i = 0; i < _length; ++i) {
-            admin = (i == 0) ? topHatId : ids[i - 1];
+            admin = (i == 0) ? _topHatId : ids[i - 1];
 
-            adminWearer = (i == 0) ? topHatWearer : wearers[i - 1];
+            adminWearer = (i == 0) ? _topHatWearer : wearers[i - 1];
 
             // create ith hat from the admin
             vm.prank(adminWearer);
@@ -121,7 +136,8 @@ abstract contract TestSetup is Test, TestVariables {
                 string.concat("hat ", vm.toString(i + 2)),
                 _maxSupply,
                 _oracle,
-                _conditions
+                _conditions,
+                "" // imageURI
             );
             ids[i] = id;
 
@@ -148,7 +164,8 @@ abstract contract TestSetup2 is TestSetup {
             "second hat",
             2, // maxSupply
             _oracle,
-            _conditions
+            _conditions,
+            secondHatImageURI
         );
 
         // mint second hat

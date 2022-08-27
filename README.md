@@ -35,11 +35,12 @@ Hat admins are the one exception to the rule that authorities are external to th
 Each Hat has several properties:
 
 - `id` - the integer identifier for the Hat, which also serves as the ERC1155 token id (see three paragraphs below)
-- `details` - metadata about the Hat; such as a name, description, and other properties like roles and responsibilities associated with the Hat
+- `details` - (optional) metadata about the Hat; such as a name, description, and other properties like roles and responsibilities associated with the Hat
 - `maxSupply` - the maximum number of addresses that can wear the Hat at once
 - `admin` - the Hat that controls who can wear the Hat
 - `oracle` - the address that controls whether a given wearer of the Hat is in good standing
 - `conditions` - the address that controls whether the Hat is active
+- `imageURI` - (optional) a uri pointing to an image for front ends to display for this hat
 
 For more information on each property, refer to the detailed sections below.
 
@@ -192,7 +193,23 @@ Since batch Hats transfers can be made from and to multiple wearers, batch trans
 
 ### Renouncing a Hat
 
-The wearer of a Hat can "take off" their Hat via `Hats.renounceHat`. This burns the token and revokes any associated authorities and responsibilities, but does not record a revocation.
+The wearer of a hat can "take off" their Hat via `Hats.renounceHat`. This burns the token and revokes any associated authorities and responsibilities, but does not record a revocation.
+
+### Image URIs
+
+Each hat can be created to include an image URI, which points to media for apps to display along with the hat token.
+
+If the image URI for a given hat was not specified upon hat creation, the image URI for that hat defaults to the URI specified for it's admin hat. This fallback happens recursively, traversing the hat's tree of admins until a specified URI is found. If there is no specified URI within that tree of admins, the image URI defaults to the global `_baseImageURI`.
+
+This architecture allows DAOs and other hat creators to add custom images to their organization's hats without requiring them to do so. There is no additional gas cost imposed on hat creators choosing not to specify a custom image URI.
+
+#### Image URIs and Hat Ids
+
+The structure of the URI returned by the `uri` function for a given hat depends on whether the hat had a custom image URI specified when it was created.
+
+For hats that *did* have an image URI specificed, the returned URI will be the concatenation of the specified image URI and the id "0". The assumption is that this is the most senior (lowest level) hat that has this URI. Returned URIs for all children of this hat that do not have their own specified image URI will follow the below convention.
+
+For hats that *did not* have an image URI specified, the returned URI will be the concatenation of its nearest admin's specified URI and its own hat id. This is required to avoid collisions with other hats that may also be children of the nearest admin.
 
 ## Latest Deployments
 
