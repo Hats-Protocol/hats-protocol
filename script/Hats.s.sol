@@ -5,7 +5,7 @@ import "forge-std/Script.sol";
 import "../src/Hats.sol";
 
 contract DeployHats is Script {
-    string public imageURI = "mvp:";
+    string public imageURI = "hats-beta1:";
 
     function run() external {
         vm.startBroadcast();
@@ -17,6 +17,5 @@ contract DeployHats is Script {
         vm.stopBroadcast();
     }
 
-    // forge script script/Hats.s.sol:DeployHats--rpc-url $RINKEBY_RPC --private-key $PRIVATE_KEY --verify --etherscan-api-key $ETHERSCAN_KEY --broadcast
-    // "https://rinkeby.infura.io/v3/2c9885dfbf00441393ec7afae72363d5"
+    // forge script script/Hats.s.sol:DeployHats--rpc-url $GC_RPC --private-key $PRIVATE_KEY --verify --etherscan-api-key $GNOSISSCAN_KEY --broadcast
 }
