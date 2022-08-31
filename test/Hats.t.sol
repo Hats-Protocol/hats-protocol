@@ -40,6 +40,16 @@ contract CreateTopHatTest is TestSetup {
         assertTrue(hats.isWearerOfHat(topHatWearer, topHatId));
         assertFalse(hats.isWearerOfHat(nonWearer, topHatId));
     }
+
+    function testTransferTopHat() public {
+        topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
+
+        emit log_uint(topHatId);
+        emit log_address(nonWearer);
+
+        vm.prank(address(topHatWearer));
+        hats.transferHat(topHatId, topHatWearer, nonWearer);
+    }
 }
 
 contract CreateHatsTest is TestSetup {

@@ -538,18 +538,16 @@ contract Hats is ERC1155 {
             revert OnlyAdminsCanTransfer();
         }
 
-        uint256 id = uint256(_hatId);
-
         // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
-        if (balanceOf(_from, id) < 1) {
+        if (balanceOf(_from, _hatId) < 1) {
             revert NotHatWearer();
         }
 
         //Adjust balances
-        --_balanceOf[_from][id];
-        ++_balanceOf[_to][id];
+        --_balanceOf[_from][_hatId];
+        ++_balanceOf[_to][_hatId];
 
-        emit TransferSingle(msg.sender, _from, _to, id, 1);
+        emit TransferSingle(msg.sender, _from, _to, _hatId, 1);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -622,19 +620,20 @@ contract Hats is ERC1155 {
         view
         returns (bool)
     {
-        // if Hat is a topHat, then the _user cannot be the admin
         if (isTopHat(_hatId)) {
-            return false;
+            return (isWearerOfHat(_user, _hatId));
         }
 
         uint8 adminHatLevel = getHatLevel(_hatId) - 1;
 
-        while (adminHatLevel >= 1) {
+        while (adminHatLevel > 0) {
             if (isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel))) {
                 return true;
             }
+
             adminHatLevel--;
         }
+
         return isWearerOfHat(_user, getAdminAtLevel(_hatId, 0));
     }
 
@@ -673,12 +672,12 @@ contract Hats is ERC1155 {
 
     function getAdminAtLevel(uint256 _hatId, uint8 _level)
         public
-        pure
+        view
         returns (uint256)
     {
-        uint256 operAND = type(uint256).max << (8 * (28 - _level));
+        uint256 mask = type(uint256).max << (8 * (28 - _level));
 
-        return _hatId & operAND;
+        return _hatId & mask;
     }
 
     /// @notice Checks the active status of a hat
