@@ -215,7 +215,7 @@ For hats that *did not* have an image URI specified, the returned URI will be th
 
 ### Mainnets
 
-- Gnosis Chain (chain id #100) &mdash; `0xb7019c3670f5d4dd99166727a7d29f8a16f4f20a`
+- Gnosis Chain (chain id #100) &mdash; `0x245e5b56c18b18ac2d72f94c5f7be1d52497a8ad`
 
 ### Testnets
 
