@@ -20,8 +20,7 @@ contract Hats is ERC1155 {
 
     // QUESTION should we add arguments to any of these errors? See github issue #21
     error NotAdmin(address _user, uint256 _hatId);
-    error AllHatsWorn();
-    error AlreadyWearingHat();
+    error HatDoesNotExist(uint256 _hatId);
     error NoApprovalsNeeded();
     error OnlyAdminsCanTransfer();
     error NotHatWearer();
@@ -306,6 +305,7 @@ contract Hats is ERC1155 {
     /// @return bool Whether the mint succeeded
     function mintHat(uint256 _hatId, address _wearer) public returns (bool) {
         Hat memory hat = _hats[_hatId];
+        if (hat.maxSupply == 0) revert HatDoesNotExist(_hatId);
         // only the wearer of a hat's admin Hat can mint it
         if (!isAdminOfHat(msg.sender, _hatId)) {
             revert NotAdmin(msg.sender, _hatId);

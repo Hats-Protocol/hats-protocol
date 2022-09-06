@@ -330,7 +330,19 @@ contract MintHatsTest is TestSetup {
         assertEq(++hatSupply_pre, hats.hatSupply(secondHatId));
     }
 
-    // function testBatchMintHats() public {}
+    function testMintHatDoesNotExistReverts() public {
+        vm.prank(topHatWearer);
+
+        uint256 badHatId = 123e18;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(Hats.HatDoesNotExist.selector, badHatId)
+        );
+
+        hats.mintHat(badHatId, secondWearer);
+    }
+
+    function testBatchMintHats() public {}
 
     // function testBatchMintHatsErrorArrayLength() public {}
 }
