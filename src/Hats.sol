@@ -20,6 +20,8 @@ contract Hats is ERC1155 {
 
     // QUESTION should we add arguments to any of these errors? See github issue #21
     error NotAdmin(address _user, uint256 _hatId);
+    error AllHatsWorn(uint256 _hatId);
+    error AlreadyWearingHat(address _wearer, uint256 _hatId);
     error HatDoesNotExist(uint256 _hatId);
     error NoApprovalsNeeded();
     error OnlyAdminsCanTransfer();
@@ -306,20 +308,35 @@ contract Hats is ERC1155 {
     function mintHat(uint256 _hatId, address _wearer) public returns (bool) {
         Hat memory hat = _hats[_hatId];
         if (hat.maxSupply == 0) revert HatDoesNotExist(_hatId);
+
         // only the wearer of a hat's admin Hat can mint it
         if (!isAdminOfHat(msg.sender, _hatId)) {
             revert NotAdmin(msg.sender, _hatId);
         }
 
         if (hatSupply[_hatId] >= hat.maxSupply) {
-            revert AllHatsWorn();
+            revert AllHatsWorn(_hatId);
         }
 
         if (isWearerOfHat(_wearer, _hatId)) {
-            revert AlreadyWearingHat();
+            revert AlreadyWearingHat(_wearer, _hatId);
         }
 
         _mint(_wearer, uint256(_hatId), 1, "");
+
+        return true;
+    }
+
+    function batchMintHats(uint256[] memory _hatIds, address[] memory _wearers)
+        public
+        returns (bool)
+    {
+        uint256 length = _hatIds.length;
+        if (length != _wearers.length) revert BatchArrayLengthMismatch();
+
+        for (uint256 i = 0; i < length; ++i) {
+            mintHat(_hatIds[i], _wearers[i]);
+        }
 
         return true;
     }
