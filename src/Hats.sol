@@ -556,7 +556,7 @@ contract Hats is ERC1155 {
         }
 
         // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
-        if (balanceOf(_from, _hatId) < 1) {
+        if (_balanceOf[_from][_hatId] < 1) {
             revert NotHatWearer();
         }
 
