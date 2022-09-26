@@ -185,12 +185,6 @@ For these reasons, in Hats Protocol, the standard ERC1155 transfer functions &md
 
 As replacements, Hats can be transfered by admins via `Hats.transferHat`, which emits the ERC1155 standard event `TransferSingle`.
 
-### Batch Transfers
-
-As with minting, admins can also transfer Hats in a batch, via `Hats.batchTransferHats`.
-
-Since batch Hats transfers can be made from and to multiple wearers, batch transfers emit multiple `TransferSingle` events rather than a `TransferBatch` event.
-
 ### Renouncing a Hat
 
 The wearer of a hat can "take off" their Hat via `Hats.renounceHat`. This burns the token and revokes any associated authorities and responsibilities, but does not record a revocation.

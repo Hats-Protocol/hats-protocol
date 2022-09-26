@@ -53,21 +53,6 @@ abstract contract TestVariables {
         uint256 id,
         uint256 amount
     );
-
-    error HatNotActive();
-    error NotAdmin(address _user, uint256 _hatId);
-    error AllHatsWorn();
-    error AlreadyWearingHat();
-    error NoApprovalsNeeded();
-    error OnlyAdminsCanTransfer();
-    error NotHatWearer();
-    error NotHatConditions();
-    error NotHatOracle();
-    error NotIHatsConditionsContract();
-    error NotIHatsOracleContract();
-    error BatchArrayLengthMismatch();
-    error SafeTransfersNotNecessary();
-    error MaxTreeDepthReached();
 }
 
 abstract contract TestSetup is Test, TestVariables {

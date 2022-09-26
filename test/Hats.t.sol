@@ -236,7 +236,13 @@ contract MintHatsTest is TestSetup {
         hats.mintHat(secondHatId, secondWearer);
 
         // expect error AlreadyWearingHat()
-        vm.expectRevert(abi.encodeWithSelector(AlreadyWearingHat.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Hats.AlreadyWearingHat.selector,
+                secondWearer,
+                secondHatId
+            )
+        );
 
         // mint another of same id to the same wearer
         vm.prank(address(topHatWearer));
@@ -263,7 +269,11 @@ contract MintHatsTest is TestSetup {
 
         // expect NotAdmin Error
         vm.expectRevert(
-            abi.encodeWithSelector(NotAdmin.selector, nonWearer, secondHatId)
+            abi.encodeWithSelector(
+                Hats.NotAdmin.selector,
+                nonWearer,
+                secondHatId
+            )
         );
 
         // 2-1. try to mint hat from a non-wearer
@@ -292,7 +302,9 @@ contract MintHatsTest is TestSetup {
         hats.mintHat(secondHatId, topHatWearer);
 
         // expect error AllHatsWorn()
-        vm.expectRevert(abi.encodeWithSelector(AllHatsWorn.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(Hats.AllHatsWorn.selector, secondHatId)
+        );
 
         // 2-3. fail to mint hat 3
         hats.mintHat(secondHatId, thirdWearer);
@@ -330,9 +342,100 @@ contract MintHatsTest is TestSetup {
         assertEq(++hatSupply_pre, hats.hatSupply(secondHatId));
     }
 
-    // function testBatchMintHats() public {}
+    function testCannotMintNonExistentHat() public {
+        vm.prank(topHatWearer);
 
-    // function testBatchMintHatsErrorArrayLength() public {}
+        uint256 badHatId = 123e18;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(Hats.HatDoesNotExist.selector, badHatId)
+        );
+
+        hats.mintHat(badHatId, secondWearer);
+    }
+
+    function testBatchMintHats(uint256 count) public {
+        vm.assume(count <= 255);
+
+        address[] memory wearerBatch = new address[](count);
+        uint256[] memory hatBatch = new uint256[](count);
+
+        vm.prank(topHatWearer);
+
+        hats.mintHat(secondHatId, secondWearer);
+
+        vm.startPrank(secondWearer);
+
+        // create the hats and populate the minting arrays
+        for (uint256 i = 0; i < count; ++i) {
+            uint256 id = hats.createHat(
+                secondHatId,
+                "",
+                1,
+                topHatWearer,
+                topHatWearer,
+                ""
+            );
+
+            hatBatch[i] = id;
+            wearerBatch[i] = address(uint160(10000 + i));
+        }
+
+        hats.batchMintHats(hatBatch, wearerBatch);
+
+        (, , , , , , uint8 lastHatId, ) = hats.viewHat(secondHatId);
+
+        assertEq(lastHatId, count);
+    }
+
+    function testBatchMintHatsErrorArrayLength(uint256 count, uint256 offset)
+        public
+    {
+        count = bound(count, 1, 254);
+        offset = bound(offset, 1, 255 - count);
+        address[] memory wearerBatch = new address[](count);
+        uint256[] memory hatBatch = new uint256[](count + offset);
+
+        vm.prank(topHatWearer);
+
+        hats.mintHat(secondHatId, secondWearer);
+
+        vm.startPrank(secondWearer);
+
+        // create the hats and populate the minting arrays
+        for (uint256 i = 0; i < count; ++i) {
+            uint256 id = hats.createHat(
+                secondHatId,
+                "",
+                1,
+                topHatWearer,
+                topHatWearer,
+                ""
+            );
+
+            hatBatch[i] = id;
+            wearerBatch[i] = address(uint160(10000 + i));
+        }
+
+        // add `offset` number of hats to the batch, without corresponding wearers
+        for (uint256 j = 0; j < offset; ++j) {
+            uint256 id = hats.createHat(
+                secondHatId,
+                "",
+                1,
+                topHatWearer,
+                topHatWearer,
+                ""
+            );
+            hatBatch[count - 1 + j] = id;
+        }
+
+        vm.expectRevert(
+            abi.encodeWithSelector(Hats.BatchArrayLengthMismatch.selector)
+        );
+
+        hats.batchMintHats(hatBatch, wearerBatch);
+    }
 }
 
 contract ViewHatTests is TestSetup2 {
@@ -414,7 +517,9 @@ contract ViewHatTests is TestSetup2 {
 contract TransferHatTests is TestSetup2 {
     function testCannotTransferHatFromNonAdmin() public {
         // expect OnlyAdminsCanTransfer error
-        vm.expectRevert(abi.encodeWithSelector(OnlyAdminsCanTransfer.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(Hats.OnlyAdminsCanTransfer.selector)
+        );
 
         // 4-1. transfer from wearer / other wallet
         vm.prank(address(nonWearer));
@@ -494,7 +599,7 @@ contract OracleSetHatsTests is TestSetup2 {
 
     function testCannotRevokeHatAsNonWearer() public {
         // expect NotHatOracle error
-        vm.expectRevert(abi.encodeWithSelector(NotHatOracle.selector));
+        vm.expectRevert(abi.encodeWithSelector(Hats.NotHatOracle.selector));
 
         // attempt to setHatWearerStatus as non-wearer
         vm.prank(address(nonWearer));
@@ -527,7 +632,7 @@ contract OracleGetHatsTests is TestSetup2 {
     function testCannotGetHatWearerStandingNoFunctionInOracleContract() public {
         // expect NotIHatsOracleContract error
         vm.expectRevert(
-            abi.encodeWithSelector(NotIHatsOracleContract.selector)
+            abi.encodeWithSelector(Hats.NotIHatsOracleContract.selector)
         );
 
         // fail attempt to pull wearer status from oracle
@@ -633,7 +738,7 @@ contract RenounceHatsTest is TestSetup2 {
 
     function testCannotRenounceHatAsNonWearer() public {
         // expect NotHatWearer error
-        vm.expectRevert(abi.encodeWithSelector(NotHatWearer.selector));
+        vm.expectRevert(abi.encodeWithSelector(Hats.NotHatWearer.selector));
 
         //  6-1. attempt to renounce from non-wearer
         vm.prank(address(nonWearer));
@@ -660,7 +765,7 @@ contract ConditionsSetHatsTest is TestSetup2 {
 
     function testCannotDeactivateHatAsNonWearer() public {
         // expect NotHatConditions error
-        vm.expectRevert(abi.encodeWithSelector(NotHatConditions.selector));
+        vm.expectRevert(abi.encodeWithSelector(Hats.NotHatConditions.selector));
 
         // 7-1. attempt to change Hat Status hat from non-wearer
         vm.prank(address(nonWearer));
@@ -689,7 +794,7 @@ contract ConditionsSetHatsTest is TestSetup2 {
         hats.setHatStatus(secondHatId, false);
 
         // expect NotHatConditions error
-        vm.expectRevert(abi.encodeWithSelector(NotHatConditions.selector));
+        vm.expectRevert(abi.encodeWithSelector(Hats.NotHatConditions.selector));
 
         // 8-1. attempt to changeHatStatus hat from wearer / other wallet / admin
         vm.prank(address(nonWearer));
@@ -703,7 +808,7 @@ contract ConditionsGetHatsTest is TestSetup2 {
     {
         // expect NotIHatsOracleContract error
         vm.expectRevert(
-            abi.encodeWithSelector(NotIHatsConditionsContract.selector)
+            abi.encodeWithSelector(Hats.NotIHatsConditionsContract.selector)
         );
 
         // fail attempt to pull Hat Status
