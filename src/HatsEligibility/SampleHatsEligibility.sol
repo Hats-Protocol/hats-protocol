@@ -2,15 +2,11 @@
 
 pragma solidity >=0.8.13;
 
-import "./IHatsWearerCriteria.sol";
+import "./IHatsEligibility.sol";
 import "../IHats.sol";
 import "utils/Auth.sol";
 
-abstract contract OwnableHatsWearerCriteria is
-    IHats,
-    IHatsWearerCriteria,
-    Auth
-{
+abstract contract OwnableHatsEligibility is IHats, IHatsEligibility, Auth {
     event HatStandingSet(
         address _wearer,
         uint256 _hatId,

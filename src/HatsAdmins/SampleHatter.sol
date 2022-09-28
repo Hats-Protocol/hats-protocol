@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.13;
 
-import "../HatsWearerCriteria/IHatsWearerCriteria.sol";
+import "../HatsEligibility/IHatsEligibility.sol";
 import "../IHats.sol";
 import "utils/Auth.sol";
 

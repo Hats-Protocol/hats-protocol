@@ -63,7 +63,7 @@ contract CreateHatsTest is TestSetup {
             topHatId,
             _details,
             _maxSupply,
-            _wearerCriteria,
+            _eligibility,
             _statusController,
             secondHatImageURI
         );
@@ -109,7 +109,7 @@ contract ImageURITest is TestSetup2 {
             secondHatId,
             "third hat",
             2, // maxSupply
-            _wearerCriteria,
+            _eligibility,
             _statusController,
             ""
         );
@@ -158,7 +158,7 @@ contract MintHatsTest is TestSetup {
             topHatId,
             "second hat",
             2, // maxSupply
-            _wearerCriteria,
+            _eligibility,
             _statusController,
             secondHatImageURI
         );
@@ -443,7 +443,7 @@ contract ViewHatTests is TestSetup2 {
         string memory retdetails;
         uint32 retmaxSupply;
         uint32 retsupply;
-        address retwearerCriteria;
+        address reteligibility;
         address retstatusController;
         string memory retimageURI;
         uint8 retlastChildId;
@@ -453,7 +453,7 @@ contract ViewHatTests is TestSetup2 {
             retdetails,
             retmaxSupply,
             retsupply,
-            retwearerCriteria,
+            reteligibility,
             retstatusController,
             retimageURI,
             retlastChildId,
@@ -464,7 +464,7 @@ contract ViewHatTests is TestSetup2 {
         assertEq(retdetails, "second hat");
         assertEq(retmaxSupply, 2);
         assertEq(retsupply, 1);
-        assertEq(retwearerCriteria, address(555));
+        assertEq(reteligibility, address(555));
         assertEq(retstatusController, address(333));
         assertEq(retimageURI, string.concat(secondHatImageURI, "0"));
         assertEq(retlastChildId, 0);
@@ -475,7 +475,7 @@ contract ViewHatTests is TestSetup2 {
         string memory retdetails;
         uint32 retmaxSupply;
         uint32 retsupply;
-        address retwearerCriteria;
+        address reteligibility;
         address retstatusController;
         string memory retimageURI;
         uint8 retlastChildId;
@@ -485,7 +485,7 @@ contract ViewHatTests is TestSetup2 {
             retdetails,
             retmaxSupply,
             retsupply,
-            retwearerCriteria,
+            reteligibility,
             retstatusController,
             retimageURI,
             retlastChildId,
@@ -495,7 +495,7 @@ contract ViewHatTests is TestSetup2 {
         assertEq(retdetails, "");
         assertEq(retmaxSupply, 1);
         assertEq(retsupply, 1);
-        assertEq(retwearerCriteria, address(0));
+        assertEq(reteligibility, address(0));
         assertEq(retstatusController, address(0));
         assertEq(retlastChildId, 1);
         assertEq(retactive, true);
@@ -546,7 +546,7 @@ contract TransferHatTests is TestSetup2 {
     }
 }
 
-contract WearerCriteriaSetHatsTests is TestSetup2 {
+contract EligibilitySetHatsTests is TestSetup2 {
     function testDoNotRevokeHatFromWearerInGoodStanding() public {
         // confirm second hat is worn by second Wearer
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
@@ -556,7 +556,7 @@ contract WearerCriteriaSetHatsTests is TestSetup2 {
         emit WearerStatus(secondHatId, secondWearer, false, true);
 
         // 5-6. do not revoke hat
-        vm.prank(address(_wearerCriteria));
+        vm.prank(address(_eligibility));
         hats.setHatWearerStatus(secondHatId, secondWearer, false, true);
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
         assertTrue(hats.isInGoodStanding(secondWearer, secondHatId));
@@ -570,7 +570,7 @@ contract WearerCriteriaSetHatsTests is TestSetup2 {
         emit WearerStatus(secondHatId, secondWearer, true, true);
 
         // 5-8a. revoke hat
-        vm.prank(address(_wearerCriteria));
+        vm.prank(address(_eligibility));
         hats.setHatWearerStatus(secondHatId, secondWearer, true, true);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
         assertTrue(hats.isInGoodStanding(secondWearer, secondHatId));
@@ -585,7 +585,7 @@ contract WearerCriteriaSetHatsTests is TestSetup2 {
         emit WearerStatus(secondHatId, secondWearer, true, false);
 
         // 5-8b. revoke hat with bad standing
-        vm.prank(address(_wearerCriteria));
+        vm.prank(address(_eligibility));
         hats.setHatWearerStatus(secondHatId, secondWearer, true, false);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
         assertFalse(hats.isInGoodStanding(secondWearer, secondHatId));
@@ -598,9 +598,9 @@ contract WearerCriteriaSetHatsTests is TestSetup2 {
     // in a future state, this call could happen if there were less severe penalities than revocations
 
     function testCannotRevokeHatAsNonWearer() public {
-        // expect NotHatWearerCriteria error
+        // expect NotHatEligibility error
         vm.expectRevert(
-            abi.encodeWithSelector(Hats.NotHatWearerCriteria.selector)
+            abi.encodeWithSelector(Hats.NotHatEligibility.selector)
         );
 
         // attempt to setHatWearerStatus as non-wearer
@@ -612,7 +612,7 @@ contract WearerCriteriaSetHatsTests is TestSetup2 {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
         // revoke hat
-        vm.prank(address(_wearerCriteria));
+        vm.prank(address(_eligibility));
         hats.setHatWearerStatus(secondHatId, secondWearer, true, true);
 
         // 5-4. remint hat
@@ -630,20 +630,20 @@ contract WearerCriteriaSetHatsTests is TestSetup2 {
     }
 }
 
-contract WearerCriteriaGetHatsTests is TestSetup2 {
-    function testCannotGetHatWearerStandingNoFunctionInWearerCriteriaContract()
+contract EligibilityGetHatsTests is TestSetup2 {
+    function testCannotGetHatWearerStandingNoFunctionInEligibilityContract()
         public
     {
-        // expect NotIHatsWearerCriteriaContract error
+        // expect NotIHatsEligibilityContract error
         vm.expectRevert(
-            abi.encodeWithSelector(Hats.NotIHatsWearerCriteriaContract.selector)
+            abi.encodeWithSelector(Hats.NotIHatsEligibilityContract.selector)
         );
 
-        // fail attempt to pull wearer status from wearerCriteria
+        // fail attempt to pull wearer status from eligibility
         hats.checkHatWearerStatus(secondHatId, secondWearer);
     }
 
-    function testCheckWearerCriteriaAndDoNotRevokeHatFromWearerInGoodStanding()
+    function testCheckEligibilityAndDoNotRevokeHatFromWearerInGoodStanding()
         public
     {
         uint32 hatSupply = hats.hatSupply(secondHatId);
@@ -655,9 +655,9 @@ contract WearerCriteriaGetHatsTests is TestSetup2 {
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, false, true);
 
-        // mock calls to wearerCriteria contract to return (false, true)
+        // mock calls to eligibility contract to return (false, true)
         vm.mockCall(
-            address(_wearerCriteria),
+            address(_eligibility),
             abi.encodeWithSignature(
                 "getWearerStatus(address,uint256)",
                 secondWearer,
@@ -675,18 +675,16 @@ contract WearerCriteriaGetHatsTests is TestSetup2 {
         assertEq(hats.hatSupply(secondHatId), hatSupply);
     }
 
-    function testCheckWearerCriteriaToRevokeHatFromWearerInGoodStanding()
-        public
-    {
+    function testCheckEligibilityToRevokeHatFromWearerInGoodStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
         // expectEmit WearerStatus - should not be wearing, in good standing
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, true, true);
 
-        // mock calls to wearerCriteria contract to return (false, true)
+        // mock calls to eligibility contract to return (false, true)
         vm.mockCall(
-            address(_wearerCriteria),
+            address(_eligibility),
             abi.encodeWithSignature(
                 "getWearerStatus(address,uint256)",
                 secondWearer,
@@ -704,18 +702,16 @@ contract WearerCriteriaGetHatsTests is TestSetup2 {
         assertEq(hats.hatSupply(secondHatId), --hatSupply);
     }
 
-    function testCheckWearerCriteriaToRevokeHatFromWearerInBadStanding()
-        public
-    {
+    function testCheckEligibilityToRevokeHatFromWearerInBadStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
         // expectEmit WearerStatus - should not be wearing, in bad standing
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, true, false);
 
-        // mock calls to wearerCriteria contract to return (false, true)
+        // mock calls to eligibility contract to return (false, true)
         vm.mockCall(
-            address(_wearerCriteria),
+            address(_eligibility),
             abi.encodeWithSignature(
                 "getWearerStatus(address,uint256)",
                 secondWearer,
