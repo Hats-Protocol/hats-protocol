@@ -29,7 +29,7 @@ abstract contract SampleMultiHatter is Auth {
         string memory _details,
         uint32 _maxSupply,
         address _oracle,
-        address _conditions,
+        address _statusController,
         address _wearer
     ) public virtual requiresAuth {
         uint256 id = HATS.createHat(
@@ -37,7 +37,7 @@ abstract contract SampleMultiHatter is Auth {
             _details,
             _maxSupply,
             _oracle,
-            _conditions
+            _statusController
         );
         _mint(id, _wearer);
     }

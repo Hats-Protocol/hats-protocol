@@ -2,23 +2,18 @@
 
 pragma solidity >=0.8.13;
 
-import "./IHatsConditions.sol";
+import "./IHatsStatusController.sol";
 import "../IHats.sol";
 import "utils/Auth.sol";
 
-abstract contract ExpiringHatsConditions is IHatsConditions {
+abstract contract ExpiringHatsStatusController is IHatsStatusController {
     event HatExpirySet(uint256 _hatId, uint256 _expiry);
 
     error ExpiryInPast();
 
     mapping(uint256 => uint256) public expiries; // key: hatId => value: expiry timestamp
 
-    function getHatStatus(uint256 _hatId)
-        public
-        view
-        virtual
-        returns (bool)
-    {
+    function getHatStatus(uint256 _hatId) public view virtual returns (bool) {
         return (block.timestamp < expiries[_hatId]);
     }
 
@@ -33,7 +28,7 @@ abstract contract ExpiringHatsConditions is IHatsConditions {
     }
 }
 
-abstract contract OwnableHatsConditions is IHatsConditions, Auth {
+abstract contract OwnableHatsStatusController is IHatsStatusController, Auth {
     event HatStatusSet(uint256 _hatId, bool _status);
 
     IHats public HATS;
@@ -44,12 +39,7 @@ abstract contract OwnableHatsConditions is IHatsConditions, Auth {
         HATS = IHats(_hatsContract);
     }
 
-    function getHatStatus(uint256 _hatId)
-        public
-        view
-        virtual
-        returns (bool)
-    {
+    function getHatStatus(uint256 _hatId) public view virtual returns (bool) {
         return (status[_hatId]);
     }
 
