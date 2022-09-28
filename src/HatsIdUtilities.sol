@@ -2,6 +2,10 @@
 pragma solidity >=0.8.13;
 
 contract HatsIdUtilities {
+    uint256 internal constant TOPHAT_BITS = 32;
+    uint256 internal constant LEVEL_BITS = 8;
+    uint256 internal constant HAT_TREE_DEPTH = 28;
+
     function getHatLevel(uint256 _hatId) public pure returns (uint8 level) {
         uint256 mask;
         uint256 i;

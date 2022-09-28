@@ -699,7 +699,7 @@ contract Hats is ERC1155, HatsIdUtilities {
         }
 
         string memory domain = Strings.toString(
-            getAdminAtLevel(_hatId, 0) >> (8 * 28)
+            getAdminAtLevel(_hatId, 0) >> (LEVEL_BITS * HAT_TREE_DEPTH)
         );
 
         bytes memory properties = abi.encodePacked(
@@ -710,7 +710,7 @@ contract Hats is ERC1155, HatsIdUtilities {
             '", "admin (id)": "',
             Strings.toString(hatAdmin),
             '", "admin (pretty id)": "',
-            Strings.toHexString(hatAdmin, 32),
+            Strings.toHexString(hatAdmin, TOPHAT_BITS),
             '", "eligibility address": "',
             Strings.toHexString(hat.eligibility),
             '", "toggle address": "',
@@ -730,7 +730,7 @@ contract Hats is ERC1155, HatsIdUtilities {
                         '", "id": "',
                         Strings.toString(_hatId),
                         '", "pretty id": "',
-                        Strings.toHexString(_hatId, 32),
+                        Strings.toHexString(_hatId, TOPHAT_BITS),
                         '", "status": "',
                         status,
                         '", "image": "',
