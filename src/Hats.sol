@@ -362,7 +362,7 @@ contract Hats is ERC1155 {
     /// @dev // TODO
     /// @param _hatId The id of the Hat whose statusController we are checking
     /// @return bool Whether there was a new status
-    function getHatStatus(uint256 _hatId) external returns (bool) {
+    function checkHatStatus(uint256 _hatId) external returns (bool) {
         Hat memory hat = _hats[_hatId];
         bool newStatus;
 
@@ -414,7 +414,7 @@ contract Hats is ERC1155 {
     /// @dev Burns the wearer's hat, if revoked
     /// @param _hatId The id of the hat
     /// @param _wearer The address of the Hat wearer whose status report is being requested
-    function getHatWearerStatus(uint256 _hatId, address _wearer)
+    function checkHatWearerStatus(uint256 _hatId, address _wearer)
         public
         returns (bool)
     {

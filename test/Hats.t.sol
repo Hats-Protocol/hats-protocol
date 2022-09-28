@@ -640,7 +640,7 @@ contract WearerCriteriaGetHatsTests is TestSetup2 {
         );
 
         // fail attempt to pull wearer status from wearerCriteria
-        hats.getHatWearerStatus(secondHatId, secondWearer);
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
     }
 
     function testCheckWearerCriteriaAndDoNotRevokeHatFromWearerInGoodStanding()
@@ -666,8 +666,8 @@ contract WearerCriteriaGetHatsTests is TestSetup2 {
             abi.encode(false, true)
         );
 
-        // 5-1. call getHatWearerStatus - no revocation
-        hats.getHatWearerStatus(secondHatId, secondWearer);
+        // 5-1. call checkHatWearerStatus - no revocation
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
         assertTrue(hats.isInGoodStanding(secondWearer, secondHatId));
 
@@ -695,8 +695,8 @@ contract WearerCriteriaGetHatsTests is TestSetup2 {
             abi.encode(true, true)
         );
 
-        // 5-3a. call getHatWearerStatus to revoke
-        hats.getHatWearerStatus(secondHatId, secondWearer);
+        // 5-3a. call checkHatWearerStatus to revoke
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
         assertTrue(hats.isInGoodStanding(secondWearer, secondHatId));
 
@@ -724,8 +724,8 @@ contract WearerCriteriaGetHatsTests is TestSetup2 {
             abi.encode(true, false)
         );
 
-        // 5-3b. call getHatWearerStatus to revoke
-        hats.getHatWearerStatus(secondHatId, secondWearer);
+        // 5-3b. call checkHatWearerStatus to revoke
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
         assertFalse(hats.isInGoodStanding(secondWearer, secondHatId));
 
@@ -817,7 +817,7 @@ contract StatusControllerSetHatsTest is TestSetup2 {
 }
 
 contract StatusControllerGetHatsTest is TestSetup2 {
-    function testCannotGetHatStatusrNoFunctionInStatusControllerContract()
+    function testCannotCheckHatStatusNoFunctionInStatusControllerContract()
         public
     {
         // expect NotIHatsStatusControllerContract error
@@ -828,7 +828,7 @@ contract StatusControllerGetHatsTest is TestSetup2 {
         );
 
         // fail attempt to pull Hat Status
-        hats.getHatStatus(secondHatId);
+        hats.checkHatStatus(secondHatId);
     }
 
     function testCheckStatusControllerToDeactivateHat() public {
@@ -843,8 +843,8 @@ contract StatusControllerGetHatsTest is TestSetup2 {
             abi.encode(false)
         );
 
-        // call mocked function within getHatStatus to deactivate
-        hats.getHatStatus(secondHatId);
+        // call mocked function within checkHatStatus to deactivate
+        hats.checkHatStatus(secondHatId);
         assertFalse(hats.isActive(secondHatId));
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
     }
@@ -865,8 +865,8 @@ contract StatusControllerGetHatsTest is TestSetup2 {
             abi.encode(true)
         );
 
-        // call mocked function within pullHatStatusFromstatusController to reactivate
-        hats.getHatStatus(secondHatId);
+        // call mocked function within checkHatStatus to reactivate
+        hats.checkHatStatus(secondHatId);
         assertTrue(hats.isActive(secondHatId));
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
     }
