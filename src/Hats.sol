@@ -4,7 +4,7 @@ pragma solidity >=0.8.13;
 import {ERC1155} from "ERC1155/ERC1155.sol";
 // do we need an interface for Hatter / parent?
 import "forge-std/Test.sol"; //remove after testing
-import "./HatsStatusController/IHatsStatusController.sol";
+import "./HatsToggle/IHatsToggle.sol";
 import "./HatsEligibility/IHatsEligibility.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
@@ -26,9 +26,9 @@ contract Hats is ERC1155 {
     error NoApprovalsNeeded();
     error OnlyParentsCanTransfer();
     error NotHatWearer();
-    error NotHatStatusController();
+    error NotHatToggle();
     error NotHatEligibility();
-    error NotIHatsStatusControllerContract();
+    error NotIHatsToggleContract();
     error NotIHatsEligibilityContract();
     error BatchArrayLengthMismatch();
     error SafeTransfersNotNecessary();
@@ -42,10 +42,10 @@ contract Hats is ERC1155 {
         // 1st storage slot
         address eligibility; // can revoke Hat based on ruling; 20 bytes (+20)
         uint32 maxSupply; // the max number of identical hats that can exist; 24 bytes (+4)
-        bool active; // can be altered by statusController, via setHatStatus(); 25 bytes (+1)
+        bool active; // can be altered by toggle, via setHatStatus(); 25 bytes (+1)
         uint8 lastChildId; // indexes how many different hats an parent is holding; 26 bytes (+1)
         // 2nd storage slot
-        address statusController; // controls when Hat is active; 20 bytes (+20)
+        address toggle; // controls when Hat is active; 20 bytes (+20)
         // 3rd+ storage slot
         string details;
         // optional
@@ -87,7 +87,7 @@ contract Hats is ERC1155 {
         string details,
         uint32 maxSupply,
         address eligibility,
-        address statusController,
+        address toggle,
         string imageURI
     );
 
@@ -112,7 +112,7 @@ contract Hats is ERC1155 {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Creates and mints a Hat that is its own parent, i.e. a "topHat"
-    /// @dev A topHat has no eligibility and no statusController
+    /// @dev A topHat has no eligibility and no toggle
     /// @param _target The address to which the newly created topHat is minted
     /// @param _imageURI The image uri for this top hat and the fallback for its
     ///                  children hats [optional]
@@ -130,7 +130,7 @@ contract Hats is ERC1155 {
             "", // details
             1, // maxSupply = 1
             address(0), // there is no eligibility
-            address(0), // it has no statusController
+            address(0), // it has no toggle
             _imageURI
         );
 
@@ -141,7 +141,7 @@ contract Hats is ERC1155 {
     /// @param _details A description of the hat
     /// @param _maxSupply The total instances of the Hat that can be worn at once
     /// @param _eligibility The address that can report on the Hat wearer's standing
-    /// @param _statusController The address that can deactivate the hat [optional]
+    /// @param _toggle The address that can deactivate the hat [optional]
     /// @param _topHatImageURI The image uri for this top hat and the fallback for its
     ///                        children hats [optional]
     /// @param _firstHatImageURI The image uri for the first hat and the fallback for its
@@ -152,7 +152,7 @@ contract Hats is ERC1155 {
         string memory _details, // encode as bytes32 ??
         uint32 _maxSupply,
         address _eligibility,
-        address _statusController,
+        address _toggle,
         string memory _topHatImageURI,
         string memory _firstHatImageURI
     ) public returns (uint256 topHatId, uint256 firstHatId) {
@@ -163,7 +163,7 @@ contract Hats is ERC1155 {
             _details,
             _maxSupply,
             _eligibility,
-            _statusController,
+            _toggle,
             _firstHatImageURI
         );
     }
@@ -174,7 +174,7 @@ contract Hats is ERC1155 {
     /// @param _maxSupply The total instances of the Hat that can be worn at once
     /// @param _parent The id of the Hat that will control who wears the newly created hat
     /// @param _eligibility The address that can report on the Hat wearer's status
-    /// @param _statusController The address that can deactivate the Hat
+    /// @param _toggle The address that can deactivate the Hat
     /// @param _imageURI The image uri for this hat and the fallback for its
     ///                  children hats [optional]
     /// @return newHatId The id of the newly created Hat
@@ -183,7 +183,7 @@ contract Hats is ERC1155 {
         string memory _details, // encode as bytes32 ??
         uint32 _maxSupply,
         address _eligibility,
-        address _statusController,
+        address _toggle,
         string memory _imageURI
     ) public returns (uint256 newHatId) {
         // to create a hat, you must be wearing the Hat of its parent
@@ -201,7 +201,7 @@ contract Hats is ERC1155 {
             _details,
             _maxSupply,
             _eligibility,
-            _statusController,
+            _toggle,
             _imageURI
         );
         // increment _parent.lastChildId
@@ -342,7 +342,7 @@ contract Hats is ERC1155 {
     }
 
     /// @notice Toggles a Hat's status from active to deactive, or vice versa
-    /// @dev The msg.sender must be set as the hat's statusController
+    /// @dev The msg.sender must be set as the hat's toggle
     /// @param _hatId The id of the Hat for which to adjust status
     /// @return bool Whether the status was toggled
     function setHatStatus(uint256 _hatId, bool newStatus)
@@ -351,16 +351,16 @@ contract Hats is ERC1155 {
     {
         Hat storage hat = _hats[_hatId];
 
-        if (msg.sender != hat.statusController) {
-            revert NotHatStatusController();
+        if (msg.sender != hat.toggle) {
+            revert NotHatToggle();
         }
 
         return _processHatStatus(_hatId, newStatus);
     }
 
-    /// @notice Checks a hat's statusController and, if new, toggle's the hat's status
+    /// @notice Checks a hat's toggle and, if new, toggle's the hat's status
     /// @dev // TODO
-    /// @param _hatId The id of the Hat whose statusController we are checking
+    /// @param _hatId The id of the Hat whose toggle we are checking
     /// @return bool Whether there was a new status
     function checkHatStatus(uint256 _hatId) external returns (bool) {
         Hat memory hat = _hats[_hatId];
@@ -371,16 +371,14 @@ contract Hats is ERC1155 {
             _hatId
         );
 
-        (bool success, bytes memory returndata) = hat
-            .statusController
-            .staticcall(data);
+        (bool success, bytes memory returndata) = hat.toggle.staticcall(data);
 
         // if function call succeeds with data of length > 0
         // then we know the contract exists and has the getWearerStatus function
         if (success && returndata.length > 0) {
             newStatus = abi.decode(returndata, (bool));
         } else {
-            revert NotIHatsStatusControllerContract();
+            revert NotIHatsToggleContract();
         }
 
         return _processHatStatus(_hatId, newStatus);
@@ -466,7 +464,7 @@ contract Hats is ERC1155 {
     /// @param _details A description of the hat
     /// @param _maxSupply The total instances of the Hat that can be worn at once
     /// @param _eligibility The address that can report on the Hat wearer's status
-    /// @param _statusController The address that can deactivate the hat [optional]
+    /// @param _toggle The address that can deactivate the hat [optional]
     /// @param _imageURI The image uri for this top hat and the fallback for its
     ///                  children hats [optional]
     /// @return hat The contents of the newly created hat
@@ -475,7 +473,7 @@ contract Hats is ERC1155 {
         string memory _details, // encode as bytes32 ??
         uint32 _maxSupply,
         address _eligibility,
-        address _statusController,
+        address _toggle,
         string memory _imageURI
     ) internal returns (Hat memory hat) {
         hat.details = _details;
@@ -484,7 +482,7 @@ contract Hats is ERC1155 {
 
         hat.eligibility = _eligibility;
 
-        hat.statusController = _statusController;
+        hat.toggle = _toggle;
         hat.imageURI = _imageURI;
         hat.active = true;
 
@@ -495,7 +493,7 @@ contract Hats is ERC1155 {
             _details,
             _maxSupply,
             _eligibility,
-            _statusController,
+            _toggle,
             _imageURI
         );
     }
@@ -576,7 +574,7 @@ contract Hats is ERC1155 {
     /// @return maxSupply The max supply of tokens for this Hat
     /// @return supply The number of current wearers of this Hat
     /// @return eligibility The eligibility address for this Hat
-    /// @return statusController The statusController address for this Hat
+    /// @return toggle The toggle address for this Hat
     /// @return imageURI The image URI used for this Hat
     /// @return lastChildId The most recently created Hat with this Hat as parent; also the count of Hats with this Hat as parent
     /// @return active Whether the Hat is current active, as read from `_isActive`
@@ -588,7 +586,7 @@ contract Hats is ERC1155 {
             uint32 maxSupply,
             uint32 supply,
             address eligibility,
-            address statusController,
+            address toggle,
             string memory imageURI,
             uint8 lastChildId,
             bool active
@@ -599,7 +597,7 @@ contract Hats is ERC1155 {
         maxSupply = hat.maxSupply;
         supply = hatSupply[_hatId];
         eligibility = hat.eligibility;
-        statusController = hat.statusController;
+        toggle = hat.toggle;
         imageURI = getImageURIForHat(_hatId);
         lastChildId = hat.lastChildId;
         active = _isActive(hat, _hatId);
@@ -713,9 +711,7 @@ contract Hats is ERC1155 {
             _hatId
         );
 
-        (bool success, bytes memory returndata) = _hat
-            .statusController
-            .staticcall(data);
+        (bool success, bytes memory returndata) = _hat.toggle.staticcall(data);
 
         if (success && returndata.length > 0) {
             active = abi.decode(returndata, (bool));
@@ -734,7 +730,7 @@ contract Hats is ERC1155 {
     }
 
     /// @notice Internal call to check whether a wearer of a Hat is in good standing
-    /// @dev Tries an external call to the Hat's statusController address, defaulting to existing badStandings state if the call fails (ie if the statusController address does not conform to it IStatusController interface)
+    /// @dev Tries an external call to the Hat's toggle address, defaulting to existing badStandings state if the call fails (ie if the toggle address does not conform to it IToggle interface)
     /// @param _hat The Hat object
     /// @param _wearer The address of the Hat wearer
     /// @return standing Whether the wearer is in good standing
@@ -848,8 +844,8 @@ contract Hats is ERC1155 {
             Strings.toHexString(hatParent, 32),
             '", "eligibility address": "',
             Strings.toHexString(hat.eligibility),
-            '", "statusController address": "',
-            Strings.toHexString(hat.statusController),
+            '", "toggle address": "',
+            Strings.toHexString(hat.toggle),
             '"}'
         );
         string memory status = (_isActive(hat, _hatId) ? "active" : "inactive");

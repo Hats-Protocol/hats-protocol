@@ -2,6 +2,6 @@
 
 pragma solidity >=0.8.13;
 
-interface IHatsStatusController {
+interface IHatsToggle {
     function getHatStatus(uint256 _hatId) external view returns (bool);
 }

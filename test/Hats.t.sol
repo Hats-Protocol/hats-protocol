@@ -64,7 +64,7 @@ contract CreateHatsTest is TestSetup {
             _details,
             _maxSupply,
             _eligibility,
-            _statusController,
+            _toggle,
             secondHatImageURI
         );
 
@@ -110,7 +110,7 @@ contract ImageURITest is TestSetup2 {
             "third hat",
             2, // maxSupply
             _eligibility,
-            _statusController,
+            _toggle,
             ""
         );
 
@@ -159,7 +159,7 @@ contract MintHatsTest is TestSetup {
             "second hat",
             2, // maxSupply
             _eligibility,
-            _statusController,
+            _toggle,
             secondHatImageURI
         );
     }
@@ -328,7 +328,7 @@ contract MintHatsTest is TestSetup {
         uint256 hatSupply_pre = hats.hatSupply(secondHatId);
 
         // deactivate the hat
-        vm.prank(_statusController);
+        vm.prank(_toggle);
         hats.setHatStatus(secondHatId, false);
 
         // mint the hat to wearer
@@ -444,7 +444,7 @@ contract ViewHatTests is TestSetup2 {
         uint32 retmaxSupply;
         uint32 retsupply;
         address reteligibility;
-        address retstatusController;
+        address rettoggle;
         string memory retimageURI;
         uint8 retlastChildId;
         bool retactive;
@@ -454,7 +454,7 @@ contract ViewHatTests is TestSetup2 {
             retmaxSupply,
             retsupply,
             reteligibility,
-            retstatusController,
+            rettoggle,
             retimageURI,
             retlastChildId,
             retactive
@@ -465,7 +465,7 @@ contract ViewHatTests is TestSetup2 {
         assertEq(retmaxSupply, 2);
         assertEq(retsupply, 1);
         assertEq(reteligibility, address(555));
-        assertEq(retstatusController, address(333));
+        assertEq(rettoggle, address(333));
         assertEq(retimageURI, string.concat(secondHatImageURI, "0"));
         assertEq(retlastChildId, 0);
         assertEq(retactive, true);
@@ -476,7 +476,7 @@ contract ViewHatTests is TestSetup2 {
         uint32 retmaxSupply;
         uint32 retsupply;
         address reteligibility;
-        address retstatusController;
+        address rettoggle;
         string memory retimageURI;
         uint8 retlastChildId;
         bool retactive;
@@ -486,7 +486,7 @@ contract ViewHatTests is TestSetup2 {
             retmaxSupply,
             retsupply,
             reteligibility,
-            retstatusController,
+            rettoggle,
             retimageURI,
             retlastChildId,
             retactive
@@ -496,7 +496,7 @@ contract ViewHatTests is TestSetup2 {
         assertEq(retmaxSupply, 1);
         assertEq(retsupply, 1);
         assertEq(reteligibility, address(0));
-        assertEq(retstatusController, address(0));
+        assertEq(rettoggle, address(0));
         assertEq(retlastChildId, 1);
         assertEq(retactive, true);
     }
@@ -752,7 +752,7 @@ contract RenounceHatsTest is TestSetup2 {
     }
 }
 
-contract StatusControllerSetHatsTest is TestSetup2 {
+contract ToggleSetHatsTest is TestSetup2 {
     function testDeactivateHat() public {
         // confirm second hat is active
         assertTrue(hats.isActive(secondHatId));
@@ -763,17 +763,15 @@ contract StatusControllerSetHatsTest is TestSetup2 {
         emit HatStatusChanged(secondHatId, false);
 
         // 7-2. change Hat Status true->false via setHatStatus
-        vm.prank(address(_statusController));
+        vm.prank(address(_toggle));
         hats.setHatStatus(secondHatId, false);
         assertFalse(hats.isActive(secondHatId));
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 
     function testCannotDeactivateHatAsNonWearer() public {
-        // expect NotHatstatusController error
-        vm.expectRevert(
-            abi.encodeWithSelector(Hats.NotHatStatusController.selector)
-        );
+        // expect NotHattoggle error
+        vm.expectRevert(abi.encodeWithSelector(Hats.NotHatToggle.selector));
 
         // 7-1. attempt to change Hat Status hat from non-wearer
         vm.prank(address(nonWearer));
@@ -782,7 +780,7 @@ contract StatusControllerSetHatsTest is TestSetup2 {
 
     function testActivateDeactivatedHat() public {
         // change Hat Status true->false via setHatStatus
-        vm.prank(address(_statusController));
+        vm.prank(address(_toggle));
         hats.setHatStatus(secondHatId, false);
 
         // expectEmit HatStatusChanged to true
@@ -790,7 +788,7 @@ contract StatusControllerSetHatsTest is TestSetup2 {
         emit HatStatusChanged(secondHatId, true);
 
         // changeHatStatus false->true via setHatStatus
-        vm.prank(address(_statusController));
+        vm.prank(address(_toggle));
         hats.setHatStatus(secondHatId, true);
         assertTrue(hats.isActive(secondHatId));
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
@@ -798,13 +796,11 @@ contract StatusControllerSetHatsTest is TestSetup2 {
 
     function testCannotActivateDeactivatedHatAsNonWearer() public {
         // change Hat Status true->false via setHatStatus
-        vm.prank(address(_statusController));
+        vm.prank(address(_toggle));
         hats.setHatStatus(secondHatId, false);
 
-        // expect NotHatstatusController error
-        vm.expectRevert(
-            abi.encodeWithSelector(Hats.NotHatStatusController.selector)
-        );
+        // expect NotHattoggle error
+        vm.expectRevert(abi.encodeWithSelector(Hats.NotHatToggle.selector));
 
         // 8-1. attempt to changeHatStatus hat from wearer / other wallet / parent
         vm.prank(address(nonWearer));
@@ -812,29 +808,25 @@ contract StatusControllerSetHatsTest is TestSetup2 {
     }
 }
 
-contract StatusControllerGetHatsTest is TestSetup2 {
-    function testCannotCheckHatStatusNoFunctionInStatusControllerContract()
-        public
-    {
-        // expect NotIHatsStatusControllerContract error
+contract ToggleGetHatsTest is TestSetup2 {
+    function testCannotCheckHatStatusNoFunctionInToggleContract() public {
+        // expect NotIHatsToggleContract error
         vm.expectRevert(
-            abi.encodeWithSelector(
-                Hats.NotIHatsStatusControllerContract.selector
-            )
+            abi.encodeWithSelector(Hats.NotIHatsToggleContract.selector)
         );
 
         // fail attempt to pull Hat Status
         hats.checkHatStatus(secondHatId);
     }
 
-    function testCheckStatusControllerToDeactivateHat() public {
+    function testCheckToggleToDeactivateHat() public {
         // expectEmit HatStatusChanged to false
         vm.expectEmit(false, false, false, true);
         emit HatStatusChanged(secondHatId, false);
 
-        // encode mock for function inside statusController contract to return false
+        // encode mock for function inside toggle contract to return false
         vm.mockCall(
-            address(_statusController),
+            address(_toggle),
             abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
             abi.encode(false)
         );
@@ -845,18 +837,18 @@ contract StatusControllerGetHatsTest is TestSetup2 {
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 
-    function testCheckStatusControllerToActivateDeactivatedHat() public {
+    function testCheckToggleToActivateDeactivatedHat() public {
         // change Hat Status true->false via setHatStatus
-        vm.prank(address(_statusController));
+        vm.prank(address(_toggle));
         hats.setHatStatus(secondHatId, false);
 
         // expectEmit HatStatusChanged to true
         vm.expectEmit(false, false, false, true);
         emit HatStatusChanged(secondHatId, true);
 
-        // encode mock for function inside statusController contract to return false
+        // encode mock for function inside toggle contract to return false
         vm.mockCall(
-            address(_statusController),
+            address(_toggle),
             abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
             abi.encode(true)
         );

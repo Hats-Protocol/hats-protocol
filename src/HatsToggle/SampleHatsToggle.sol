@@ -2,11 +2,11 @@
 
 pragma solidity >=0.8.13;
 
-import "./IHatsStatusController.sol";
+import "./IHatsToggle.sol";
 import "../IHats.sol";
 import "utils/Auth.sol";
 
-abstract contract ExpiringHatsStatusController is IHatsStatusController {
+abstract contract ExpiringHatsToggle is IHatsToggle {
     event HatExpirySet(uint256 _hatId, uint256 _expiry);
 
     error ExpiryInPast();
@@ -28,7 +28,7 @@ abstract contract ExpiringHatsStatusController is IHatsStatusController {
     }
 }
 
-abstract contract OwnableHatsStatusController is IHatsStatusController, Auth {
+abstract contract OwnableHatsToggle is IHatsToggle, Auth {
     event HatStatusSet(uint256 _hatId, bool _status);
 
     IHats public HATS;
