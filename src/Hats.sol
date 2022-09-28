@@ -2,7 +2,7 @@
 pragma solidity >=0.8.13;
 
 import {ERC1155} from "ERC1155/ERC1155.sol";
-// do we need an interface for Hatter / parent?
+// do we need an interface for Hatter / admin?
 import "forge-std/Test.sol"; //remove after testing
 import "./HatsToggle/IHatsToggle.sol";
 import "./HatsEligibility/IHatsEligibility.sol";
@@ -19,12 +19,12 @@ contract Hats is ERC1155 {
     //////////////////////////////////////////////////////////////*/
 
     // QUESTION should we add arguments to any of these errors? See github issue #21
-    error NotParent(address _user, uint256 _hatId);
+    error NotAdmin(address _user, uint256 _hatId);
     error AllHatsWorn(uint256 _hatId);
     error AlreadyWearingHat(address _wearer, uint256 _hatId);
     error HatDoesNotExist(uint256 _hatId);
     error NoApprovalsNeeded();
-    error OnlyParentsCanTransfer();
+    error OnlyAdminsCanTransfer();
     error NotHatWearer();
     error NotHatToggle();
     error NotHatEligibility();
@@ -43,7 +43,7 @@ contract Hats is ERC1155 {
         address eligibility; // can revoke Hat based on ruling; 20 bytes (+20)
         uint32 maxSupply; // the max number of identical hats that can exist; 24 bytes (+4)
         bool active; // can be altered by toggle, via setHatStatus(); 25 bytes (+1)
-        uint8 lastChildId; // indexes how many different hats an parent is holding; 26 bytes (+1)
+        uint8 lastChildId; // indexes how many different hats an admin is holding; 26 bytes (+1)
         // 2nd storage slot
         address toggle; // controls when Hat is active; 20 bytes (+20)
         // 3rd+ storage slot
@@ -67,7 +67,7 @@ contract Hats is ERC1155 {
      * Each level below consists of 1 byte, which can contain up to 255 types of hats.
      *
      * A uint256 contains 4 bytes of space for tophat addresses and 28 bytes of space
-     * for 28 levels of heirarchy of ownership, with the parent at each level having space
+     * for 28 levels of heirarchy of ownership, with the admin at each level having space
      * for 255 different hats.
      *
      */
@@ -111,7 +111,7 @@ contract Hats is ERC1155 {
                               HATS LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Creates and mints a Hat that is its own parent, i.e. a "topHat"
+    /// @notice Creates and mints a Hat that is its own admin, i.e. a "topHat"
     /// @dev A topHat has no eligibility and no toggle
     /// @param _target The address to which the newly created topHat is minted
     /// @param _imageURI The image uri for this top hat and the fallback for its
@@ -137,7 +137,7 @@ contract Hats is ERC1155 {
         _mint(_target, topHatId, 1, "");
     }
 
-    /// @notice Mints a topHat to the msg.sender and creates another Hat parent'd by the topHat
+    /// @notice Mints a topHat to the msg.sender and creates another Hat admin'd by the topHat
     /// @param _details A description of the hat
     /// @param _maxSupply The total instances of the Hat that can be worn at once
     /// @param _eligibility The address that can report on the Hat wearer's standing
@@ -168,33 +168,33 @@ contract Hats is ERC1155 {
         );
     }
 
-    /// @notice Creates a new hat. The msg.sender must wear the `_parent` hat.
+    /// @notice Creates a new hat. The msg.sender must wear the `_admin` hat.
     /// @dev Initializes a new Hat struct, but does not mint any tokens.
     /// @param _details A description of the Hat
     /// @param _maxSupply The total instances of the Hat that can be worn at once
-    /// @param _parent The id of the Hat that will control who wears the newly created hat
+    /// @param _admin The id of the Hat that will control who wears the newly created hat
     /// @param _eligibility The address that can report on the Hat wearer's status
     /// @param _toggle The address that can deactivate the Hat
     /// @param _imageURI The image uri for this hat and the fallback for its
     ///                  children hats [optional]
     /// @return newHatId The id of the newly created Hat
     function createHat(
-        uint256 _parent,
+        uint256 _admin,
         string memory _details, // encode as bytes32 ??
         uint32 _maxSupply,
         address _eligibility,
         address _toggle,
         string memory _imageURI
     ) public returns (uint256 newHatId) {
-        // to create a hat, you must be wearing the Hat of its parent
-        if (!isWearerOfHat(msg.sender, _parent)) {
-            revert NotParent(msg.sender, _parent);
+        // to create a hat, you must be wearing the Hat of its admin
+        if (!isWearerOfHat(msg.sender, _admin)) {
+            revert NotAdmin(msg.sender, _admin);
         }
-        if (uint8(_parent) > 0) {
+        if (uint8(_admin) > 0) {
             revert MaxTreeDepthReached();
         }
 
-        newHatId = _buildNextId(_parent);
+        newHatId = _buildNextId(_admin);
         // create the new hat
         _createHat(
             newHatId,
@@ -204,104 +204,104 @@ contract Hats is ERC1155 {
             _toggle,
             _imageURI
         );
-        // increment _parent.lastChildId
-        ++_hats[_parent].lastChildId;
+        // increment _admin.lastChildId
+        ++_hats[_admin].lastChildId;
     }
 
-    function _buildNextId(uint256 _parent) internal returns (uint256) {
-        uint8 nextHatId = _hats[_parent].lastChildId + 1;
+    function _buildNextId(uint256 _admin) internal returns (uint256) {
+        uint8 nextHatId = _hats[_admin].lastChildId + 1;
 
-        if (uint224(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 216);
+        if (uint224(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 216);
         }
-        if (uint216(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 208);
+        if (uint216(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 208);
         }
-        if (uint208(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 200);
+        if (uint208(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 200);
         }
-        if (uint200(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 192);
+        if (uint200(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 192);
         }
-        if (uint192(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 184);
+        if (uint192(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 184);
         }
-        if (uint184(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 176);
+        if (uint184(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 176);
         }
-        if (uint176(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 168);
+        if (uint176(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 168);
         }
-        if (uint168(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 160);
+        if (uint168(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 160);
         }
-        if (uint160(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 152);
+        if (uint160(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 152);
         }
-        if (uint152(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 144);
+        if (uint152(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 144);
         }
-        if (uint144(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 136);
+        if (uint144(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 136);
         }
-        if (uint136(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 128);
+        if (uint136(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 128);
         }
-        if (uint128(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 120);
+        if (uint128(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 120);
         }
-        if (uint120(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 112);
+        if (uint120(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 112);
         }
-        if (uint112(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 104);
+        if (uint112(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 104);
         }
-        if (uint104(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 96);
+        if (uint104(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 96);
         }
-        if (uint96(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 88);
+        if (uint96(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 88);
         }
-        if (uint88(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 80);
+        if (uint88(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 80);
         }
-        if (uint80(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 72);
+        if (uint80(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 72);
         }
-        if (uint72(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 64);
+        if (uint72(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 64);
         }
-        if (uint64(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 56);
+        if (uint64(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 56);
         }
-        if (uint56(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 48);
+        if (uint56(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 48);
         }
-        if (uint48(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 40);
-        }
-
-        if (uint40(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 32);
+        if (uint48(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 40);
         }
 
-        if (uint32(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 24);
+        if (uint40(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 32);
         }
 
-        if (uint24(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 16);
+        if (uint32(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 24);
         }
 
-        if (uint16(_parent) == 0) {
-            return _parent | (uint256(nextHatId) << 8);
+        if (uint24(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 16);
         }
 
-        return _parent | uint256(nextHatId);
+        if (uint16(_admin) == 0) {
+            return _admin | (uint256(nextHatId) << 8);
+        }
+
+        return _admin | uint256(nextHatId);
     }
 
     /// @notice Mints an ERC1155 token of the Hat to a recipient, who then "wears" the hat
-    /// @dev The msg.sender must wear the parent Hat of `_hatId`
+    /// @dev The msg.sender must wear the admin Hat of `_hatId`
     /// @param _hatId The id of the Hat to mint
     /// @param _wearer The address to which the Hat is minted
     /// @return bool Whether the mint succeeded
@@ -309,9 +309,9 @@ contract Hats is ERC1155 {
         Hat memory hat = _hats[_hatId];
         if (hat.maxSupply == 0) revert HatDoesNotExist(_hatId);
 
-        // only the wearer of a hat's parent Hat can mint it
-        if (!isParentOfHat(msg.sender, _hatId)) {
-            revert NotParent(msg.sender, _hatId);
+        // only the wearer of a hat's admin Hat can mint it
+        if (!isAdminOfHat(msg.sender, _hatId)) {
+            revert NotAdmin(msg.sender, _hatId);
         }
 
         if (hatSupply[_hatId] >= hat.maxSupply) {
@@ -548,11 +548,11 @@ contract Hats is ERC1155 {
         address _from,
         address _to
     ) public {
-        if (!isParentOfHat(msg.sender, _hatId)) {
-            revert OnlyParentsCanTransfer();
+        if (!isAdminOfHat(msg.sender, _hatId)) {
+            revert OnlyAdminsCanTransfer();
         }
 
-        // Checks storage instead of `isWearerOfHat` since parents may want to transfer revoked Hats to new wearers
+        // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
         if (_balanceOf[_from][_hatId] < 1) {
             revert NotHatWearer();
         }
@@ -576,7 +576,7 @@ contract Hats is ERC1155 {
     /// @return eligibility The eligibility address for this Hat
     /// @return toggle The toggle address for this Hat
     /// @return imageURI The image URI used for this Hat
-    /// @return lastChildId The most recently created Hat with this Hat as parent; also the count of Hats with this Hat as parent
+    /// @return lastChildId The most recently created Hat with this Hat as admin; also the count of Hats with this Hat as admin
     /// @return active Whether the Hat is current active, as read from `_isActive`
     function viewHat(uint256 _hatId)
         public
@@ -624,12 +624,12 @@ contract Hats is ERC1155 {
         return (balanceOf(_user, _hatId) >= 1);
     }
 
-    /// @notice Checks whether a given address serves as the parent of a given Hat
-    /// @dev Recursively checks if `_user` wears the parent Hat of the Hat in question. This is recursive since there may be a string of Hats as parents of Hats.
+    /// @notice Checks whether a given address serves as the admin of a given Hat
+    /// @dev Recursively checks if `_user` wears the admin Hat of the Hat in question. This is recursive since there may be a string of Hats as admins of Hats.
     /// @param _user The address in question
-    /// @param _hatId The id of the Hat for which the `_user` might be the parent
-    /// @return bool Whether the `_user` has parent rights for the Hat
-    function isParentOfHat(address _user, uint256 _hatId)
+    /// @param _hatId The id of the Hat for which the `_user` might be the admin
+    /// @return bool Whether the `_user` has admin rights for the Hat
+    function isAdminOfHat(address _user, uint256 _hatId)
         public
         view
         returns (bool)
@@ -638,19 +638,17 @@ contract Hats is ERC1155 {
             return (isWearerOfHat(_user, _hatId));
         }
 
-        uint8 parentHatLevel = getHatLevel(_hatId) - 1;
+        uint8 adminHatLevel = getHatLevel(_hatId) - 1;
 
-        while (parentHatLevel > 0) {
-            if (
-                isWearerOfHat(_user, getParentAtLevel(_hatId, parentHatLevel))
-            ) {
+        while (adminHatLevel > 0) {
+            if (isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel))) {
                 return true;
             }
 
-            parentHatLevel--;
+            adminHatLevel--;
         }
 
-        return isWearerOfHat(_user, getParentAtLevel(_hatId, 0));
+        return isWearerOfHat(_user, getAdminAtLevel(_hatId, 0));
     }
 
     function getHatLevel(uint256 _hatId) public pure returns (uint8 level) {
@@ -686,7 +684,7 @@ contract Hats is ERC1155 {
         return 0;
     }
 
-    function getParentAtLevel(uint256 _hatId, uint8 _level)
+    function getAdminAtLevel(uint256 _hatId, uint8 _level)
         public
         view
         returns (uint256)
@@ -772,9 +770,9 @@ contract Hats is ERC1155 {
 
     /// @notice Gets the imageURI for a given hat
     /// @dev If this hat does not have an imageURI set, recursively get the imageURI from
-    ///      its parent
+    ///      its admin
     /// @param _hatId The hat whose imageURI we're looking for
-    /// @return imageURI The imageURI of this hat or, if empty, its parent
+    /// @return imageURI The imageURI of this hat or, if empty, its admin
     function getImageURIForHat(uint256 _hatId)
         public
         view
@@ -791,12 +789,12 @@ contract Hats is ERC1155 {
             return string.concat(imageURI, "0");
         }
 
-        // if _hatId doesn't have an imageURI, we fall back to its parent tree
+        // if _hatId doesn't have an imageURI, we fall back to its admin tree
         uint256 level = getHatLevel(_hatId);
 
         // already checked at `level`, so we start the loop at `level - 1`
         for (uint256 i = level; i > 0; --i) {
-            uint256 id = getParentAtLevel(_hatId, uint8(i - 1));
+            uint256 id = getAdminAtLevel(_hatId, uint8(i - 1));
             hat = _hats[id];
             imageURI = hat.imageURI;
 
@@ -807,7 +805,7 @@ contract Hats is ERC1155 {
             }
         }
 
-        // if no hat in _hatId's parent tre has an imageURI, we fall back to the global image uri
+        // if no hat in _hatId's admin tre has an imageURI, we fall back to the global image uri
         return string.concat(baseImageURI, Strings.toString(_hatId));
     }
 
@@ -821,16 +819,16 @@ contract Hats is ERC1155 {
     {
         Hat memory hat = _hats[_hatId];
 
-        uint256 hatParent;
+        uint256 hatAdmin;
 
         if (isTopHat(_hatId)) {
-            hatParent = _hatId;
+            hatAdmin = _hatId;
         } else {
-            hatParent = getParentAtLevel(_hatId, getHatLevel(_hatId) - 1);
+            hatAdmin = getAdminAtLevel(_hatId, getHatLevel(_hatId) - 1);
         }
 
         string memory domain = Strings.toString(
-            getParentAtLevel(_hatId, 0) >> (8 * 28)
+            getAdminAtLevel(_hatId, 0) >> (8 * 28)
         );
 
         bytes memory properties = abi.encodePacked(
@@ -838,10 +836,10 @@ contract Hats is ERC1155 {
             Strings.toString(hatSupply[_hatId]),
             '", "supply cap": "',
             Strings.toString(hat.maxSupply),
-            '", "parent (id)": "',
-            Strings.toString(hatParent),
-            '", "parent (pretty id)": "',
-            Strings.toHexString(hatParent, 32),
+            '", "admin (id)": "',
+            Strings.toString(hatAdmin),
+            '", "admin (pretty id)": "',
+            Strings.toHexString(hatAdmin, 32),
             '", "eligibility address": "',
             Strings.toHexString(hat.eligibility),
             '", "toggle address": "',

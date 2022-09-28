@@ -68,7 +68,7 @@ contract CreateHatsTest is TestSetup {
             secondHatImageURI
         );
 
-        // assert parent's lastChildId is incremented
+        // assert admin's lastChildId is incremented
         (, , , , , , uint8 lastChildIdPost, ) = hats.viewHat(topHatId);
         assertEq(++lastChildId, lastChildIdPost);
     }
@@ -83,9 +83,9 @@ contract CreateHatsTest is TestSetup {
             topHatWearer
         );
         assertEq(hats.getHatLevel(ids[2]), 3);
-        assertEq(hats.getParentAtLevel(ids[0], 0), topHatId);
-        assertEq(hats.getParentAtLevel(ids[1], 1), ids[0]);
-        assertEq(hats.getParentAtLevel(ids[2], 2), ids[1]);
+        assertEq(hats.getAdminAtLevel(ids[0], 0), topHatId);
+        assertEq(hats.getAdminAtLevel(ids[1], 1), ids[0]);
+        assertEq(hats.getAdminAtLevel(ids[2], 2), ids[1]);
     }
 }
 
@@ -220,7 +220,7 @@ contract MintHatsTest is TestSetup {
         // assert hatSupply is incremented
         assertEq(hats.hatSupply(secondHatId), supply_pre + 2);
 
-        // assert parent's lastChildId is *not* incremented
+        // assert admin's lastChildId is *not* incremented
         (, , , , , , uint8 lastChildId_post, ) = hats.viewHat(topHatId);
         assertEq(lastChildId_post, lastChildId_pre);
     }
@@ -257,20 +257,20 @@ contract MintHatsTest is TestSetup {
         // assert hatSupply is incremented only by 1
         assertEq(hats.hatSupply(secondHatId), supply_pre + 1);
 
-        // assert parent's lastChildId is *not* incremented
+        // assert admin's lastChildId is *not* incremented
         (, , , , , , uint8 lastChildId_post, ) = hats.viewHat(topHatId);
         assertEq(lastChildId_post, lastChildId_pre);
     }
 
-    function testMintHatErrorNotParent() public {
+    function testMintHatErrorNotAdmin() public {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(secondWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
 
-        // expect NotParent Error
+        // expect NotAdmin Error
         vm.expectRevert(
             abi.encodeWithSelector(
-                Hats.NotParent.selector,
+                Hats.NotAdmin.selector,
                 nonWearer,
                 secondHatId
             )
@@ -502,10 +502,10 @@ contract ViewHatTests is TestSetup2 {
     }
 
     // TODO: do any other public functions need to be added here?
-    // many of the other public functions are tested in the assertions of other tests (e.g. getParentAtLevel)
+    // many of the other public functions are tested in the assertions of other tests (e.g. getAdminAtLevel)
 
-    function testIsParentOfHat() public {
-        assertTrue(hats.isParentOfHat(topHatWearer, secondHatId));
+    function testIsAdminOfHat() public {
+        assertTrue(hats.isAdminOfHat(topHatWearer, secondHatId));
     }
 
     function testGetHatLevel() public {
@@ -515,10 +515,10 @@ contract ViewHatTests is TestSetup2 {
 }
 
 contract TransferHatTests is TestSetup2 {
-    function testCannotTransferHatFromNonParent() public {
-        // expect OnlyParentsCanTransfer error
+    function testCannotTransferHatFromNonAdmin() public {
+        // expect OnlyAdminsCanTransfer error
         vm.expectRevert(
-            abi.encodeWithSelector(Hats.OnlyParentsCanTransfer.selector)
+            abi.encodeWithSelector(Hats.OnlyAdminsCanTransfer.selector)
         );
 
         // 4-1. transfer from wearer / other wallet
@@ -529,7 +529,7 @@ contract TransferHatTests is TestSetup2 {
     function testTransferHat() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
-        // 4-2. transfer from parent
+        // 4-2. transfer from admin
         vm.prank(address(topHatWearer));
         hats.transferHat(secondHatId, secondWearer, thirdWearer);
 
@@ -802,7 +802,7 @@ contract ToggleSetHatsTest is TestSetup2 {
         // expect NotHattoggle error
         vm.expectRevert(abi.encodeWithSelector(Hats.NotHatToggle.selector));
 
-        // 8-1. attempt to changeHatStatus hat from wearer / other wallet / parent
+        // 8-1. attempt to changeHatStatus hat from wearer / other wallet / admin
         vm.prank(address(nonWearer));
         hats.setHatStatus(secondHatId, true);
     }
