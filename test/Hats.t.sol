@@ -55,7 +55,7 @@ contract CreateTopHatTest is TestSetup {
 contract CreateHatsTest is TestSetup {
     function testHatCreated() public {
         // get prelim values
-        (, , , , , , uint8 lastHatId, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastChildId, ) = hats.viewHat(topHatId);
 
         topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
         vm.prank(address(topHatWearer));
@@ -68,9 +68,9 @@ contract CreateHatsTest is TestSetup {
             secondHatImageURI
         );
 
-        // assert admin's lastHatId is incremented
-        (, , , , , , uint8 lastHatIdPost, ) = hats.viewHat(topHatId);
-        assertEq(++lastHatId, lastHatIdPost);
+        // assert parent's lastChildId is incremented
+        (, , , , , , uint8 lastChildIdPost, ) = hats.viewHat(topHatId);
+        assertEq(++lastChildId, lastChildIdPost);
     }
 
     function testHatsBranchCreated() public {
@@ -83,9 +83,9 @@ contract CreateHatsTest is TestSetup {
             topHatWearer
         );
         assertEq(hats.getHatLevel(ids[2]), 3);
-        assertEq(hats.getAdminAtLevel(ids[0], 0), topHatId);
-        assertEq(hats.getAdminAtLevel(ids[1], 1), ids[0]);
-        assertEq(hats.getAdminAtLevel(ids[2], 2), ids[1]);
+        assertEq(hats.getParentAtLevel(ids[0], 0), topHatId);
+        assertEq(hats.getParentAtLevel(ids[1], 1), ids[0]);
+        assertEq(hats.getParentAtLevel(ids[2], 2), ids[1]);
     }
 }
 
@@ -201,7 +201,7 @@ contract MintHatsTest is TestSetup {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(thirdWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
-        (, , , , , , uint8 lastHatId_pre, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastChildId_pre, ) = hats.viewHat(topHatId);
 
         // mint hat
         vm.prank(address(topHatWearer));
@@ -220,16 +220,16 @@ contract MintHatsTest is TestSetup {
         // assert hatSupply is incremented
         assertEq(hats.hatSupply(secondHatId), supply_pre + 2);
 
-        // assert admin's lastHatId is *not* incremented
-        (, , , , , , uint8 lastHatId_post, ) = hats.viewHat(topHatId);
-        assertEq(lastHatId_post, lastHatId_pre);
+        // assert parent's lastChildId is *not* incremented
+        (, , , , , , uint8 lastChildId_post, ) = hats.viewHat(topHatId);
+        assertEq(lastChildId_post, lastChildId_pre);
     }
 
     function testCannotMint2HatsToSameWearer() public {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(thirdWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
-        (, , , , , , uint8 lastHatId_pre, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastChildId_pre, ) = hats.viewHat(topHatId);
 
         // mint hat
         vm.prank(address(topHatWearer));
@@ -257,20 +257,20 @@ contract MintHatsTest is TestSetup {
         // assert hatSupply is incremented only by 1
         assertEq(hats.hatSupply(secondHatId), supply_pre + 1);
 
-        // assert admin's lastHatId is *not* incremented
-        (, , , , , , uint8 lastHatId_post, ) = hats.viewHat(topHatId);
-        assertEq(lastHatId_post, lastHatId_pre);
+        // assert parent's lastChildId is *not* incremented
+        (, , , , , , uint8 lastChildId_post, ) = hats.viewHat(topHatId);
+        assertEq(lastChildId_post, lastChildId_pre);
     }
 
-    function testMintHatErrorNotAdmin() public {
+    function testMintHatErrorNotParent() public {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(secondWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
 
-        // expect NotAdmin Error
+        // expect NotParent Error
         vm.expectRevert(
             abi.encodeWithSelector(
-                Hats.NotAdmin.selector,
+                Hats.NotParent.selector,
                 nonWearer,
                 secondHatId
             )
@@ -383,9 +383,9 @@ contract MintHatsTest is TestSetup {
 
         hats.batchMintHats(hatBatch, wearerBatch);
 
-        (, , , , , , uint8 lastHatId, ) = hats.viewHat(secondHatId);
+        (, , , , , , uint8 lastChildId, ) = hats.viewHat(secondHatId);
 
-        assertEq(lastHatId, count);
+        assertEq(lastChildId, count);
     }
 
     function testBatchMintHatsErrorArrayLength(uint256 count, uint256 offset)
@@ -446,7 +446,7 @@ contract ViewHatTests is TestSetup2 {
         address retwearerCriteria;
         address retstatusController;
         string memory retimageURI;
-        uint8 retlastHatId;
+        uint8 retlastChildId;
         bool retactive;
 
         (
@@ -456,7 +456,7 @@ contract ViewHatTests is TestSetup2 {
             retwearerCriteria,
             retstatusController,
             retimageURI,
-            retlastHatId,
+            retlastChildId,
             retactive
         ) = hats.viewHat(secondHatId);
 
@@ -467,7 +467,7 @@ contract ViewHatTests is TestSetup2 {
         assertEq(retwearerCriteria, address(555));
         assertEq(retstatusController, address(333));
         assertEq(retimageURI, string.concat(secondHatImageURI, "0"));
-        assertEq(retlastHatId, 0);
+        assertEq(retlastChildId, 0);
         assertEq(retactive, true);
     }
 
@@ -478,7 +478,7 @@ contract ViewHatTests is TestSetup2 {
         address retwearerCriteria;
         address retstatusController;
         string memory retimageURI;
-        uint8 retlastHatId;
+        uint8 retlastChildId;
         bool retactive;
 
         (
@@ -488,7 +488,7 @@ contract ViewHatTests is TestSetup2 {
             retwearerCriteria,
             retstatusController,
             retimageURI,
-            retlastHatId,
+            retlastChildId,
             retactive
         ) = hats.viewHat(topHatId);
 
@@ -497,15 +497,15 @@ contract ViewHatTests is TestSetup2 {
         assertEq(retsupply, 1);
         assertEq(retwearerCriteria, address(0));
         assertEq(retstatusController, address(0));
-        assertEq(retlastHatId, 1);
+        assertEq(retlastChildId, 1);
         assertEq(retactive, true);
     }
 
     // TODO: do any other public functions need to be added here?
-    // many of the other public functions are tested in the assertions of other tests (e.g. getAdminAtLevel)
+    // many of the other public functions are tested in the assertions of other tests (e.g. getParentAtLevel)
 
-    function testIsAdminOfHat() public {
-        assertTrue(hats.isAdminOfHat(topHatWearer, secondHatId));
+    function testIsParentOfHat() public {
+        assertTrue(hats.isParentOfHat(topHatWearer, secondHatId));
     }
 
     function testGetHatLevel() public {
@@ -515,10 +515,10 @@ contract ViewHatTests is TestSetup2 {
 }
 
 contract TransferHatTests is TestSetup2 {
-    function testCannotTransferHatFromNonAdmin() public {
-        // expect OnlyAdminsCanTransfer error
+    function testCannotTransferHatFromNonParent() public {
+        // expect OnlyParentsCanTransfer error
         vm.expectRevert(
-            abi.encodeWithSelector(Hats.OnlyAdminsCanTransfer.selector)
+            abi.encodeWithSelector(Hats.OnlyParentsCanTransfer.selector)
         );
 
         // 4-1. transfer from wearer / other wallet
@@ -529,7 +529,7 @@ contract TransferHatTests is TestSetup2 {
     function testTransferHat() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
-        // 4-2. transfer from admin
+        // 4-2. transfer from parent
         vm.prank(address(topHatWearer));
         hats.transferHat(secondHatId, secondWearer, thirdWearer);
 
@@ -810,7 +810,7 @@ contract StatusControllerSetHatsTest is TestSetup2 {
             abi.encodeWithSelector(Hats.NotHatStatusController.selector)
         );
 
-        // 8-1. attempt to changeHatStatus hat from wearer / other wallet / admin
+        // 8-1. attempt to changeHatStatus hat from wearer / other wallet / parent
         vm.prank(address(nonWearer));
         hats.setHatStatus(secondHatId, true);
     }

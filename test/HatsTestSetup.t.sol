@@ -13,7 +13,7 @@ abstract contract TestVariables {
     address internal fourthWearer;
     address internal nonWearer;
 
-    uint256 internal _admin;
+    uint256 internal _parent;
     string internal _details;
     uint32 internal _maxSupply;
     address internal _wearerCriteria;
@@ -102,22 +102,22 @@ abstract contract TestSetup is Test, TestVariables {
     ) internal returns (uint256[] memory ids, address[] memory wearers) {
         uint256 id;
         address wearer;
-        uint256 admin;
-        address adminWearer;
+        uint256 parent;
+        address parentWearer;
 
         ids = new uint256[](_length);
         wearers = new address[](_length);
 
         for (uint256 i = 0; i < _length; ++i) {
-            admin = (i == 0) ? _topHatId : ids[i - 1];
+            parent = (i == 0) ? _topHatId : ids[i - 1];
 
-            adminWearer = (i == 0) ? _topHatWearer : wearers[i - 1];
+            parentWearer = (i == 0) ? _topHatWearer : wearers[i - 1];
 
-            // create ith hat from the admin
-            vm.prank(adminWearer);
+            // create ith hat from the parent
+            vm.prank(parentWearer);
 
             id = hats.createHat(
-                admin,
+                parent,
                 string.concat("hat ", vm.toString(i + 2)),
                 _maxSupply,
                 _wearerCriteria,
@@ -126,8 +126,8 @@ abstract contract TestSetup is Test, TestVariables {
             );
             ids[i] = id;
 
-            // mint ith hat from the admin, to the ith wearer
-            vm.prank(adminWearer);
+            // mint ith hat from the parent, to the ith wearer
+            vm.prank(parentWearer);
             wearer = address(uint160(i));
             hats.mintHat(id, wearer);
 
