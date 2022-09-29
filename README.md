@@ -1,5 +1,5 @@
 <!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
-<a name="readme-top"></a>
+# <a name="readme-top"></a>
 <!--
 *** Attribution: thanks to @othneildrew for the Readme template!)
 -->
@@ -71,7 +71,7 @@ Hats Protocol is a protocol for DAO-native roles and credentials that support de
 
 Hats are represented on-chain by ERC1155 tokens. An address with a balance of a given Hat token "wears" that hat, granting them the responsibilities and authorities that have been assigned to the Hat by the DAO.
 
-#### Latest Deployments
+### Latest Deployments
 
 - Gnosis Chain (chain id #100) &mdash; `0x245e5B56C18B18aC2d72F94C5F7bE1D52497A8aD`
 
@@ -102,9 +102,9 @@ _For more examples, please refer to the [Documentation](https://github.com/Hats-
 
 Contributions are what make web3 such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement". Don't forget to give the project a star! Thanks again!
 
-Don't forget to give the project a star! Thanks again!
+To contribute:
 
 1. Fork the Project
 2. Install [Forge](https://book.getfoundry.sh/getting-started/installation)
@@ -115,6 +115,7 @@ Don't forget to give the project a star! Thanks again!
 7. Open a Pull Request
 
 To deploy Hats yourself:
+
 - Install [Forge](https://book.getfoundry.sh/getting-started/installation)
 - Compile the contracts, run `forge build`, and to test, run `forge test`
 - Deploy using the [Hats.s.sol script](script/Hats.s.sol) and follow the [Foundry scripting instructions](https://book.getfoundry.sh/tutorials/solidity-scripting)
@@ -125,10 +126,11 @@ To deploy Hats yourself:
 
 <!-- DOCUMENTATION -->
 <a name="documentation-top"></a>
+
 ## Hats Protocol Docs
 
 <!-- TABLE OF CONTENTS -->
-<summary>Table of Contents</summary>
+### Table of Contents
 <ol>
   <li><a href="#authorities-in-hats-protocol">Authorities in Hats Protocol</a></li>
   <li><a href="#hats-logic">Hats Logic</a></li>
