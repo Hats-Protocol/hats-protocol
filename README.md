@@ -4,8 +4,6 @@
 *** Attribution: thanks to @othneildrew for the Readme template!)
 -->
 
-
-
 <!-- SHIELDS -->
 <!--
 *** I'm using markdown "reference style" links for readability.
@@ -41,8 +39,6 @@
   </p>
 </div>
 
-
-
 <!-- TABLE OF CONTENTS -->
 <details>
   <summary>Table of Contents</summary>
@@ -62,8 +58,6 @@
   </ol>
 </details>
 
-
-
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
@@ -75,16 +69,12 @@ Hats are represented on-chain by ERC1155 tokens. An address with a balance of a 
 
 - Gnosis Chain (chain id #100) &mdash; `0x245e5B56C18B18aC2d72F94C5F7bE1D52497A8aD`
 
-
-
 <!-- GETTING STARTED -->
 ## Getting Started
 
 [TODO - add how to get your DAO a tophat, create your first hat, and mint it, and plug into a token gate]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 <!-- USE CASES -->
 ## Use Cases
@@ -94,8 +84,6 @@ Hats are represented on-chain by ERC1155 tokens. An address with a balance of a 
 _For more examples, please refer to the [Documentation](https://github.com/Hats-Protocol/hats-protocol/edit/main/README.md#hats-protocol-docs)_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -122,8 +110,6 @@ To deploy Hats yourself:
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
 <!-- DOCUMENTATION -->
 <a name="documentation-top"></a>
 
@@ -131,6 +117,7 @@ To deploy Hats yourself:
 
 <!-- TABLE OF CONTENTS -->
 ### Table of Contents
+
 <ol>
   <li><a href="#authorities-in-hats-protocol">Authorities in Hats Protocol</a></li>
   <li><a href="#hats-logic">Hats Logic</a></li>
@@ -144,8 +131,6 @@ To deploy Hats yourself:
   <li><a href="#transferring-a-hat">Transferring a Hat</a></li>
   <li><a href="#renouncing-a-hat">Renouncing a Hat</a></li>
 </ol>
-
-
 
 ### Authorities in Hats Protocol
 
@@ -171,7 +156,6 @@ Hat admins are the one exception to the rule that authorities are external to th
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
-
 ### Hats Logic
 
 Each Hat has several properties:
@@ -186,7 +170,6 @@ Each Hat has several properties:
 For more information on each property, refer to the detailed sections below.
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
-
 
 ### Wearing a Hat
 
@@ -207,7 +190,6 @@ Any address can wear a Hat, including:
 - Governance contracts (e.g., DAOs, multisigs, etc.)
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
-
 
 ### Hat Admins
 
@@ -239,7 +221,6 @@ Tophats are the one exception to the rule that a Hat's admin must be another hat
 The root of a Hat tree is always a Tophat. Typically, a DAO will wear the Tophat that serves as admin for the tree of Hats related to the DAO's operations.
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
-
 
 ### Addressable Hat Ids
 
@@ -275,7 +256,6 @@ In this second version, you can clearly see that this hat is...
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
-
 ### Eligibility
 
 Eligibility contracts have authority to rule on the good standing of wearers of a given Hat. This authority is reflected in an eligibility contract's ability to trigger revocation of a Hat from a wearer, which burns the wearer's Hat token.
@@ -291,7 +271,6 @@ Unlike admins, an eligibilities are explicitly set as addresses, not Hats. This 
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
-
 ### Toggle
 
 Toggle contracts have authority to switch the `hat.active` status of a Hat, such as from `active` to `inactive`. When a Hat is inactive, it does not have any wearers (i.e., the balance of its previous wearers' is changed to 0).
@@ -304,7 +283,6 @@ Any address can serve as a Hat's toggle. As with eligibility contracts, there ar
 Unlike admins, toggles are explicitly set as addresses, not Hats.
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
-
 
 ### Creating a Hat
 
@@ -322,7 +300,6 @@ To create a Hat tree, a DAO can call the `Hats.createHatsTree()` function. This 
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
-
 ### Minting a Hat
 
 Only a Hat's admin can mint its token to a wearer.
@@ -336,7 +313,6 @@ A Hat's admin can mint its token individually by calling `Hats.mintHat`.
 An admin can also mint multiple Hats by calling `Hats.batchMintHats`. This enables an admin to mint instances of the same hat to multiple wearers, to mint several Hats at once, or even to mint an entire Hats tree it just created.
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
-
 
 ### Transferring a Hat
 
@@ -358,7 +334,6 @@ Since batch Hats transfers can be made from and to multiple wearers, batch trans
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
-
 ### Renouncing a Hat
 
 The wearer of a Hat can "take off" their Hat via `Hats.renounceHat`. This burns the token and revokes any associated authorities and responsibilities, but does not record a revocation.
@@ -366,16 +341,12 @@ The wearer of a Hat can "take off" their Hat via `Hats.renounceHat`. This burns 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
 <!-- LICENSE-->
 ## License
 
 Distributed under the CC0 License. See `LICENSE.txt` for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 <!-- CONTACT -->
 ## Contact
@@ -389,8 +360,6 @@ Project Website: [https://hatsprotocol.xyz/](https://hatsprotocol.xyz)
 Project Link: [https://github.com/Hats-Protocol/hats-protocol/](https://github.com/Hats-Protocol/hats-protocol/)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
