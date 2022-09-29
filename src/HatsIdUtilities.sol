@@ -66,6 +66,13 @@ contract HatsIdUtilities {
         }
     }
 
+    /// @notice Checks whether a hat is a topHat
+    /// @dev For use when passing a Hat object is not appropriate
+    /// @param _hatId The hat in question
+    /// @return bool Whether the hat is a topHat
+    function isTopHat(uint256 _hatId) public pure returns (bool) {
+        return _hatId > 0 && uint224(_hatId) == 0;
+    }
 
     /// @notice Gets the hat id of the admin at a given level of a given hat
     /// @param _hatId the id of the hat in question
@@ -82,22 +89,13 @@ contract HatsIdUtilities {
         return _hatId & mask;
     }
 
-    function buildHatId(uint256 _admin, uint8 _newChild)
-        public
-        pure
-        returns (uint256)
-    {
-        uint256 mask;
-        for (uint256 i = 0; i < HAT_TREE_DEPTH; ++i) {
-            mask = uint256(
-                type(uint256).max >> (TOPHAT_BITS + (LEVEL_BITS * i))
-            );
-            if (_admin & mask == 0) {
+    /// @notice Gets the tophat domain of a given hat
+    /// @dev A domain is the identifier for a given hat tree, stored in the first 4 bytes of a hat's id
+    /// @param _hatId the id of the hat in question
+    /// @return uint256 The domain
+    function getTophatDomain(uint256 _hatId) public pure returns (uint256) {
         return
-                    _admin |
-                    (uint256(_newChild) <<
-                        (LEVEL_BITS * (HAT_TREE_DEPTH - 1 - i)));
-            }
-        }
+            getAdminAtLevel(_hatId, 0) >>
+            (LOWER_LEVEL_ADDRESS_SPACE * MAX_LEVELS);
     }
 }

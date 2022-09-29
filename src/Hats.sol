@@ -509,14 +509,6 @@ contract Hats is ERC1155, HatsIdUtilities {
         active = _isActive(hat, _hatId);
     }
 
-    /// @notice Chcecks whether a Hat is a topHat
-    /// @dev For use when passing a Hat object is not appropriate
-    /// @param _hatId The Hat in question
-    /// @return bool Whether the Hat is a topHat
-    function isTopHat(uint256 _hatId) public pure returns (bool) {
-        return _hatId > 0 && uint224(_hatId) == 0;
-    }
-
     /// @notice Checks whether a given address wears a given Hat
     /// @dev Convenience function that wraps `balanceOf`
     /// @param _user The address in question
@@ -690,9 +682,7 @@ contract Hats is ERC1155, HatsIdUtilities {
             hatAdmin = getAdminAtLevel(_hatId, getHatLevel(_hatId) - 1);
         }
 
-        string memory domain = Strings.toString(
-            getAdminAtLevel(_hatId, 0) >> (LEVEL_BITS * HAT_TREE_DEPTH)
-        );
+        string memory domain = Strings.toString(getTophatDomain(_hatId));
 
         bytes memory properties = abi.encodePacked(
             '{"current supply": "',
