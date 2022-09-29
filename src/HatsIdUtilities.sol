@@ -2,7 +2,8 @@
 pragma solidity >=0.8.13;
 
 /// @title Hats Id Utilities
-/// @dev Functions for working with Hat Ids from Hats Protocol
+/// @dev Functions for working with Hat Ids from Hats Protocol. Factored out of Hats.sol
+/// for easier use by other contracts.
 /// @author Hats Protocol
 contract HatsIdUtilities {
     /**
