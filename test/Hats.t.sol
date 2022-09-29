@@ -63,8 +63,8 @@ contract CreateHatsTest is TestSetup {
             topHatId,
             _details,
             _maxSupply,
-            _oracle,
-            _conditions,
+            _eligibility,
+            _toggle,
             secondHatImageURI
         );
 
@@ -109,8 +109,8 @@ contract ImageURITest is TestSetup2 {
             secondHatId,
             "third hat",
             2, // maxSupply
-            _oracle,
-            _conditions,
+            _eligibility,
+            _toggle,
             ""
         );
 
@@ -158,8 +158,8 @@ contract MintHatsTest is TestSetup {
             topHatId,
             "second hat",
             2, // maxSupply
-            _oracle,
-            _conditions,
+            _eligibility,
+            _toggle,
             secondHatImageURI
         );
     }
@@ -328,7 +328,7 @@ contract MintHatsTest is TestSetup {
         uint256 hatSupply_pre = hats.hatSupply(secondHatId);
 
         // deactivate the hat
-        vm.prank(_conditions);
+        vm.prank(_toggle);
         hats.setHatStatus(secondHatId, false);
 
         // mint the hat to wearer
@@ -443,8 +443,8 @@ contract ViewHatTests is TestSetup2 {
         string memory retdetails;
         uint32 retmaxSupply;
         uint32 retsupply;
-        address retoracle;
-        address retconditions;
+        address reteligibility;
+        address rettoggle;
         string memory retimageURI;
         uint8 retlastHatId;
         bool retactive;
@@ -453,8 +453,8 @@ contract ViewHatTests is TestSetup2 {
             retdetails,
             retmaxSupply,
             retsupply,
-            retoracle,
-            retconditions,
+            reteligibility,
+            rettoggle,
             retimageURI,
             retlastHatId,
             retactive
@@ -464,8 +464,8 @@ contract ViewHatTests is TestSetup2 {
         assertEq(retdetails, "second hat");
         assertEq(retmaxSupply, 2);
         assertEq(retsupply, 1);
-        assertEq(retoracle, address(555));
-        assertEq(retconditions, address(333));
+        assertEq(reteligibility, address(555));
+        assertEq(rettoggle, address(333));
         assertEq(retimageURI, string.concat(secondHatImageURI, "0"));
         assertEq(retlastHatId, 0);
         assertEq(retactive, true);
@@ -475,8 +475,8 @@ contract ViewHatTests is TestSetup2 {
         string memory retdetails;
         uint32 retmaxSupply;
         uint32 retsupply;
-        address retoracle;
-        address retconditions;
+        address reteligibility;
+        address rettoggle;
         string memory retimageURI;
         uint8 retlastHatId;
         bool retactive;
@@ -485,8 +485,8 @@ contract ViewHatTests is TestSetup2 {
             retdetails,
             retmaxSupply,
             retsupply,
-            retoracle,
-            retconditions,
+            reteligibility,
+            rettoggle,
             retimageURI,
             retlastHatId,
             retactive
@@ -495,8 +495,8 @@ contract ViewHatTests is TestSetup2 {
         assertEq(retdetails, "");
         assertEq(retmaxSupply, 1);
         assertEq(retsupply, 1);
-        assertEq(retoracle, address(0));
-        assertEq(retconditions, address(0));
+        assertEq(reteligibility, address(0));
+        assertEq(rettoggle, address(0));
         assertEq(retlastHatId, 1);
         assertEq(retactive, true);
     }
@@ -546,7 +546,7 @@ contract TransferHatTests is TestSetup2 {
     }
 }
 
-contract OracleSetHatsTests is TestSetup2 {
+contract EligibilitySetHatsTests is TestSetup2 {
     function testDoNotRevokeHatFromWearerInGoodStanding() public {
         // confirm second hat is worn by second Wearer
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
@@ -556,7 +556,7 @@ contract OracleSetHatsTests is TestSetup2 {
         emit WearerStatus(secondHatId, secondWearer, false, true);
 
         // 5-6. do not revoke hat
-        vm.prank(address(_oracle));
+        vm.prank(address(_eligibility));
         hats.setHatWearerStatus(secondHatId, secondWearer, false, true);
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
         assertTrue(hats.isInGoodStanding(secondWearer, secondHatId));
@@ -570,7 +570,7 @@ contract OracleSetHatsTests is TestSetup2 {
         emit WearerStatus(secondHatId, secondWearer, true, true);
 
         // 5-8a. revoke hat
-        vm.prank(address(_oracle));
+        vm.prank(address(_eligibility));
         hats.setHatWearerStatus(secondHatId, secondWearer, true, true);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
         assertTrue(hats.isInGoodStanding(secondWearer, secondHatId));
@@ -585,7 +585,7 @@ contract OracleSetHatsTests is TestSetup2 {
         emit WearerStatus(secondHatId, secondWearer, true, false);
 
         // 5-8b. revoke hat with bad standing
-        vm.prank(address(_oracle));
+        vm.prank(address(_eligibility));
         hats.setHatWearerStatus(secondHatId, secondWearer, true, false);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
         assertFalse(hats.isInGoodStanding(secondWearer, secondHatId));
@@ -598,8 +598,10 @@ contract OracleSetHatsTests is TestSetup2 {
     // in a future state, this call could happen if there were less severe penalities than revocations
 
     function testCannotRevokeHatAsNonWearer() public {
-        // expect NotHatOracle error
-        vm.expectRevert(abi.encodeWithSelector(Hats.NotHatOracle.selector));
+        // expect NotHatEligibility error
+        vm.expectRevert(
+            abi.encodeWithSelector(Hats.NotHatEligibility.selector)
+        );
 
         // attempt to setHatWearerStatus as non-wearer
         vm.prank(address(nonWearer));
@@ -610,7 +612,7 @@ contract OracleSetHatsTests is TestSetup2 {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
         // revoke hat
-        vm.prank(address(_oracle));
+        vm.prank(address(_eligibility));
         hats.setHatWearerStatus(secondHatId, secondWearer, true, true);
 
         // 5-4. remint hat
@@ -628,18 +630,22 @@ contract OracleSetHatsTests is TestSetup2 {
     }
 }
 
-contract OracleGetHatsTests is TestSetup2 {
-    function testCannotGetHatWearerStandingNoFunctionInOracleContract() public {
-        // expect NotIHatsOracleContract error
+contract EligibilityGetHatsTests is TestSetup2 {
+    function testCannotGetHatWearerStandingNoFunctionInEligibilityContract()
+        public
+    {
+        // expect NotIHatsEligibilityContract error
         vm.expectRevert(
-            abi.encodeWithSelector(Hats.NotIHatsOracleContract.selector)
+            abi.encodeWithSelector(Hats.NotIHatsEligibilityContract.selector)
         );
 
-        // fail attempt to pull wearer status from oracle
-        hats.pullHatWearerStatusFromOracle(secondHatId, secondWearer);
+        // fail attempt to pull wearer status from eligibility
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
     }
 
-    function testCheckOracleAndDoNotRevokeHatFromWearerInGoodStanding() public {
+    function testCheckEligibilityAndDoNotRevokeHatFromWearerInGoodStanding()
+        public
+    {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
         // confirm second hat is worn by second Wearer
@@ -649,9 +655,9 @@ contract OracleGetHatsTests is TestSetup2 {
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, false, true);
 
-        // mock calls to Oracle contract to return (false, true)
+        // mock calls to eligibility contract to return (false, true)
         vm.mockCall(
-            address(_oracle),
+            address(_eligibility),
             abi.encodeWithSignature(
                 "getWearerStatus(address,uint256)",
                 secondWearer,
@@ -660,8 +666,8 @@ contract OracleGetHatsTests is TestSetup2 {
             abi.encode(false, true)
         );
 
-        // 5-1. call pullHatStatusFromConditions - no revocation
-        hats.pullHatWearerStatusFromOracle(secondHatId, secondWearer);
+        // 5-1. call checkHatWearerStatus - no revocation
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
         assertTrue(hats.isInGoodStanding(secondWearer, secondHatId));
 
@@ -669,16 +675,16 @@ contract OracleGetHatsTests is TestSetup2 {
         assertEq(hats.hatSupply(secondHatId), hatSupply);
     }
 
-    function testCheckOracleToRevokeHatFromWearerInGoodStanding() public {
+    function testCheckEligibilityToRevokeHatFromWearerInGoodStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
         // expectEmit WearerStatus - should not be wearing, in good standing
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, true, true);
 
-        // mock calls to Oracle contract to return (false, true)
+        // mock calls to eligibility contract to return (false, true)
         vm.mockCall(
-            address(_oracle),
+            address(_eligibility),
             abi.encodeWithSignature(
                 "getWearerStatus(address,uint256)",
                 secondWearer,
@@ -687,8 +693,8 @@ contract OracleGetHatsTests is TestSetup2 {
             abi.encode(true, true)
         );
 
-        // 5-3a. call pullHatStatusFromConditions to revoke
-        hats.pullHatWearerStatusFromOracle(secondHatId, secondWearer);
+        // 5-3a. call checkHatWearerStatus to revoke
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
         assertTrue(hats.isInGoodStanding(secondWearer, secondHatId));
 
@@ -696,16 +702,16 @@ contract OracleGetHatsTests is TestSetup2 {
         assertEq(hats.hatSupply(secondHatId), --hatSupply);
     }
 
-    function testCheckOracleToRevokeHatFromWearerInBadStanding() public {
+    function testCheckEligibilityToRevokeHatFromWearerInBadStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
         // expectEmit WearerStatus - should not be wearing, in bad standing
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, true, false);
 
-        // mock calls to Oracle contract to return (false, true)
+        // mock calls to eligibility contract to return (false, true)
         vm.mockCall(
-            address(_oracle),
+            address(_eligibility),
             abi.encodeWithSignature(
                 "getWearerStatus(address,uint256)",
                 secondWearer,
@@ -714,8 +720,8 @@ contract OracleGetHatsTests is TestSetup2 {
             abi.encode(true, false)
         );
 
-        // 5-3b. call pullHatStatusFromConditions to revoke
-        hats.pullHatWearerStatusFromOracle(secondHatId, secondWearer);
+        // 5-3b. call checkHatWearerStatus to revoke
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
         assertFalse(hats.isInGoodStanding(secondWearer, secondHatId));
 
@@ -746,7 +752,7 @@ contract RenounceHatsTest is TestSetup2 {
     }
 }
 
-contract ConditionsSetHatsTest is TestSetup2 {
+contract ToggleSetHatsTest is TestSetup2 {
     function testDeactivateHat() public {
         // confirm second hat is active
         assertTrue(hats.isActive(secondHatId));
@@ -757,15 +763,15 @@ contract ConditionsSetHatsTest is TestSetup2 {
         emit HatStatusChanged(secondHatId, false);
 
         // 7-2. change Hat Status true->false via setHatStatus
-        vm.prank(address(_conditions));
+        vm.prank(address(_toggle));
         hats.setHatStatus(secondHatId, false);
         assertFalse(hats.isActive(secondHatId));
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 
     function testCannotDeactivateHatAsNonWearer() public {
-        // expect NotHatConditions error
-        vm.expectRevert(abi.encodeWithSelector(Hats.NotHatConditions.selector));
+        // expect NotHattoggle error
+        vm.expectRevert(abi.encodeWithSelector(Hats.NotHatToggle.selector));
 
         // 7-1. attempt to change Hat Status hat from non-wearer
         vm.prank(address(nonWearer));
@@ -774,7 +780,7 @@ contract ConditionsSetHatsTest is TestSetup2 {
 
     function testActivateDeactivatedHat() public {
         // change Hat Status true->false via setHatStatus
-        vm.prank(address(_conditions));
+        vm.prank(address(_toggle));
         hats.setHatStatus(secondHatId, false);
 
         // expectEmit HatStatusChanged to true
@@ -782,7 +788,7 @@ contract ConditionsSetHatsTest is TestSetup2 {
         emit HatStatusChanged(secondHatId, true);
 
         // changeHatStatus false->true via setHatStatus
-        vm.prank(address(_conditions));
+        vm.prank(address(_toggle));
         hats.setHatStatus(secondHatId, true);
         assertTrue(hats.isActive(secondHatId));
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
@@ -790,11 +796,11 @@ contract ConditionsSetHatsTest is TestSetup2 {
 
     function testCannotActivateDeactivatedHatAsNonWearer() public {
         // change Hat Status true->false via setHatStatus
-        vm.prank(address(_conditions));
+        vm.prank(address(_toggle));
         hats.setHatStatus(secondHatId, false);
 
-        // expect NotHatConditions error
-        vm.expectRevert(abi.encodeWithSelector(Hats.NotHatConditions.selector));
+        // expect NotHattoggle error
+        vm.expectRevert(abi.encodeWithSelector(Hats.NotHatToggle.selector));
 
         // 8-1. attempt to changeHatStatus hat from wearer / other wallet / admin
         vm.prank(address(nonWearer));
@@ -802,55 +808,53 @@ contract ConditionsSetHatsTest is TestSetup2 {
     }
 }
 
-contract ConditionsGetHatsTest is TestSetup2 {
-    function testCannotPullHatStatusFromConditionsNoFunctionInConditionsContract()
-        public
-    {
-        // expect NotIHatsOracleContract error
+contract ToggleGetHatsTest is TestSetup2 {
+    function testCannotCheckHatStatusNoFunctionInToggleContract() public {
+        // expect NotIHatsToggleContract error
         vm.expectRevert(
-            abi.encodeWithSelector(Hats.NotIHatsConditionsContract.selector)
+            abi.encodeWithSelector(Hats.NotIHatsToggleContract.selector)
         );
 
         // fail attempt to pull Hat Status
-        hats.pullHatStatusFromConditions(secondHatId);
+        hats.checkHatStatus(secondHatId);
     }
 
-    function testCheckConditionsToDeactivateHat() public {
+    function testCheckToggleToDeactivateHat() public {
         // expectEmit HatStatusChanged to false
         vm.expectEmit(false, false, false, true);
         emit HatStatusChanged(secondHatId, false);
 
-        // encode mock for function inside Conditions contract to return false
+        // encode mock for function inside toggle contract to return false
         vm.mockCall(
-            address(_conditions),
+            address(_toggle),
             abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
             abi.encode(false)
         );
 
-        // call mocked function within pullHatStatusFromConditions to deactivate
-        hats.pullHatStatusFromConditions(secondHatId);
+        // call mocked function within checkHatStatus to deactivate
+        hats.checkHatStatus(secondHatId);
         assertFalse(hats.isActive(secondHatId));
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 
-    function testCheckConditionsToActivateDeactivatedHat() public {
+    function testCheckToggleToActivateDeactivatedHat() public {
         // change Hat Status true->false via setHatStatus
-        vm.prank(address(_conditions));
+        vm.prank(address(_toggle));
         hats.setHatStatus(secondHatId, false);
 
         // expectEmit HatStatusChanged to true
         vm.expectEmit(false, false, false, true);
         emit HatStatusChanged(secondHatId, true);
 
-        // encode mock for function inside Conditions contract to return false
+        // encode mock for function inside toggle contract to return false
         vm.mockCall(
-            address(_conditions),
+            address(_toggle),
             abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
             abi.encode(true)
         );
 
-        // call mocked function within pullHatStatusFromConditions to reactivate
-        hats.pullHatStatusFromConditions(secondHatId);
+        // call mocked function within checkHatStatus to reactivate
+        hats.checkHatStatus(secondHatId);
         assertTrue(hats.isActive(secondHatId));
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
     }

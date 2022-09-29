@@ -2,12 +2,17 @@
 
 pragma solidity >=0.8.13;
 
-import "./IHatsOracle.sol";
+import "./IHatsEligibility.sol";
 import "../IHats.sol";
 import "utils/Auth.sol";
 
-abstract contract OwnableHatsOracle is IHats, IHatsOracle, Auth {
-    event HatStandingSet(address _wearer, uint256 _hatId, bool _revoke, bool _standing);
+abstract contract OwnableHatsEligibility is IHats, IHatsEligibility, Auth {
+    event HatStandingSet(
+        address _wearer,
+        uint256 _hatId,
+        bool _revoke,
+        bool _standing
+    );
 
     IHats public HATS;
 
@@ -25,21 +30,24 @@ abstract contract OwnableHatsOracle is IHats, IHatsOracle, Auth {
         return standings[_wearer][_hatId];
     }
 
-    function setWearerStatus(address _wearer, uint256 _hatId, bool _revoke, bool _standing)
-        public
-        virtual
-        requiresAuth
-    {
+    function setWearerStatus(
+        address _wearer,
+        uint256 _hatId,
+        bool _revoke,
+        bool _standing
+    ) public virtual requiresAuth {
         standings[_wearer][_hatId] = _standing;
         _updateHatWearerStatus(_wearer, _hatId, _revoke, _standing);
 
         emit HatStandingSet(_wearer, _hatId, _revoke, _standing);
     }
 
-    function _updateHatWearerStatus(address _wearer, uint256 _hatId, bool _revoke, bool _standing)
-        internal
-        virtual
-    {
+    function _updateHatWearerStatus(
+        address _wearer,
+        uint256 _hatId,
+        bool _revoke,
+        bool _standing
+    ) internal virtual {
         HATS.setHatWearerStatus(_hatId, _wearer, _revoke, _standing);
     }
 }

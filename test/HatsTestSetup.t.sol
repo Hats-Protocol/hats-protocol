@@ -16,8 +16,8 @@ abstract contract TestVariables {
     uint256 internal _admin;
     string internal _details;
     uint32 internal _maxSupply;
-    address internal _oracle;
-    address internal _conditions;
+    address internal _eligibility;
+    address internal _toggle;
     string internal _baseImageURI;
 
     string internal topHatImageURI;
@@ -34,8 +34,8 @@ abstract contract TestVariables {
         uint256 id,
         string details,
         uint32 maxSupply,
-        address oracle,
-        address conditions,
+        address eligibility,
+        address toggle,
         string imageURI
     );
     event HatRenounced(uint256 hatId, address wearer);
@@ -78,8 +78,8 @@ abstract contract TestSetup is Test, TestVariables {
 
         // set variables: Hat parameters
         _maxSupply = 1;
-        _oracle = address(555);
-        _conditions = address(333);
+        _eligibility = address(555);
+        _toggle = address(333);
 
         topHatImageURI = "http://www.tophat.com/";
         secondHatImageURI = "http://www.second.com/";
@@ -120,8 +120,8 @@ abstract contract TestSetup is Test, TestVariables {
                 admin,
                 string.concat("hat ", vm.toString(i + 2)),
                 _maxSupply,
-                _oracle,
-                _conditions,
+                _eligibility,
+                _toggle,
                 "" // imageURI
             );
             ids[i] = id;
@@ -148,8 +148,8 @@ abstract contract TestSetup2 is TestSetup {
             topHatId,
             "second hat",
             2, // maxSupply
-            _oracle,
-            _conditions,
+            _eligibility,
+            _toggle,
             secondHatImageURI
         );
 

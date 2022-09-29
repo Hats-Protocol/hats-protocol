@@ -4,8 +4,8 @@ pragma solidity >=0.8.13;
 import {ERC1155} from "ERC1155/ERC1155.sol";
 // do we need an interface for Hatter / admin?
 import "forge-std/Test.sol"; //remove after testing
-import "./HatsConditions/IHatsConditions.sol";
-import "./HatsOracles/IHatsOracle.sol";
+import "./HatsToggle/IHatsToggle.sol";
+import "./HatsEligibility/IHatsEligibility.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
@@ -26,10 +26,10 @@ contract Hats is ERC1155 {
     error NoApprovalsNeeded();
     error OnlyAdminsCanTransfer();
     error NotHatWearer();
-    error NotHatConditions();
-    error NotHatOracle();
-    error NotIHatsConditionsContract();
-    error NotIHatsOracleContract();
+    error NotHatToggle();
+    error NotHatEligibility();
+    error NotIHatsToggleContract();
+    error NotIHatsEligibilityContract();
     error BatchArrayLengthMismatch();
     error SafeTransfersNotNecessary();
     error MaxTreeDepthReached();
@@ -40,12 +40,12 @@ contract Hats is ERC1155 {
 
     struct Hat {
         // 1st storage slot
-        address oracle; // can revoke Hat based on ruling; 20 bytes (+20)
+        address eligibility; // can revoke Hat based on ruling; 20 bytes (+20)
         uint32 maxSupply; // the max number of identical hats that can exist; 24 bytes (+4)
-        bool active; // can be altered by conditions, via setHatStatus(); 25 bytes (+1)
+        bool active; // can be altered by toggle, via setHatStatus(); 25 bytes (+1)
         uint8 lastHatId; // indexes how many different hats an admin is holding; 26 bytes (+1)
         // 2nd storage slot
-        address conditions; // controls when Hat is active; 20 bytes (+20)
+        address toggle; // controls when Hat is active; 20 bytes (+20)
         // 3rd+ storage slot
         string details;
         // optional
@@ -86,8 +86,8 @@ contract Hats is ERC1155 {
         uint256 id,
         string details,
         uint32 maxSupply,
-        address oracle,
-        address conditions,
+        address eligibility,
+        address toggle,
         string imageURI
     );
 
@@ -112,10 +112,10 @@ contract Hats is ERC1155 {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Creates and mints a Hat that is its own admin, i.e. a "topHat"
-    /// @dev A topHat has no oracle and no conditions
+    /// @dev A topHat has no eligibility and no toggle
     /// @param _target The address to which the newly created topHat is minted
     /// @param _imageURI The image uri for this top hat and the fallback for its
-    ///                  children hats [optional]
+    ///                  downstream hats [optional]
     /// @return topHatId The id of the newly created topHat
     function mintTopHat(address _target, string memory _imageURI)
         public
@@ -129,8 +129,8 @@ contract Hats is ERC1155 {
             topHatId,
             "", // details
             1, // maxSupply = 1
-            address(0), // there is no oracle
-            address(0), // it has no conditions
+            address(0), // there is no eligibility
+            address(0), // it has no toggle
             _imageURI
         );
 
@@ -140,19 +140,19 @@ contract Hats is ERC1155 {
     /// @notice Mints a topHat to the msg.sender and creates another Hat admin'd by the topHat
     /// @param _details A description of the hat
     /// @param _maxSupply The total instances of the Hat that can be worn at once
-    /// @param _oracle The address that can report on the Hat wearer's standing
-    /// @param _conditions The address that can deactivate the hat [optional]
+    /// @param _eligibility The address that can report on the Hat wearer's standing
+    /// @param _toggle The address that can deactivate the hat [optional]
     /// @param _topHatImageURI The image uri for this top hat and the fallback for its
-    ///                        children hats [optional]
+    ///                        downstream hats [optional]
     /// @param _firstHatImageURI The image uri for the first hat and the fallback for its
-    ///                        children hats [optional]
+    ///                        downstream hats [optional]
     /// @return topHatId The id of the newly created topHat
     /// @return firstHatId The id of the other newly created hat
     function createTopHatAndHat(
         string memory _details, // encode as bytes32 ??
         uint32 _maxSupply,
-        address _oracle,
-        address _conditions,
+        address _eligibility,
+        address _toggle,
         string memory _topHatImageURI,
         string memory _firstHatImageURI
     ) public returns (uint256 topHatId, uint256 firstHatId) {
@@ -162,8 +162,8 @@ contract Hats is ERC1155 {
             topHatId,
             _details,
             _maxSupply,
-            _oracle,
-            _conditions,
+            _eligibility,
+            _toggle,
             _firstHatImageURI
         );
     }
@@ -173,17 +173,17 @@ contract Hats is ERC1155 {
     /// @param _details A description of the Hat
     /// @param _maxSupply The total instances of the Hat that can be worn at once
     /// @param _admin The id of the Hat that will control who wears the newly created hat
-    /// @param _oracle The address that can report on the Hat wearer's status
-    /// @param _conditions The address that can deactivate the Hat
+    /// @param _eligibility The address that can report on the Hat wearer's status
+    /// @param _toggle The address that can deactivate the Hat
     /// @param _imageURI The image uri for this hat and the fallback for its
-    ///                  children hats [optional]
+    ///                  downstream hats [optional]
     /// @return newHatId The id of the newly created Hat
     function createHat(
         uint256 _admin,
         string memory _details, // encode as bytes32 ??
         uint32 _maxSupply,
-        address _oracle,
-        address _conditions,
+        address _eligibility,
+        address _toggle,
         string memory _imageURI
     ) public returns (uint256 newHatId) {
         // to create a hat, you must be wearing the Hat of its admin
@@ -200,8 +200,8 @@ contract Hats is ERC1155 {
             newHatId,
             _details,
             _maxSupply,
-            _oracle,
-            _conditions,
+            _eligibility,
+            _toggle,
             _imageURI
         );
         // increment _admin.lastHatId
@@ -342,7 +342,7 @@ contract Hats is ERC1155 {
     }
 
     /// @notice Toggles a Hat's status from active to deactive, or vice versa
-    /// @dev The msg.sender must be set as the hat's Conditions
+    /// @dev The msg.sender must be set as the hat's toggle
     /// @param _hatId The id of the Hat for which to adjust status
     /// @return bool Whether the status was toggled
     function setHatStatus(uint256 _hatId, bool newStatus)
@@ -351,21 +351,18 @@ contract Hats is ERC1155 {
     {
         Hat storage hat = _hats[_hatId];
 
-        if (msg.sender != hat.conditions) {
-            revert NotHatConditions();
+        if (msg.sender != hat.toggle) {
+            revert NotHatToggle();
         }
 
         return _processHatStatus(_hatId, newStatus);
     }
 
-    /// @notice Checks a hat's Conditions and, if new, toggle's the hat's status
+    /// @notice Checks a hat's toggle and, if new, toggle's the hat's status
     /// @dev // TODO
-    /// @param _hatId The id of the Hat whose Conditions we are checking
+    /// @param _hatId The id of the Hat whose toggle we are checking
     /// @return bool Whether there was a new status
-    function pullHatStatusFromConditions(uint256 _hatId)
-        external
-        returns (bool)
-    {
+    function checkHatStatus(uint256 _hatId) external returns (bool) {
         Hat memory hat = _hats[_hatId];
         bool newStatus;
 
@@ -374,22 +371,20 @@ contract Hats is ERC1155 {
             _hatId
         );
 
-        (bool success, bytes memory returndata) = hat.conditions.staticcall(
-            data
-        );
+        (bool success, bytes memory returndata) = hat.toggle.staticcall(data);
 
         // if function call succeeds with data of length > 0
         // then we know the contract exists and has the getWearerStatus function
         if (success && returndata.length > 0) {
             newStatus = abi.decode(returndata, (bool));
         } else {
-            revert NotIHatsConditionsContract();
+            revert NotIHatsToggleContract();
         }
 
         return _processHatStatus(_hatId, newStatus);
     }
 
-    /// @notice Report from a hat's Oracle on the status of one of its wearers and, if `false`, revoke their hat
+    /// @notice Report from a hat's eligibility on the status of one of its wearers and, if `false`, revoke their hat
     /// @dev Burns the wearer's hat, if revoked
     /// @param _hatId The id of the hat
     /// @param _wearer The address of the hat wearer whose status is being reported
@@ -404,8 +399,8 @@ contract Hats is ERC1155 {
     ) external returns (bool) {
         Hat memory hat = _hats[_hatId];
 
-        if (msg.sender != hat.oracle) {
-            revert NotHatOracle();
+        if (msg.sender != hat.eligibility) {
+            revert NotHatEligibility();
         }
 
         _processHatWearerStatus(_hatId, _wearer, _revoke, _wearerStanding);
@@ -413,11 +408,11 @@ contract Hats is ERC1155 {
         return true;
     }
 
-    /// @notice Check a hat's Oracle for a report on the status of one of the hat's wearers and, if `false`, revoke their hat
+    /// @notice Check a hat's eligibility for a report on the status of one of the hat's wearers and, if `false`, revoke their hat
     /// @dev Burns the wearer's hat, if revoked
     /// @param _hatId The id of the hat
     /// @param _wearer The address of the Hat wearer whose status report is being requested
-    function pullHatWearerStatusFromOracle(uint256 _hatId, address _wearer)
+    function checkHatWearerStatus(uint256 _hatId, address _wearer)
         public
         returns (bool)
     {
@@ -431,14 +426,16 @@ contract Hats is ERC1155 {
             _hatId
         );
 
-        (bool success, bytes memory returndata) = hat.oracle.staticcall(data);
+        (bool success, bytes memory returndata) = hat.eligibility.staticcall(
+            data
+        );
 
         // if function call succeeds with data of length > 0
         // then we know the contract exists and has the getWearerStatus function
         if (success && returndata.length > 0) {
             (revoke, wearerStanding) = abi.decode(returndata, (bool, bool));
         } else {
-            revert NotIHatsOracleContract();
+            revert NotIHatsEligibilityContract();
         }
 
         return _processHatWearerStatus(_hatId, _wearer, revoke, wearerStanding);
@@ -466,26 +463,26 @@ contract Hats is ERC1155 {
     /// @param _id ID of the hat to be stored
     /// @param _details A description of the hat
     /// @param _maxSupply The total instances of the Hat that can be worn at once
-    /// @param _oracle The address that can report on the Hat wearer's status
-    /// @param _conditions The address that can deactivate the hat [optional]
+    /// @param _eligibility The address that can report on the Hat wearer's status
+    /// @param _toggle The address that can deactivate the hat [optional]
     /// @param _imageURI The image uri for this top hat and the fallback for its
-    ///                  children hats [optional]
+    ///                  downstream hats [optional]
     /// @return hat The contents of the newly created hat
     function _createHat(
         uint256 _id,
         string memory _details, // encode as bytes32 ??
         uint32 _maxSupply,
-        address _oracle,
-        address _conditions,
+        address _eligibility,
+        address _toggle,
         string memory _imageURI
     ) internal returns (Hat memory hat) {
         hat.details = _details;
 
         hat.maxSupply = _maxSupply;
 
-        hat.oracle = _oracle;
+        hat.eligibility = _eligibility;
 
-        hat.conditions = _conditions;
+        hat.toggle = _toggle;
         hat.imageURI = _imageURI;
         hat.active = true;
 
@@ -495,8 +492,8 @@ contract Hats is ERC1155 {
             _id,
             _details,
             _maxSupply,
-            _oracle,
-            _conditions,
+            _eligibility,
+            _toggle,
             _imageURI
         );
     }
@@ -576,8 +573,8 @@ contract Hats is ERC1155 {
     /// @return details The details of the Hat
     /// @return maxSupply The max supply of tokens for this Hat
     /// @return supply The number of current wearers of this Hat
-    /// @return oracle The Oracle address for this Hat
-    /// @return conditions The Conditions address for this Hat
+    /// @return eligibility The eligibility address for this Hat
+    /// @return toggle The toggle address for this Hat
     /// @return imageURI The image URI used for this Hat
     /// @return lastHatId The most recently created Hat with this Hat as admin; also the count of Hats with this Hat as admin
     /// @return active Whether the Hat is current active, as read from `_isActive`
@@ -588,8 +585,8 @@ contract Hats is ERC1155 {
             string memory details,
             uint32 maxSupply,
             uint32 supply,
-            address oracle,
-            address conditions,
+            address eligibility,
+            address toggle,
             string memory imageURI,
             uint8 lastHatId,
             bool active
@@ -599,8 +596,8 @@ contract Hats is ERC1155 {
         details = hat.details;
         maxSupply = hat.maxSupply;
         supply = hatSupply[_hatId];
-        oracle = hat.oracle;
-        conditions = hat.conditions;
+        eligibility = hat.eligibility;
+        toggle = hat.toggle;
         imageURI = getImageURIForHat(_hatId);
         lastHatId = hat.lastHatId;
         active = _isActive(hat, _hatId);
@@ -712,9 +709,7 @@ contract Hats is ERC1155 {
             _hatId
         );
 
-        (bool success, bytes memory returndata) = _hat.conditions.staticcall(
-            data
-        );
+        (bool success, bytes memory returndata) = _hat.toggle.staticcall(data);
 
         if (success && returndata.length > 0) {
             active = abi.decode(returndata, (bool));
@@ -733,7 +728,7 @@ contract Hats is ERC1155 {
     }
 
     /// @notice Internal call to check whether a wearer of a Hat is in good standing
-    /// @dev Tries an external call to the Hat's Conditions address, defaulting to existing badStandings state if the call fails (ie if the Conditions address does not conform to it IConditions interface)
+    /// @dev Tries an external call to the Hat's toggle address, defaulting to existing badStandings state if the call fails (ie if the toggle address does not conform to it IToggle interface)
     /// @param _hat The Hat object
     /// @param _wearer The address of the Hat wearer
     /// @return standing Whether the wearer is in good standing
@@ -748,7 +743,9 @@ contract Hats is ERC1155 {
             _hatId
         );
 
-        (bool success, bytes memory returndata) = _hat.oracle.staticcall(data);
+        (bool success, bytes memory returndata) = _hat.eligibility.staticcall(
+            data
+        );
 
         if (success && returndata.length > 0) {
             (, standing) = abi.decode(returndata, (bool, bool));
@@ -843,10 +840,10 @@ contract Hats is ERC1155 {
             Strings.toString(hatAdmin),
             '", "admin (pretty id)": "',
             Strings.toHexString(hatAdmin, 32),
-            '", "oracle address": "',
-            Strings.toHexString(hat.oracle),
-            '", "conditions address": "',
-            Strings.toHexString(hat.conditions),
+            '", "eligibility address": "',
+            Strings.toHexString(hat.eligibility),
+            '", "toggle address": "',
+            Strings.toHexString(hat.toggle),
             '"}'
         );
         string memory status = (_isActive(hat, _hatId) ? "active" : "inactive");

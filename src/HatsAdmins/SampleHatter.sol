@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.13;
 
-import "../HatsOracles/IHatsOracle.sol";
+import "../HatsEligibility/IHatsEligibility.sol";
 import "../IHats.sol";
 import "utils/Auth.sol";
 
@@ -29,7 +29,7 @@ abstract contract SampleMultiHatter is Auth {
         string memory _details,
         uint32 _maxSupply,
         address _oracle,
-        address _conditions,
+        address _toggle,
         address _wearer
     ) public virtual requiresAuth {
         uint256 id = HATS.createHat(
@@ -37,7 +37,7 @@ abstract contract SampleMultiHatter is Auth {
             _details,
             _maxSupply,
             _oracle,
-            _conditions
+            _toggle
         );
         _mint(id, _wearer);
     }
