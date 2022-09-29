@@ -55,7 +55,7 @@ contract CreateTopHatTest is TestSetup {
 contract CreateHatsTest is TestSetup {
     function testHatCreated() public {
         // get prelim values
-        (, , , , , , uint8 lastChildId, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastHatId, ) = hats.viewHat(topHatId);
 
         topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
         vm.prank(address(topHatWearer));
@@ -68,9 +68,9 @@ contract CreateHatsTest is TestSetup {
             secondHatImageURI
         );
 
-        // assert admin's lastChildId is incremented
-        (, , , , , , uint8 lastChildIdPost, ) = hats.viewHat(topHatId);
-        assertEq(++lastChildId, lastChildIdPost);
+        // assert admin's lastHatId is incremented
+        (, , , , , , uint8 lastHatIdPost, ) = hats.viewHat(topHatId);
+        assertEq(++lastHatId, lastHatIdPost);
     }
 
     function testHatsBranchCreated() public {
@@ -201,7 +201,7 @@ contract MintHatsTest is TestSetup {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(thirdWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
-        (, , , , , , uint8 lastChildId_pre, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastHatId_pre, ) = hats.viewHat(topHatId);
 
         // mint hat
         vm.prank(address(topHatWearer));
@@ -220,16 +220,16 @@ contract MintHatsTest is TestSetup {
         // assert hatSupply is incremented
         assertEq(hats.hatSupply(secondHatId), supply_pre + 2);
 
-        // assert admin's lastChildId is *not* incremented
-        (, , , , , , uint8 lastChildId_post, ) = hats.viewHat(topHatId);
-        assertEq(lastChildId_post, lastChildId_pre);
+        // assert admin's lastHatId is *not* incremented
+        (, , , , , , uint8 lastHatId_post, ) = hats.viewHat(topHatId);
+        assertEq(lastHatId_post, lastHatId_pre);
     }
 
     function testCannotMint2HatsToSameWearer() public {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(thirdWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
-        (, , , , , , uint8 lastChildId_pre, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastHatId_pre, ) = hats.viewHat(topHatId);
 
         // mint hat
         vm.prank(address(topHatWearer));
@@ -257,9 +257,9 @@ contract MintHatsTest is TestSetup {
         // assert hatSupply is incremented only by 1
         assertEq(hats.hatSupply(secondHatId), supply_pre + 1);
 
-        // assert admin's lastChildId is *not* incremented
-        (, , , , , , uint8 lastChildId_post, ) = hats.viewHat(topHatId);
-        assertEq(lastChildId_post, lastChildId_pre);
+        // assert admin's lastHatId is *not* incremented
+        (, , , , , , uint8 lastHatId_post, ) = hats.viewHat(topHatId);
+        assertEq(lastHatId_post, lastHatId_pre);
     }
 
     function testMintHatErrorNotAdmin() public {
@@ -383,9 +383,9 @@ contract MintHatsTest is TestSetup {
 
         hats.batchMintHats(hatBatch, wearerBatch);
 
-        (, , , , , , uint8 lastChildId, ) = hats.viewHat(secondHatId);
+        (, , , , , , uint8 lastHatId, ) = hats.viewHat(secondHatId);
 
-        assertEq(lastChildId, count);
+        assertEq(lastHatId, count);
     }
 
     function testBatchMintHatsErrorArrayLength(uint256 count, uint256 offset)
@@ -446,7 +446,7 @@ contract ViewHatTests is TestSetup2 {
         address reteligibility;
         address rettoggle;
         string memory retimageURI;
-        uint8 retlastChildId;
+        uint8 retlastHatId;
         bool retactive;
 
         (
@@ -456,7 +456,7 @@ contract ViewHatTests is TestSetup2 {
             reteligibility,
             rettoggle,
             retimageURI,
-            retlastChildId,
+            retlastHatId,
             retactive
         ) = hats.viewHat(secondHatId);
 
@@ -467,7 +467,7 @@ contract ViewHatTests is TestSetup2 {
         assertEq(reteligibility, address(555));
         assertEq(rettoggle, address(333));
         assertEq(retimageURI, string.concat(secondHatImageURI, "0"));
-        assertEq(retlastChildId, 0);
+        assertEq(retlastHatId, 0);
         assertEq(retactive, true);
     }
 
@@ -478,7 +478,7 @@ contract ViewHatTests is TestSetup2 {
         address reteligibility;
         address rettoggle;
         string memory retimageURI;
-        uint8 retlastChildId;
+        uint8 retlastHatId;
         bool retactive;
 
         (
@@ -488,7 +488,7 @@ contract ViewHatTests is TestSetup2 {
             reteligibility,
             rettoggle,
             retimageURI,
-            retlastChildId,
+            retlastHatId,
             retactive
         ) = hats.viewHat(topHatId);
 
@@ -497,7 +497,7 @@ contract ViewHatTests is TestSetup2 {
         assertEq(retsupply, 1);
         assertEq(reteligibility, address(0));
         assertEq(rettoggle, address(0));
-        assertEq(retlastChildId, 1);
+        assertEq(retlastHatId, 1);
         assertEq(retactive, true);
     }
 
