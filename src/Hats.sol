@@ -33,7 +33,7 @@ contract Hats is ERC1155, HatsIdUtilities {
     error NotIHatsEligibilityContract();
     error BatchArrayLengthMismatch();
     error SafeTransfersNotNecessary();
-    error MaxTreeDepthReached();
+    error MaxLevelsReached();
 
     /*//////////////////////////////////////////////////////////////
                               HATS DATA MODELS
@@ -63,16 +63,8 @@ contract Hats is ERC1155, HatsIdUtilities {
 
     string public baseImageURI;
 
-    /**
-     * Hat IDs act like addresses. The top level consists of 4 bytes and references all tophats
-     * Each level below consists of 1 byte, which can contain up to 255 types of hats.
-     *
-     * A uint256 contains 4 bytes of space for tophat addresses and 28 bytes of space
-     * for 28 levels of heirarchy of ownership, with the admin at each level having space
-     * for 255 different hats.
-     *
-     */
-    mapping(uint256 => Hat) internal _hats;
+    // see HatsIdUtilities.sol for more info on how Hat Ids work
+    mapping(uint256 => Hat) internal _hats; // key: hatId => value: Hat struct
 
     mapping(uint256 => uint32) public hatSupply; // key: hatId => value: supply
 
@@ -192,7 +184,7 @@ contract Hats is ERC1155, HatsIdUtilities {
             revert NotAdmin(msg.sender, _admin);
         }
         if (uint8(_admin) > 0) {
-            revert MaxTreeDepthReached();
+            revert MaxLevelsReached();
         }
 
         newHatId = getNextId(_admin);
@@ -208,7 +200,6 @@ contract Hats is ERC1155, HatsIdUtilities {
         // increment _admin.lastHatId
         ++_hats[_admin].lastHatId;
     }
-
 
     function getNextId(uint256 _admin) public view returns (uint256) {
         uint8 nextHatId = _hats[_admin].lastHatId + 1;
@@ -711,7 +702,7 @@ contract Hats is ERC1155, HatsIdUtilities {
             '", "admin (id)": "',
             Strings.toString(hatAdmin),
             '", "admin (pretty id)": "',
-            Strings.toHexString(hatAdmin, TOPHAT_BITS),
+            Strings.toHexString(hatAdmin, 32),
             '", "eligibility address": "',
             Strings.toHexString(hat.eligibility),
             '", "toggle address": "',
@@ -731,7 +722,7 @@ contract Hats is ERC1155, HatsIdUtilities {
                         '", "id": "',
                         Strings.toString(_hatId),
                         '", "pretty id": "',
-                        Strings.toHexString(_hatId, TOPHAT_BITS),
+                        Strings.toHexString(_hatId, 32),
                         '", "status": "',
                         status,
                         '", "image": "',
