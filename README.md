@@ -1,14 +1,134 @@
-# hats-protocol
+<!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
+<a name="readme-top"></a>
+<!--
+*** Attribution: thanks to @othneildrew for the Readme template!)
+-->
 
-Core contracts for Hats Protocol
 
-## Overview
+
+<!-- SHIELDS -->
+<!--
+*** I'm using markdown "reference style" links for readability.
+*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
+*** See the bottom of this document for the declaration of the reference variables
+*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
+*** https://www.markdownguide.org/basic-syntax/#reference-style-links
+-->
+[![Contributors][contributors-shield]][contributors-url]
+[![Stargazers][stars-shield]][stars-url]
+[![Issues][issues-shield]][issues-url]
+[![CCO License][license-shield]][license-url]
+[![Twitter][twitter-shield]][twitter-url]
+
+<!-- LOGO -->
+<br />
+<div align="center">
+  <a href="https://github.com/Hats-Protocol/hats-protocol">
+    <img src="https://user-images.githubusercontent.com/10171948/192988691-07b7f842-232d-4ac6-9b14-21b626775834.png" alt="Logo" width="320" height="184">
+  </a>
+
+  <h3 align="center">Hats Protocol</h3>
+
+  <p align="center">
+    How DAOs get things done
+    <br />
+    <br />
+    <a href="https://hatsprotocol.xyz">Hats Protocol Website</a>
+    ·
+    <a href="https://github.com/Hats-Protocol/hats-protocol/issues">Report Bug</a>
+    ·
+    <a href="https://github.com/Hats-Protocol/hats-protocol/issues">Request Feature</a>
+  </p>
+</div>
+
+
+
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#about-the-project">About The Project</a>
+      <ul>
+        <li><a href="#latest-deployments">Latest Deployments</a></li>
+      </ul>
+    </li>
+    </li>
+    <li><a href="#getting-started">Getting Started</a></li>
+    <li><a href="#use-cases">Use Cases</a></li>
+    <li>
+      <a href="#hats-protocol-docs">Hats Protocol Docs</a>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#installation">Installation</a></li>
+      </ul>
+    </li>
+    <li><a href="#license">License</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ol>
+</details>
+
+<!-- ABOUT THE PROJECT -->
+## About The Project
 
 Hats Protocol is a protocol for DAO-native roles and credentials that support delegation of authorities.
 
 Hats are represented on-chain by ERC1155 tokens. An address with a balance of a given Hat token "wears" that hat, granting them the responsibilities and authorities that have been assigned to the Hat by the DAO.
 
-### Hat Authorities
+#### Latest Deployments
+
+- Gnosis Chain (chain id #100) &mdash; `0x245e5B56C18B18aC2d72F94C5F7bE1D52497A8aD`
+
+
+
+<!-- GETTING STARTED -->
+## Getting Started
+
+[TODO - add how to get your DAO a tophat, create your first hat, and mint it, and plug into a token gate]
+
+
+
+<!-- USAGE EXAMPLES -->
+## Use Cases
+
+[TODO] Examples / screenshots
+
+_For more examples, please refer to the [Documentation](https://github.com/Hats-Protocol/hats-protocol/edit/main/README.md#hats-protocol-docs)_
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- CONTRIBUTING -->
+## Contributing
+
+Contributions are what make web3 such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+
+Don't forget to give the project a star! Thanks again!
+
+1. Fork the Project
+2. Install [Forge](https://book.getfoundry.sh/getting-started/installation)
+3. Compile the contracts, run `forge build`, and to test, run `forge test`
+4. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+5. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+6. Push to the Branch (`git push origin feature/AmazingFeature`)
+7. Open a Pull Request
+
+To deploy Hats yourself:
+- Install [Forge](https://book.getfoundry.sh/getting-started/installation)
+- Compile the contracts, run `forge build`, and to test, run `forge test`
+- Deploy using the [Hats.s.sol script](script/Hats.s.sol) and follow the [Foundry scripting instructions](https://book.getfoundry.sh/tutorials/solidity-scripting)
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- Docs -->
+## Hats Protocol Docs
+
+### Authorities in Hats Protocol
 
 Hats Protocol does not define mechanisms for authorities and responsibilities to be associated with a Hat. All associations between a Hat and its authorities or responsibilities are created external to the protocol.
 
@@ -35,12 +155,11 @@ Hat admins are the one exception to the rule that authorities are external to th
 Each Hat has several properties:
 
 - `id` - the integer identifier for the Hat, which also serves as the ERC1155 token id (see three paragraphs below)
-- `details` - (optional) metadata about the Hat; such as a name, description, and other properties like roles and responsibilities associated with the Hat
+- `details` - metadata about the Hat; such as a name, description, and other properties like roles and responsibilities associated with the Hat
 - `maxSupply` - the maximum number of addresses that can wear the Hat at once
 - `admin` - the Hat that controls who can wear the Hat
 - `oracle` - the address that controls whether a given wearer of the Hat is in good standing
 - `conditions` - the address that controls whether the Hat is active
-- `imageURI` - (optional) a uri pointing to an image for front ends to display for this hat
 
 For more information on each property, refer to the detailed sections below.
 
@@ -185,40 +304,53 @@ For these reasons, in Hats Protocol, the standard ERC1155 transfer functions &md
 
 As replacements, Hats can be transfered by admins via `Hats.transferHat`, which emits the ERC1155 standard event `TransferSingle`.
 
+### Batch Transfers
+
+As with minting, admins can also transfer Hats in a batch, via `Hats.batchTransferHats`.
+
+Since batch Hats transfers can be made from and to multiple wearers, batch transfers emit multiple `TransferSingle` events rather than a `TransferBatch` event.
+
 ### Renouncing a Hat
 
-The wearer of a hat can "take off" their Hat via `Hats.renounceHat`. This burns the token and revokes any associated authorities and responsibilities, but does not record a revocation.
+The wearer of a Hat can "take off" their Hat via `Hats.renounceHat`. This burns the token and revokes any associated authorities and responsibilities, but does not record a revocation.
 
-### Image URIs
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-Each hat can be created to include an image URI, which points to media for apps to display along with the hat token.
 
-If the image URI for a given hat was not specified upon hat creation, the image URI for that hat defaults to the URI specified for it's admin hat. This fallback happens recursively, traversing the hat's tree of admins until a specified URI is found. If there is no specified URI within that tree of admins, the image URI defaults to the global `_baseImageURI`.
 
-This architecture allows DAOs and other hat creators to add custom images to their organization's hats without requiring them to do so. There is no additional gas cost imposed on hat creators choosing not to specify a custom image URI.
+<!-- LICENSE-->
+## License
 
-#### Image URIs and Hat Ids
+Distributed under the CC0 License. See `LICENSE.txt` for more information.
 
-The structure of the URI returned by the `uri` function for a given hat depends on whether the hat had a custom image URI specified when it was created.
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-For hats that *did* have an image URI specificed, the returned URI will be the concatenation of the specified image URI and the id "0". The assumption is that this is the most senior (lowest level) hat that has this URI. Returned URIs for all children of this hat that do not have their own specified image URI will follow the below convention.
 
-For hats that *did not* have an image URI specified, the returned URI will be the concatenation of its nearest admin's specified URI and its own hat id. This is required to avoid collisions with other hats that may also be children of the nearest admin.
 
-## Latest Deployments
+<!-- CONTACT -->
+## Contact
 
-### Mainnets
+Spencer Graham - [@spengrah](https://twitter.com/spengrah)
 
-- Gnosis Chain (chain id #100) &mdash; `0x245e5b56c18b18ac2d72f94c5f7be1d52497a8ad`
+nintynick - [@nintynick_](https://twitter.com/nintynick_)
 
-### Testnets
+Project Website: [https://hatsprotocol.xyz/](https://hatsprotocol.xyz)
 
-- Goerli (chain id #5) &mdash; `0xb7019c3670f5d4dd99166727a7d29f8a16f4f20a`
-- Rinkeby (chain id #4) &mdash; `0xf55228444742e6812535bcda350167cd965121b7`
+Project Link: [https://github.com/Hats-Protocol/hats-protocol/](https://github.com/Hats-Protocol/hats-protocol/)
 
-## How to Contribute
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-- Fork this repo
-- [Install Forge](https://book.getfoundry.sh/getting-started/installation)
 
-To compile the contracts, run `forge build`, and to test, run `forge test`. To deploy, use the [Hats.s.sol script](script/Hats.s.sol) and follow the [Foundry scripting instructions](https://book.getfoundry.sh/tutorials/solidity-scripting).
+
+<!-- MARKDOWN LINKS & IMAGES -->
+<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
+[contributors-shield]: https://img.shields.io/github/contributors/Hats-Protocol/hats-protocol.svg?style=flat
+[contributors-url]: https://github.com/Hats-Protocol/hats-protocol/graphs/contributors
+[stars-shield]: https://img.shields.io/github/stars/Hats-Protocol/hats-protocol.svg?style=flat
+[stars-url]: https://github.com/Hats-Protocol/hats-protocol/stargazers
+[issues-shield]: https://img.shields.io/github/issues/Hats-Protocol/hats-protocol.svg?style=flat
+[issues-url]: https://github.com/Hats-Protocol/hats-protocol/issues
+[license-shield]: https://img.shields.io/github/license/Hats-Protocol/hats-protocol.svg?style=flat
+[license-url]: https://github.com/Hats-Protocol/hats-protocol
+[twitter-shield]: https://img.shields.io/twitter/follow/hatsprotocol
+[twitter-url]: https://twitter.com/hatsprotocol
