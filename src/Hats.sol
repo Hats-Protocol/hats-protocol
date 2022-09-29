@@ -43,7 +43,7 @@ contract Hats is ERC1155 {
         address eligibility; // can revoke Hat based on ruling; 20 bytes (+20)
         uint32 maxSupply; // the max number of identical hats that can exist; 24 bytes (+4)
         bool active; // can be altered by toggle, via setHatStatus(); 25 bytes (+1)
-        uint8 lastChildId; // indexes how many different hats an admin is holding; 26 bytes (+1)
+        uint8 lastHatId; // indexes how many different hats an admin is holding; 26 bytes (+1)
         // 2nd storage slot
         address toggle; // controls when Hat is active; 20 bytes (+20)
         // 3rd+ storage slot
@@ -115,7 +115,7 @@ contract Hats is ERC1155 {
     /// @dev A topHat has no eligibility and no toggle
     /// @param _target The address to which the newly created topHat is minted
     /// @param _imageURI The image uri for this top hat and the fallback for its
-    ///                  children hats [optional]
+    ///                  downstream hats [optional]
     /// @return topHatId The id of the newly created topHat
     function mintTopHat(address _target, string memory _imageURI)
         public
@@ -143,9 +143,9 @@ contract Hats is ERC1155 {
     /// @param _eligibility The address that can report on the Hat wearer's standing
     /// @param _toggle The address that can deactivate the hat [optional]
     /// @param _topHatImageURI The image uri for this top hat and the fallback for its
-    ///                        children hats [optional]
+    ///                        downstream hats [optional]
     /// @param _firstHatImageURI The image uri for the first hat and the fallback for its
-    ///                        children hats [optional]
+    ///                        downstream hats [optional]
     /// @return topHatId The id of the newly created topHat
     /// @return firstHatId The id of the other newly created hat
     function createTopHatAndHat(
@@ -176,7 +176,7 @@ contract Hats is ERC1155 {
     /// @param _eligibility The address that can report on the Hat wearer's status
     /// @param _toggle The address that can deactivate the Hat
     /// @param _imageURI The image uri for this hat and the fallback for its
-    ///                  children hats [optional]
+    ///                  downstream hats [optional]
     /// @return newHatId The id of the newly created Hat
     function createHat(
         uint256 _admin,
@@ -204,12 +204,12 @@ contract Hats is ERC1155 {
             _toggle,
             _imageURI
         );
-        // increment _admin.lastChildId
-        ++_hats[_admin].lastChildId;
+        // increment _admin.lastHatId
+        ++_hats[_admin].lastHatId;
     }
 
     function _buildNextId(uint256 _admin) internal returns (uint256) {
-        uint8 nextHatId = _hats[_admin].lastChildId + 1;
+        uint8 nextHatId = _hats[_admin].lastHatId + 1;
 
         if (uint224(_admin) == 0) {
             return _admin | (uint256(nextHatId) << 216);
@@ -466,7 +466,7 @@ contract Hats is ERC1155 {
     /// @param _eligibility The address that can report on the Hat wearer's status
     /// @param _toggle The address that can deactivate the hat [optional]
     /// @param _imageURI The image uri for this top hat and the fallback for its
-    ///                  children hats [optional]
+    ///                  downstream hats [optional]
     /// @return hat The contents of the newly created hat
     function _createHat(
         uint256 _id,
@@ -576,7 +576,7 @@ contract Hats is ERC1155 {
     /// @return eligibility The eligibility address for this Hat
     /// @return toggle The toggle address for this Hat
     /// @return imageURI The image URI used for this Hat
-    /// @return lastChildId The most recently created Hat with this Hat as admin; also the count of Hats with this Hat as admin
+    /// @return lastHatId The most recently created Hat with this Hat as admin; also the count of Hats with this Hat as admin
     /// @return active Whether the Hat is current active, as read from `_isActive`
     function viewHat(uint256 _hatId)
         public
@@ -588,7 +588,7 @@ contract Hats is ERC1155 {
             address eligibility,
             address toggle,
             string memory imageURI,
-            uint8 lastChildId,
+            uint8 lastHatId,
             bool active
         )
     {
@@ -599,7 +599,7 @@ contract Hats is ERC1155 {
         eligibility = hat.eligibility;
         toggle = hat.toggle;
         imageURI = getImageURIForHat(_hatId);
-        lastChildId = hat.lastChildId;
+        lastHatId = hat.lastHatId;
         active = _isActive(hat, _hatId);
     }
 
