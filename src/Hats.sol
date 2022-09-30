@@ -301,7 +301,7 @@ contract Hats is ERC1155, HatsIdUtilities {
     function setHatWearerStatus(
         uint256 _hatId,
         address _wearer,
-        bool _revoke,
+        bool _eligible,
         bool _wearerStanding
     ) external returns (bool) {
         Hat memory hat = _hats[_hatId];
@@ -310,7 +310,7 @@ contract Hats is ERC1155, HatsIdUtilities {
             revert NotHatEligibility();
         }
 
-        _processHatWearerStatus(_hatId, _wearer, _revoke, _wearerStanding);
+        _processHatWearerStatus(_hatId, _wearer, _eligible, _wearerStanding);
 
         return true;
     }
