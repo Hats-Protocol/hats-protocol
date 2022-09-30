@@ -17,8 +17,8 @@
 [![Contributors][contributors-shield]][contributors-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
-[![CCO License][license-shield]][license-url]
 [![Twitter][twitter-shield]][twitter-url]
+<!-- [![CCO License][license-shield]][license-url] -->
 
 <!-- LOGO -->
 <br />
@@ -83,7 +83,7 @@ Hats are represented on-chain by ERC1155 tokens. An address with a balance of a 
 
 [TODO] Examples / screenshots
 
-_For more examples, please refer to the <a href="#hats-protocol-docs">docs</a>_
+_For more examples, please refer to the <a href="#hats-protocol-docs">docs</a>._
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -136,13 +136,13 @@ To deploy Hats yourself:
 
 ### Authorities in Hats Protocol
 
-Hats Protocol does not define mechanisms for authorities and responsibilities to be associated with a Hat. All associations between a Hat and its authorities or responsibilities are created external to the protocol.
+One way to think about a Hat is as a primitive that creates a substrate onto which a DAO can attach authorities (e.g., access rights) and responsibilities via other tools (e.g., token-gating platforms).
 
-You can think of a Hat's ERC1155 token as a credentialing primitive that creates a substrate onto which a DAO can attach authorities and responsibilities by using other tools.
+Hats Protocol itself does not define mechanisms for how such authorities and responsibilities are associated with a Hat. All such associations are created external to the protocol.
 
 Here are a few examples of how a DAO might confer authorities and responsibilities to a Hat:
 
-| Authority or Responsibility | How is it attached to the Hat? |
+| Authority | How is it attached to the Hat? |
 | --- | ---- |
 | Signer on a multisig | Using the Hat's ERC1155 token as a condition for membership in an Orca Protocol Pod |
 | Admin of the DAO's Github repo | Using the Hat's ERC1155 token as a condition for access via Lit Protocol |
@@ -150,11 +150,11 @@ Here are a few examples of how a DAO might confer authorities and responsibiliti
 
 In each case, the DAO uses a separate tool to attach the authority to the Hat.
 
-Hats is designed this way in order to be highly composable -- it will work with any tool, application, or protocol that can interact with ERC1155. Further, it allows any number of such authorities or responsibilities to be attached to a single Hat, which greatly simplifies the process for DAOs of revoking those authorities as well as the process of role handoff.
+Hats is designed to be highly composable -- it will work with any tool, application, or protocol that can interact with ERC1155. Further, it allows any number of such authorities or responsibilities to be attached to a single Hat, which greatly simplifies the process for DAOs of revoking those authorities as well as the process of role handoff.
 
 #### Exception: Hat Admins
 
-Hat admins are the one exception to the rule that authorities are external to the Hats Protocol. Refer to the Admins section below for more details.
+Hat admins are the one (very important!) exception to the rule that authorities are external to the Hats Protocol. Refer to the Admins section below for more details.
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
@@ -166,7 +166,7 @@ Each Hat has several properties:
 - `details` - metadata about the Hat; such as a name, description, and other properties like roles and responsibilities associated with the Hat
 - `maxSupply` - the maximum number of addresses that can wear the Hat at once
 - `admin` - the Hat that controls who can wear the Hat
-- `eligibility` - the address that controls whether a given wearer of the Hat is in good standing
+- `eligibility` - the address that controls eligibility criteria and whether a given wearer of the Hat is in good standing
 - `toggle` - the address that controls whether the Hat is active
 
 For more information on each property, refer to the detailed sections below.
@@ -177,11 +177,11 @@ For more information on each property, refer to the detailed sections below.
 
 The wearer of a given Hat is assigned the authorities and responsibilities associated with the Hat.
 
-A wearer's standing relating to a given Hat is determined by three factors. All three must be true.
+A wearer's status relating to a given Hat is determined by three factors. All three must be true.
 
 1. Whether their address has a balance (of 1) of the Hat's token
 2. Whether the Hat is active (see the Toggle section for more detail)
-3. Whether they are in good standing (see the Eligibility section for more detail)
+3. Whether they are eligible (see the Eligibility section for more detail)
 
 All of these factors are reflected in the `Hats.balanceOf` function, which will return `0` if any of the factors are false.
 
@@ -241,7 +241,7 @@ A hat tree can have up to 28 levels, plus the top hat (tree root). Within those 
 
 #### Displaying Hat Ids
 
-Unfortunately, the rich information embedded within a hat id is hard to see when the id is converted to base 10, which is how most applications and front ends display uint256 numbers read from smart contracts.
+Unfortunately, the rich information embedded within a hat id is hard to see when the id is converted to base 10, which is how most applications and front ends display uint256 values originating from smart contracts.
 
 It is recommended for front ends to instead convert hat ids to hexidecimal, revealing the values of the bytes &mdash; and therefore the hat levels &mdash; directly.
 
@@ -260,16 +260,29 @@ In this second version, you can clearly see that this hat is...
 
 ### Eligibility
 
-Eligibility contracts have authority to rule on the good standing of wearers of a given Hat. This authority is reflected in an eligibility contract's ability to trigger revocation of a Hat from a wearer, which burns the wearer's Hat token.
+Eligibility modules have authority to rule on the a) eligibility and b) good standing of wearer(s) of a given Hat.
 
-Revocations are stored on-chain to facilitate accountability. For example, a hatter contract implementing staking logic could slash a wearer's stake if their Hat were revoked.
+**Wearer Eligibility** (A) determines whether a given address is eligible to wear the Hat. This applies both before and while the address wears the Hat. Consider the following scenarios for a given address:
 
-Any address can serve as an eligibility. There are two categories of eligibilities within Hats Protocol:
+|  | Eligible | Not Eligible |
+| --- | --- | --- |
+| **Doesn't wear the Hat** | Hat can be minted to the address | Hat cannot be minted to the address |
+| **Currently wears the Hat** | Keeps wearing the Hat | The Hat is revoked |
 
-1. **Mechanistic eligibilities** are logic contracts that implement the `IHatsEligibility` interface, which enables the Hats contract to *pull* wearer standing by calling `checkwearerStanding` from within the `Hats.balanceOf` function. Mechanistic eligibility enable instantaneous revocation based on pre-defined triggers.
-2. **Humanistic eligibilities** are either EOAs or governance contracts. To revoke a Hat, humanistic eligibility must *push* updates to the Hats contract by calling `Hats.ruleOHatWearerStanding`.
+When a Hat is revoked, its token is burned.
 
-Unlike admins, an eligibilities are explicitly set as addresses, not Hats. This is to avoid long, potentially illegible, chains of revocation authority that can affect wearer penalties (such as slashed stake).
+**Wearer Standing** (B) determines whether a given address is in good or bad standing. Standing is stored on-chain in `Hats.sol` to facilitate accountability.
+
+For example, a hatter contract implementing staking logic could slash a wearer's stake if they are placed in bad standing by the eligibility module.
+
+An address placed in bad standing by a Hat's eligibility module automatically loses eligibility for that Hat. Note, though, that ineligibility does necessarily imply bad standing; it is possible for an address may be ineligible but in good standing.
+
+Any address can serve as an eligibility module for a given Hat. Hats Protocol supports two categories of eligibility modules:
+
+1. **Mechanistic eligibility** are logic contracts that implement the `IHatsEligibility` interface, which enables the Hats contract to _pull_ wearer standing by calling `checkWearerStanding` from within the `Hats.balanceOf` function. Mechanistic eligibility enables instantaneous revocation based on pre-defined triggers.
+2. **Humanistic eligibility** are either EOAs or governance contracts. To revoke a Hat, humanistic eligibility must _push_ updates to the Hats contract by calling `Hats.ruleOHatWearerStanding`.
+
+Unlike admins, an eligibility modules are explicitly set as addresses, not Hats. This is to avoid long, potentially illegible, chains of revocation authority that can affect wearer penalties (such as slashed stake).
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
@@ -277,12 +290,12 @@ Unlike admins, an eligibilities are explicitly set as addresses, not Hats. This 
 
 Toggle contracts have authority to switch the `hat.active` status of a Hat, such as from `active` to `inactive`. When a Hat is inactive, it does not have any wearers (i.e., the balance of its previous wearers' is changed to 0).
 
-Any address can serve as a Hat's toggle. As with eligibility contracts, there are two categories of toggles within Hats Protocol:
+Any address can serve as a Hat's toggle. As with eligibility modules, Hats Protocol supports two categories of toggle modules:
 
-1. **Mechanistic toggle** are logic contracts that implement the `IHatsToggle` interface, which enables the Hats contract to *pull* Hat active status by calling `checkToggle` from within the `Hats.balanceOf` function. Mechanistic toggle enable instantaneous deactivation (or reactivation) based on pre-defined toggle, such as timestamps ("this Hat expires at the end of the year").
-2. **Humanistic toggles** are either EOAs or governance contracts. To deactivate (or reactivate) a Hat, humanistic toggles must *push* updates to the Hats contract by calling `Hats.toggleHatStatus`.
+1. **Mechanistic toggles** are logic contracts that implement the `IHatsToggle` interface, which enables the Hats contract to _pull_ a Hat's active status by calling `checkToggle` from within the `Hats.balanceOf` function. Mechanistic toggle enable instantaneous deactivation (or reactivation) based on pre-defined logic, such as timestamps ("this Hat expires at the end of the year").
+2. **Humanistic toggles** are either EOAs or governance contracts. To deactivate (or reactivate) a Hat, humanistic toggles must _push_ updates to the Hats contract by calling `Hats.toggleHatStatus`.
 
-Unlike admins, toggles are explicitly set as addresses, not Hats.
+Unlike admins, toggle modules are explicitly set as addresses, not Hats.
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
@@ -290,8 +303,10 @@ Unlike admins, toggles are explicitly set as addresses, not Hats.
 
 The creator of a Hat must be its admin. In other words, the admin of a Hat must be the `msg.sender` of the `Hats.createHat` function call. Though remember, by delegating its authority to a hatter contract, an admin can enable eligible others to create Hats based on whatever logic it desires.
 
-Creating a Tophat (a Hat that serves as its own admin) requires a special function `createTophat(address _target_)`, which creates a new Hat, sets that Hat as its own admin, and then mints its token to `_target`. Any address that wants to create a Hat must first create a Tophat with itself as the wearer.
+Creating a Tophat (a Hat that serves as its own admin) requires a special function `createTophat`, which creates a new Hat, sets that Hat as its own admin, and then mints its token to a `_target`. Any address wanting to create a Hat that is not already wearing an admin Hat of some kind must first create a Tophat with itself as the wearer.
 
+<!--
+TODO add back in after implementing batchCreateHat
 #### Creating a Hat Tree
 
 In some scenarios, a DAO may want to create an entire tree of Hats at once. This is particularly useful when setting up an initial structure for a DAO or working group (e.g., from a Hats template) or when forking an existing Hats structure from a template.
@@ -301,6 +316,8 @@ Enabling this latter forking/exit scenario is an important protection for Hat we
 To create a Hat tree, a DAO can call the `Hats.createHatsTree()` function. This function takes arrays as its arguments, from which it constructs multiple Hats. As long as each of these Hats is part of the same tree of Hats &mdash; i.e., they either have the same existing Hat or any of the newly created Hats as admin(s) &mdash; they can all be created together.
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+
+-->
 
 ### Minting a Hat
 
@@ -328,6 +345,8 @@ For these reasons, in Hats Protocol, the standard ERC1155 transfer functions &md
 
 As replacements, Hats can be transfered by admins via `Hats.transferHat`, which emits the ERC1155 standard event `TransferSingle`.
 
+<!--
+TODO add back in after implementing batchTransferHats
 #### Batch Transfers
 
 As with minting, admins can also transfer Hats in a batch, via `Hats.batchTransferHats`.
@@ -336,9 +355,11 @@ Since batch Hats transfers can be made from and to multiple wearers, batch trans
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
+-->
+
 ### Renouncing a Hat
 
-The wearer of a Hat can "take off" their Hat via `Hats.renounceHat`. This burns the token and revokes any associated authorities and responsibilities, but does not record a revocation.
+The wearer of a Hat can "take off" their Hat via `Hats.renounceHat`. This burns the token and revokes any associated authorities and responsibilities from the now-former wearer, but does not put the wearer in bad standing.
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -372,7 +393,5 @@ Project Link: [https://github.com/Hats-Protocol/hats-protocol/](https://github.c
 [stars-url]: https://github.com/Hats-Protocol/hats-protocol/stargazers
 [issues-shield]: https://img.shields.io/github/issues/Hats-Protocol/hats-protocol.svg?style=flat
 [issues-url]: https://github.com/Hats-Protocol/hats-protocol/issues
-[license-shield]: https://img.shields.io/github/license/Hats-Protocol/hats-protocol.svg?style=flat
-[license-url]: https://github.com/Hats-Protocol/hats-protocol
 [twitter-shield]: https://img.shields.io/twitter/follow/hatsprotocol
 [twitter-url]: https://twitter.com/hatsprotocol
