@@ -33,7 +33,7 @@ abstract contract HatsERC20Eligibility is IHatsEligibility {
         address _token,
         uint256 _threshold
     ) public {
-        if (HATS.isAdminOfHat(msg.sender, _hatId))
+        if (!HATS.isAdminOfHat(msg.sender, _hatId))
             revert NotHatAdmin(msg.sender, _hatId);
 
         Criterion crit = new Criterion;
