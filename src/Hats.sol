@@ -295,14 +295,15 @@ contract Hats is ERC1155, HatsIdUtilities {
     /// @dev Burns the wearer's hat, if revoked
     /// @param _hatId The id of the hat
     /// @param _wearer The address of the hat wearer whose status is being reported
-    /// @param _revoke True if the wearer should no longer wear the hat
-    /// @param _wearerStanding False if the wearer is no longer in good standing (and potentially should be penalized)
+    /// @param _eligible Whether the wearer is eligible for the hat (will be revoked if
+    /// false)
+    /// @param _standing False if the wearer is no longer in good standing (and potentially should be penalized)
     /// @return bool Whether the report succeeded
     function setHatWearerStatus(
         uint256 _hatId,
         address _wearer,
         bool _eligible,
-        bool _wearerStanding
+        bool _standing
     ) external returns (bool) {
         Hat memory hat = _hats[_hatId];
 
@@ -310,7 +311,7 @@ contract Hats is ERC1155, HatsIdUtilities {
             revert NotHatEligibility();
         }
 
-        _processHatWearerStatus(_hatId, _wearer, _eligible, _wearerStanding);
+        _processHatWearerStatus(_hatId, _wearer, _eligible, _standing);
 
         return true;
     }
