@@ -83,7 +83,7 @@ Hats are represented on-chain by ERC1155 tokens. An address with a balance of a 
 
 [TODO] Examples / screenshots
 
-_For more examples, please refer to the [Documentation](https://github.com/Hats-Protocol/hats-protocol/edit/main/README.md#hats-protocol-docs)_
+_For more examples, please refer to the <a href="#hats-protocol-docs">docs</a>_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -343,12 +343,13 @@ The wearer of a Hat can "take off" their Hat via `Hats.renounceHat`. This burns 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-<!-- LICENSE-->
+<!-- LICENSE
 ## License
 
 Distributed under the CC0 License. See `LICENSE.txt` for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+-->
 
 <!-- CONTACT -->
 ## Contact
