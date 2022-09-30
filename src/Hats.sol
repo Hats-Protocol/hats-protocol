@@ -4,6 +4,7 @@ pragma solidity >=0.8.13;
 import {ERC1155} from "ERC1155/ERC1155.sol";
 // do we need an interface for Hatter / admin?
 import "forge-std/Test.sol"; //remove after testing
+import "./HatsIdUtilities.sol";
 import "./HatsToggle/IHatsToggle.sol";
 import "./HatsEligibility/IHatsEligibility.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
@@ -13,7 +14,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 /// @notice Hats are DAO-native revocable roles that are represented as semi-fungable tokens for composability
 /// @dev This contract can manage all Hats for a given chain
 /// @author Hats Protocol
-contract Hats is ERC1155 {
+contract Hats is ERC1155, HatsIdUtilities {
     /*//////////////////////////////////////////////////////////////
                               HATS ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -32,7 +33,7 @@ contract Hats is ERC1155 {
     error NotIHatsEligibilityContract();
     error BatchArrayLengthMismatch();
     error SafeTransfersNotNecessary();
-    error MaxTreeDepthReached();
+    error MaxLevelsReached();
 
     /*//////////////////////////////////////////////////////////////
                               HATS DATA MODELS
@@ -62,16 +63,8 @@ contract Hats is ERC1155 {
 
     string public baseImageURI;
 
-    /**
-     * Hat IDs act like addresses. The top level consists of 4 bytes and references all tophats
-     * Each level below consists of 1 byte, which can contain up to 255 types of hats.
-     *
-     * A uint256 contains 4 bytes of space for tophat addresses and 28 bytes of space
-     * for 28 levels of heirarchy of ownership, with the admin at each level having space
-     * for 255 different hats.
-     *
-     */
-    mapping(uint256 => Hat) internal _hats;
+    // see HatsIdUtilities.sol for more info on how Hat Ids work
+    mapping(uint256 => Hat) internal _hats; // key: hatId => value: Hat struct
 
     mapping(uint256 => uint32) public hatSupply; // key: hatId => value: supply
 
@@ -191,10 +184,10 @@ contract Hats is ERC1155 {
             revert NotAdmin(msg.sender, _admin);
         }
         if (uint8(_admin) > 0) {
-            revert MaxTreeDepthReached();
+            revert MaxLevelsReached();
         }
 
-        newHatId = _buildNextId(_admin);
+        newHatId = getNextId(_admin);
         // create the new hat
         _createHat(
             newHatId,
@@ -208,96 +201,9 @@ contract Hats is ERC1155 {
         ++_hats[_admin].lastHatId;
     }
 
-    function _buildNextId(uint256 _admin) internal returns (uint256) {
+    function getNextId(uint256 _admin) public view returns (uint256) {
         uint8 nextHatId = _hats[_admin].lastHatId + 1;
-
-        if (uint224(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 216);
-        }
-        if (uint216(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 208);
-        }
-        if (uint208(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 200);
-        }
-        if (uint200(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 192);
-        }
-        if (uint192(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 184);
-        }
-        if (uint184(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 176);
-        }
-        if (uint176(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 168);
-        }
-        if (uint168(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 160);
-        }
-        if (uint160(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 152);
-        }
-        if (uint152(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 144);
-        }
-        if (uint144(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 136);
-        }
-        if (uint136(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 128);
-        }
-        if (uint128(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 120);
-        }
-        if (uint120(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 112);
-        }
-        if (uint112(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 104);
-        }
-        if (uint104(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 96);
-        }
-        if (uint96(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 88);
-        }
-        if (uint88(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 80);
-        }
-        if (uint80(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 72);
-        }
-        if (uint72(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 64);
-        }
-        if (uint64(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 56);
-        }
-        if (uint56(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 48);
-        }
-        if (uint48(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 40);
-        }
-
-        if (uint40(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 32);
-        }
-
-        if (uint32(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 24);
-        }
-
-        if (uint24(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 16);
-        }
-
-        if (uint16(_admin) == 0) {
-            return _admin | (uint256(nextHatId) << 8);
-        }
-
-        return _admin | uint256(nextHatId);
+        return buildHatId(_admin, nextHatId);
     }
 
     /// @notice Mints an ERC1155 token of the Hat to a recipient, who then "wears" the hat
@@ -603,14 +509,6 @@ contract Hats is ERC1155 {
         active = _isActive(hat, _hatId);
     }
 
-    /// @notice Chcecks whether a Hat is a topHat
-    /// @dev For use when passing a Hat object is not appropriate
-    /// @param _hatId The Hat in question
-    /// @return bool Whether the Hat is a topHat
-    function isTopHat(uint256 _hatId) public pure returns (bool) {
-        return _hatId > 0 && uint224(_hatId) == 0;
-    }
-
     /// @notice Checks whether a given address wears a given Hat
     /// @dev Convenience function that wraps `balanceOf`
     /// @param _user The address in question
@@ -649,49 +547,6 @@ contract Hats is ERC1155 {
         }
 
         return isWearerOfHat(_user, getAdminAtLevel(_hatId, 0));
-    }
-
-    function getHatLevel(uint256 _hatId) public pure returns (uint8 level) {
-        // TODO: invert the order for optimization
-        if (uint8(_hatId) > 0) return 28;
-        if (uint16(_hatId) > 0) return 27;
-        if (uint24(_hatId) > 0) return 26;
-        if (uint32(_hatId) > 0) return 25;
-        if (uint40(_hatId) > 0) return 24;
-        if (uint48(_hatId) > 0) return 23;
-        if (uint56(_hatId) > 0) return 22;
-        if (uint64(_hatId) > 0) return 21;
-        if (uint72(_hatId) > 0) return 20;
-        if (uint80(_hatId) > 0) return 19;
-        if (uint88(_hatId) > 0) return 18;
-        if (uint96(_hatId) > 0) return 17;
-        if (uint104(_hatId) > 0) return 16;
-        if (uint112(_hatId) > 0) return 15;
-        if (uint120(_hatId) > 0) return 14;
-        if (uint128(_hatId) > 0) return 13;
-        if (uint136(_hatId) > 0) return 12;
-        if (uint144(_hatId) > 0) return 11;
-        if (uint152(_hatId) > 0) return 10;
-        if (uint160(_hatId) > 0) return 9;
-        if (uint168(_hatId) > 0) return 8;
-        if (uint176(_hatId) > 0) return 7;
-        if (uint184(_hatId) > 0) return 6;
-        if (uint192(_hatId) > 0) return 5;
-        if (uint200(_hatId) > 0) return 4;
-        if (uint208(_hatId) > 0) return 3;
-        if (uint216(_hatId) > 0) return 2;
-        if (uint224(_hatId) > 0) return 1;
-        return 0;
-    }
-
-    function getAdminAtLevel(uint256 _hatId, uint8 _level)
-        public
-        view
-        returns (uint256)
-    {
-        uint256 mask = type(uint256).max << (8 * (28 - _level));
-
-        return _hatId & mask;
     }
 
     /// @notice Checks the active status of a hat
@@ -827,9 +682,7 @@ contract Hats is ERC1155 {
             hatAdmin = getAdminAtLevel(_hatId, getHatLevel(_hatId) - 1);
         }
 
-        string memory domain = Strings.toString(
-            getAdminAtLevel(_hatId, 0) >> (8 * 28)
-        );
+        string memory domain = Strings.toString(getTophatDomain(_hatId));
 
         bytes memory properties = abi.encodePacked(
             '{"current supply": "',
