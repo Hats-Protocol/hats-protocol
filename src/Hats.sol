@@ -24,6 +24,7 @@ contract Hats is ERC1155, HatsIdUtilities {
     error AllHatsWorn(uint256 _hatId);
     error AlreadyWearingHat(address _wearer, uint256 _hatId);
     error HatDoesNotExist(uint256 _hatId);
+    error NotEligible(address _wearer, uint256 _hatId);
     error NoApprovalsNeeded();
     error OnlyAdminsCanTransfer();
     error NotHatWearer();
@@ -89,7 +90,7 @@ contract Hats is ERC1155, HatsIdUtilities {
     event WearerStatus(
         uint256 hatId,
         address wearer,
-        bool revoke,
+        bool eligible,
         bool wearerStanding
     );
 
@@ -323,8 +324,8 @@ contract Hats is ERC1155, HatsIdUtilities {
         returns (bool)
     {
         Hat memory hat = _hats[_hatId];
-        bool revoke;
-        bool wearerStanding;
+        bool eligible;
+        bool standing;
 
         bytes memory data = abi.encodeWithSignature(
             "getWearerStatus(address,uint256)",
@@ -339,12 +340,12 @@ contract Hats is ERC1155, HatsIdUtilities {
         // if function call succeeds with data of length > 0
         // then we know the contract exists and has the getWearerStatus function
         if (success && returndata.length > 0) {
-            (revoke, wearerStanding) = abi.decode(returndata, (bool, bool));
+            (eligible, standing) = abi.decode(returndata, (bool, bool));
         } else {
             revert NotIHatsEligibilityContract();
         }
 
-        return _processHatWearerStatus(_hatId, _wearer, revoke, wearerStanding);
+        return _processHatWearerStatus(_hatId, _wearer, eligible, standing);
     }
 
     /// @notice Stop wearing a hat, aka "renounce" it
@@ -419,34 +420,38 @@ contract Hats is ERC1155, HatsIdUtilities {
         }
     }
 
-    /// @notice Internal call to revoke a Hat from a wearer
-    /// @dev Burns the wearer's Hat token
+    /// @notice Internal call to process wearer status from the eligibility module
+    /// @dev Burns the wearer's Hat token if _eligible is false, and updates badStandings
+    /// state if necessary
     /// @param _hatId The id of the Hat to revoke
-    /// @param _wearer The address of the wearer from whom to revoke the hat
-    /// @param _wearerStanding Whether or to make a record of the revocation on-chain for other contracts to use
+    /// @param _wearer The address of the wearer in question
+    /// @param _eligible Whether _wearer is eligible for the Hat (if false, this function
+    /// will revoke their Hat)
+    /// @param _standing Whether _wearer is in good standing (to be recorded in storage)
     function _processHatWearerStatus(
         uint256 _hatId,
         address _wearer,
-        bool _revoke,
-        bool _wearerStanding
+        bool _eligible,
+        bool _standing
     ) internal returns (bool updated) {
-        if (_revoke) {
+        // always ineligible if in bad standing
+        if (!_eligible || !_standing) {
             // revoke the Hat by burning it
             _burn(_wearer, _hatId, 1);
         }
 
         // record standing for use by other contracts
-        // note: here, wearerStanding and badStandings are opposite
-        // i.e. if wearerStanding (true = good standing)
+        // note: here, standing and badStandings are opposite
+        // i.e. if standing (true = good standing)
         // then badStandings[_hatId][wearer] will be false
         // if they are different, then something has changed, and we need to update
         // badStandings marker
-        if (_wearerStanding == badStandings[_hatId][_wearer]) {
-            badStandings[_hatId][_wearer] = !_wearerStanding;
+        if (_standing == badStandings[_hatId][_wearer]) {
+            badStandings[_hatId][_wearer] = !_standing;
             updated = true;
         }
 
-        emit WearerStatus(_hatId, _wearer, _revoke, _wearerStanding);
+        emit WearerStatus(_hatId, _wearer, _eligible, _standing);
     }
 
     function transferHat(
@@ -582,16 +587,45 @@ contract Hats is ERC1155, HatsIdUtilities {
         return _isActive(hat, _hatId);
     }
 
-    /// @notice Internal call to check whether a wearer of a Hat is in good standing
-    /// @dev Tries an external call to the Hat's toggle address, defaulting to existing badStandings state if the call fails (ie if the toggle address does not conform to it IToggle interface)
-    /// @param _hat The Hat object
+    /// @notice Checks whether a wearer of a Hat is in good standing
+    /// @dev Public function for use when passing a Hat object is not possible or preferable
     /// @param _wearer The address of the Hat wearer
+    /// @param _hatId The id of the Hat
     /// @return standing Whether the wearer is in good standing
-    function _isInGoodStanding(
+    function isInGoodStanding(address _wearer, uint256 _hatId)
+        public
+        view
+        returns (bool standing)
+    {
+        Hat memory hat = _hats[_hatId];
+        bytes memory data = abi.encodeWithSignature(
+            "getWearerStatus(address,uint256)",
+            _wearer,
+            _hatId
+        );
+
+        (bool success, bytes memory returndata) = hat.eligibility.staticcall(
+            data
+        );
+
+        if (success && returndata.length > 0) {
+            (, standing) = abi.decode(returndata, (bool, bool));
+        } else {
+            standing = !badStandings[_hatId][_wearer];
+        }
+    }
+
+    /// @notice Internal call to check whether an address is eligible for a given Hat
+    /// @dev Tries an external call to the Hat's eligibility module, defaulting to existing badStandings state if the call fails (ie if the eligibility module address does not conform to the IHatsEligibility interface)
+    /// @param _wearer The address of the Hat wearer
+    /// @param _hat The Hat object
+    /// @param _hatId The id of the Hat
+    /// @return eligible Whether the wearer is eligible for the Hat
+    function _isEligible(
         address _wearer,
         Hat memory _hat,
         uint256 _hatId
-    ) internal view returns (bool standing) {
+    ) internal view returns (bool eligible) {
         bytes memory data = abi.encodeWithSignature(
             "getWearerStatus(address,uint256)",
             _wearer,
@@ -603,24 +637,27 @@ contract Hats is ERC1155, HatsIdUtilities {
         );
 
         if (success && returndata.length > 0) {
-            (, standing) = abi.decode(returndata, (bool, bool));
+            bool standing;
+            (eligible, standing) = abi.decode(returndata, (bool, bool));
+            // never eligible if in bad standing
+            if (eligible && !standing) eligible = false;
         } else {
-            standing = !badStandings[_hatId][_wearer];
+            eligible = !badStandings[_hatId][_wearer];
         }
     }
 
-    /// @notice Checks whether a wearer of a Hat is in good standing
+    /// @notice Checks whether an address is eligible for a given Hat
     /// @dev Public function for use when passing a Hat object is not possible or preferable
     /// @param _hatId The id of the Hat
-    /// @param _wearer The address of the Hat wearer
+    /// @param _wearer The address to check
     /// @return bool
-    function isInGoodStanding(address _wearer, uint256 _hatId)
+    function isEligible(address _wearer, uint256 _hatId)
         public
         view
         returns (bool)
     {
         Hat memory hat = _hats[_hatId];
-        return _isInGoodStanding(_wearer, hat, _hatId);
+        return _isEligible(_wearer, hat, _hatId);
     }
 
     /// @notice Gets the imageURI for a given hat
@@ -746,7 +783,7 @@ contract Hats is ERC1155, HatsIdUtilities {
 
         balance = 0;
 
-        if (_isActive(hat, hatId) && _isInGoodStanding(wearer, hat, hatId)) {
+        if (_isActive(hat, hatId) && _isEligible(wearer, hat, hatId)) {
             balance = super.balanceOf(wearer, hatId);
         }
     }
