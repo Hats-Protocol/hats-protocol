@@ -633,7 +633,7 @@ contract EligibilitySetHatsTests is TestSetup2 {
 
         // set eligibility = true in Eligibility Module
 
-        // mock calls to eligibility contract to return (eligible = false, standing = true)
+        // mock calls to eligibility contract to return (eligible = true, standing = true)
         vm.mockCall(
             address(_eligibility),
             abi.encodeWithSignature(
