@@ -10,7 +10,7 @@ abstract contract OwnableHatsEligibility is IHats, IHatsEligibility, Auth {
     event HatStandingSet(
         address _wearer,
         uint256 _hatId,
-        bool _revoke,
+        bool _eligible,
         bool _standing
     );
 
@@ -33,21 +33,21 @@ abstract contract OwnableHatsEligibility is IHats, IHatsEligibility, Auth {
     function setWearerStatus(
         address _wearer,
         uint256 _hatId,
-        bool _revoke,
+        bool _eligible,
         bool _standing
     ) public virtual requiresAuth {
         standings[_wearer][_hatId] = _standing;
-        _updateHatWearerStatus(_wearer, _hatId, _revoke, _standing);
+        _updateHatWearerStatus(_wearer, _hatId, _eligible, _standing);
 
-        emit HatStandingSet(_wearer, _hatId, _revoke, _standing);
+        emit HatStandingSet(_wearer, _hatId, _eligible, _standing);
     }
 
     function _updateHatWearerStatus(
         address _wearer,
         uint256 _hatId,
-        bool _revoke,
+        bool _eligible,
         bool _standing
     ) internal virtual {
-        HATS.setHatWearerStatus(_hatId, _wearer, _revoke, _standing);
+        HATS.setHatWearerStatus(_hatId, _wearer, _eligible, _standing);
     }
 }

@@ -6,8 +6,8 @@ interface IHats {
         uint256 admin,
         string memory details, // encode as bytes32 ??
         uint32 maxSupply,
-        address oracle,
-        address conditions
+        address eligibility,
+        address toggle
     ) external returns (uint256 hatId);
 
     function mintHat(uint256 _hatId, address _wearer) external returns (bool);
@@ -24,13 +24,13 @@ interface IHats {
 
     function getHatWearerStatus(uint256 hatId, address wearer)
         external
-        returns (bool);
+        returns (bool, bool);
 
     function setHatWearerStatus(
         uint256 hatId,
         address wearer,
-        bool revoke,
-        bool wearerStanding
+        bool eligible,
+        bool standing
     ) external returns (bool);
 
     function renounceHat(uint256 _hatId) external;
@@ -81,6 +81,11 @@ interface IHats {
     function isActive(uint256 _hatId) external view returns (bool);
 
     function isInGoodStanding(address _wearer, uint256 _hatId)
+        external
+        view
+        returns (bool);
+
+    function isEligible(address _wearer, uint256 _hatId)
         external
         view
         returns (bool);

@@ -547,31 +547,31 @@ contract TransferHatTests is TestSetup2 {
 }
 
 contract EligibilitySetHatsTests is TestSetup2 {
-    function testDoNotRevokeHatFromWearerInGoodStanding() public {
+    function testDoNotRevokeHatFromEligibleWearerInGoodStanding() public {
         // confirm second hat is worn by second Wearer
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
 
         // expectEmit WearerStatus - should be wearing, in good standing
         vm.expectEmit(false, false, false, true);
-        emit WearerStatus(secondHatId, secondWearer, false, true);
+        emit WearerStatus(secondHatId, secondWearer, true, true);
 
         // 5-6. do not revoke hat
         vm.prank(address(_eligibility));
-        hats.setHatWearerStatus(secondHatId, secondWearer, false, true);
+        hats.setHatWearerStatus(secondHatId, secondWearer, true, true);
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
         assertTrue(hats.isInGoodStanding(secondWearer, secondHatId));
     }
 
-    function testRevokeHatFromWearerInGoodStanding() public {
+    function testRevokeHatFromIneligibleWearerInGoodStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
         // expectEmit WearerStatus - should not be wearing, in good standing
         vm.expectEmit(false, false, false, true);
-        emit WearerStatus(secondHatId, secondWearer, true, true);
+        emit WearerStatus(secondHatId, secondWearer, false, true);
 
         // 5-8a. revoke hat
         vm.prank(address(_eligibility));
-        hats.setHatWearerStatus(secondHatId, secondWearer, true, true);
+        hats.setHatWearerStatus(secondHatId, secondWearer, false, true);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
         assertTrue(hats.isInGoodStanding(secondWearer, secondHatId));
 
@@ -579,7 +579,19 @@ contract EligibilitySetHatsTests is TestSetup2 {
         assertEq(hats.hatSupply(secondHatId), --hatSupply);
     }
 
-    function testRevokeHatFromWearerInBadStanding() public {
+    function testRevokeHatFromIneligibleWearerInBadStanding() public {
+        // expectEmit WearerStatus - should not be wearing, in bad standing
+        vm.expectEmit(false, false, false, true);
+        emit WearerStatus(secondHatId, secondWearer, false, false);
+
+        // 5-8b. revoke hat with bad standing
+        vm.prank(address(_eligibility));
+        hats.setHatWearerStatus(secondHatId, secondWearer, false, false);
+        assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
+        assertFalse(hats.isInGoodStanding(secondWearer, secondHatId));
+    }
+
+    function testRevokeHatFromEligibleWearerInBadStanding() public {
         // expectEmit WearerStatus - should not be wearing, in bad standing
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, true, false);
@@ -613,11 +625,24 @@ contract EligibilitySetHatsTests is TestSetup2 {
 
         // revoke hat
         vm.prank(address(_eligibility));
-        hats.setHatWearerStatus(secondHatId, secondWearer, true, true);
+        hats.setHatWearerStatus(secondHatId, secondWearer, false, true);
 
         // 5-4. remint hat
         vm.prank(address(topHatWearer));
         hats.mintHat(secondHatId, secondWearer);
+
+        // set eligibility = true in Eligibility Module
+
+        // mock calls to eligibility contract to return (eligible = true, standing = true)
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature(
+                "getWearerStatus(address,uint256)",
+                secondWearer,
+                secondHatId
+            ),
+            abi.encode(true, true)
+        );
 
         // assert balance = 1
         assertEq(hats.balanceOf(secondWearer, secondHatId), 1);
@@ -643,9 +668,7 @@ contract EligibilityGetHatsTests is TestSetup2 {
         hats.checkHatWearerStatus(secondHatId, secondWearer);
     }
 
-    function testCheckEligibilityAndDoNotRevokeHatFromWearerInGoodStanding()
-        public
-    {
+    function testCheckEligibilityAndDoNotRevokeHatFromEligibleWearer() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
         // confirm second hat is worn by second Wearer
@@ -653,9 +676,9 @@ contract EligibilityGetHatsTests is TestSetup2 {
 
         // expectEmit WearerStatus - should be wearing, in good standing
         vm.expectEmit(false, false, false, true);
-        emit WearerStatus(secondHatId, secondWearer, false, true);
+        emit WearerStatus(secondHatId, secondWearer, true, true);
 
-        // mock calls to eligibility contract to return (false, true)
+        // mock calls to eligibility contract to return (eligible = true, standing = true)
         vm.mockCall(
             address(_eligibility),
             abi.encodeWithSignature(
@@ -663,7 +686,7 @@ contract EligibilityGetHatsTests is TestSetup2 {
                 secondWearer,
                 secondHatId
             ),
-            abi.encode(false, true)
+            abi.encode(true, true)
         );
 
         // 5-1. call checkHatWearerStatus - no revocation
@@ -675,14 +698,16 @@ contract EligibilityGetHatsTests is TestSetup2 {
         assertEq(hats.hatSupply(secondHatId), hatSupply);
     }
 
-    function testCheckEligibilityToRevokeHatFromWearerInGoodStanding() public {
+    function testCheckEligibilityToRevokeHatFromIneligibleWearerInGoodStanding()
+        public
+    {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
         // expectEmit WearerStatus - should not be wearing, in good standing
         vm.expectEmit(false, false, false, true);
-        emit WearerStatus(secondHatId, secondWearer, true, true);
+        emit WearerStatus(secondHatId, secondWearer, false, true);
 
-        // mock calls to eligibility contract to return (false, true)
+        // mock calls to eligibility contract to return (eligible = false, standing = true)
         vm.mockCall(
             address(_eligibility),
             abi.encodeWithSignature(
@@ -690,7 +715,7 @@ contract EligibilityGetHatsTests is TestSetup2 {
                 secondWearer,
                 secondHatId
             ),
-            abi.encode(true, true)
+            abi.encode(false, true)
         );
 
         // 5-3a. call checkHatWearerStatus to revoke
@@ -702,14 +727,45 @@ contract EligibilityGetHatsTests is TestSetup2 {
         assertEq(hats.hatSupply(secondHatId), --hatSupply);
     }
 
-    function testCheckEligibilityToRevokeHatFromWearerInBadStanding() public {
+    function testCheckEligibilityToRevokeHatFromIneligibleWearerInBadStanding()
+        public
+    {
+        uint32 hatSupply = hats.hatSupply(secondHatId);
+
+        // expectEmit WearerStatus - should not be wearing, in bad standing
+        vm.expectEmit(false, false, false, true);
+        emit WearerStatus(secondHatId, secondWearer, false, false);
+
+        // mock calls to eligibility contract to return (eligible = false, standing = false)
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature(
+                "getWearerStatus(address,uint256)",
+                secondWearer,
+                secondHatId
+            ),
+            abi.encode(false, false)
+        );
+
+        // 5-3b. call checkHatWearerStatus to revoke
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
+        assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
+        assertFalse(hats.isInGoodStanding(secondWearer, secondHatId));
+
+        // assert hatSupply is decremented
+        assertEq(hats.hatSupply(secondHatId), --hatSupply);
+    }
+
+    function testCheckEligibilityToRevokeHatFromEligibleWearerInBadStanding()
+        public
+    {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
         // expectEmit WearerStatus - should not be wearing, in bad standing
         vm.expectEmit(false, false, false, true);
         emit WearerStatus(secondHatId, secondWearer, true, false);
 
-        // mock calls to eligibility contract to return (false, true)
+        // mock calls to eligibility contract to return (eligible = true, standing = false)
         vm.mockCall(
             address(_eligibility),
             abi.encodeWithSignature(
