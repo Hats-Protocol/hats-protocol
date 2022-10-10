@@ -180,15 +180,17 @@ contract Hats is ERC1155, HatsIdUtilities {
         address _toggle,
         string memory _imageURI
     ) public returns (uint256 newHatId) {
-        // to create a hat, you must be wearing the Hat of its admin
-        if (!isWearerOfHat(msg.sender, _admin)) {
-            revert NotAdmin(msg.sender, _admin);
-        }
         if (uint8(_admin) > 0) {
             revert MaxLevelsReached();
         }
 
         newHatId = getNextId(_admin);
+
+        // to create a hat, you must be wearing one of its admin hats
+        if (!isAdminOfHat(msg.sender, newHatId)) {
+            revert NotAdmin(msg.sender, newHatId);
+        }
+
         // create the new hat
         _createHat(
             newHatId,
@@ -198,6 +200,7 @@ contract Hats is ERC1155, HatsIdUtilities {
             _toggle,
             _imageURI
         );
+
         // increment _admin.lastHatId
         ++_hats[_admin].lastHatId;
     }
