@@ -30,6 +30,13 @@ abstract contract TestVariables {
 
     string internal name;
 
+    uint256[] adminsBatch;
+    string[] detailsBatch;
+    uint32[] maxSuppliesBatch;
+    address[] eligibilityModulesBatch;
+    address[] toggleModulesBatch;
+    string[] imageURIsBatch;
+
     event HatCreated(
         uint256 id,
         string details,
@@ -156,5 +163,14 @@ abstract contract TestSetup2 is TestSetup {
         // mint second hat
         vm.prank(address(topHatWearer));
         hats.mintHat(secondHatId, secondWearer);
+    }
+}
+
+abstract contract TestSetupBatch is TestSetup {
+    function setUp() public override {
+        // expand on TestSetup
+        super.setUp();
+
+        // create empty batch create arrays
     }
 }

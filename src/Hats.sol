@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 
 /// @title Hats Protocol
 /// @notice Hats are DAO-native revocable roles that are represented as semi-fungable tokens for composability
-/// @dev This contract can manage all Hats for a given chain
+/// @dev This is a multitenant contract that can manage all Hats for a given chain
 /// @author Hats Protocol
 contract Hats is ERC1155, HatsIdUtilities {
     /*//////////////////////////////////////////////////////////////
@@ -35,6 +35,30 @@ contract Hats is ERC1155, HatsIdUtilities {
     error BatchArrayLengthMismatch();
     error SafeTransfersNotNecessary();
     error MaxLevelsReached();
+
+    /*//////////////////////////////////////////////////////////////
+                              HATS EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    event HatCreated(
+        uint256 id,
+        string details,
+        uint32 maxSupply,
+        address eligibility,
+        address toggle,
+        string imageURI
+    );
+
+    event HatRenounced(uint256 hatId, address wearer);
+
+    event WearerStatus(
+        uint256 hatId,
+        address wearer,
+        bool eligible,
+        bool wearerStanding
+    );
+
+    event HatStatusChanged(uint256 hatId, bool newStatus);
 
     /*//////////////////////////////////////////////////////////////
                               HATS DATA MODELS
@@ -73,28 +97,8 @@ contract Hats is ERC1155, HatsIdUtilities {
     mapping(uint256 => mapping(address => bool)) public badStandings; // key: hatId => value: (key: wearer => value: badStanding?)
 
     /*//////////////////////////////////////////////////////////////
-                              HATS EVENTS
+                              CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
-
-    event HatCreated(
-        uint256 id,
-        string details,
-        uint32 maxSupply,
-        address eligibility,
-        address toggle,
-        string imageURI
-    );
-
-    event HatRenounced(uint256 hatId, address wearer);
-
-    event WearerStatus(
-        uint256 hatId,
-        address wearer,
-        bool eligible,
-        bool wearerStanding
-    );
-
-    event HatStatusChanged(uint256 hatId, bool newStatus);
 
     constructor(string memory _name, string memory _baseImageURI) {
         name = _name;
@@ -203,6 +207,50 @@ contract Hats is ERC1155, HatsIdUtilities {
 
         // increment _admin.lastHatId
         ++_hats[_admin].lastHatId;
+    }
+
+    /// @notice Creates new hats in batch. The msg.sender must be an admin of each hat.
+    /// @dev This is a convenience function that loops through the arrays and calls `createHat`.
+    /// @param _admins Array of ids of admins for each hat to create
+    /// @param _details Array of details for each hat to create
+    /// @param _maxSupplies Array of supply caps for each hat to create
+    /// @param _eligibilityModules Array of eligibility module addresses for each hat to
+    /// create
+    /// @param _toggleModules Array of toggle module addresses for each hat to create
+    /// @param _imageURIs Array of imageURIs for each hat to create
+    /// @return bool True if all createHat calls succeeded
+    function batchCreateHats(
+        uint256[] memory _admins,
+        string[] memory _details,
+        uint32[] memory _maxSupplies,
+        address[] memory _eligibilityModules,
+        address[] memory _toggleModules,
+        string[] memory _imageURIs
+    ) public returns (bool) {
+        // check if array lengths are the same
+        uint256 length = _admins.length; // save an MLOAD
+
+        bool sameLengths = (length == _details.length &&
+            length == _maxSupplies.length &&
+            length == _eligibilityModules.length &&
+            length == _toggleModules.length &&
+            length == _imageURIs.length);
+
+        if (!sameLengths) revert BatchArrayLengthMismatch();
+
+        // loop through and create each hat
+        for (uint256 i = 0; i < length; ++i) {
+            createHat(
+                _admins[i],
+                _details[i],
+                _maxSupplies[i],
+                _eligibilityModules[i],
+                _toggleModules[i],
+                _imageURIs[i]
+            );
+        }
+
+        return true;
     }
 
     function getNextId(uint256 _admin) public view returns (uint256) {
