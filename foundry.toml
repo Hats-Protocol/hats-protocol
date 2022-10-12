@@ -12,4 +12,20 @@ remappings = [
   "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
 ]
 
+[rpc_endpoints]
+ethereum = "${ETHEREUM_RPC}"
+optimism = "${OPTIMISM_RPC}"
+goerli = "${GOERLI_RPC}"
+gnosis = "${GC_RPC}"
+polygon = "${POLYGON_RPC}"
+
+[etherscan]
+arbitrum = {key = "${ARBISCAN_KEY}", url = "https://api.arbiscan.io/api"}
+goerli = {key = "${ETHERSCAN_KEY}", url = "https://api-goerli.etherscan.io/api"}
+ethereum = {key = "${ETHERSCAN_KEY}"}
+optimism = {key = "${OPTIMISM_ETHERSCAN_KEY}", url = "https://api-optimistic.etherscan.io/api"}
+polygon = {key = "${POLYGONSCAN_KEY}", url = "https://api.polygonscan.com/api"}
+gnosis = {key = "${GNOSISSCAN_KEY}", url = "https://api.gnosisscan.io/api"}
+
+
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
