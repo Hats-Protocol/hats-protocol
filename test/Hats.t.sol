@@ -89,6 +89,208 @@ contract CreateHatsTest is TestSetup {
     }
 }
 
+contract BatchCreateHats is TestSetupBatch {
+    function testBatchCreateTwoHats() public {
+        testBatchCreateHatsSameAdmin(2);
+    }
+
+    function testBatchCreateOneHat() public {
+        testBatchCreateHatsSameAdmin(1);
+    }
+
+    function testBatchCreateHatsSameAdmin(uint256 count) public {
+        // this is inefficient, but bound() is not working correctly
+        vm.assume(count >= 1);
+        vm.assume(count < 256);
+
+        adminsBatch = new uint256[](count);
+        detailsBatch = new string[](count);
+        maxSuppliesBatch = new uint32[](count);
+        eligibilityModulesBatch = new address[](count);
+        toggleModulesBatch = new address[](count);
+        imageURIsBatch = new string[](count);
+
+        vm.prank(topHatWearer);
+
+        // populate the creating arrays
+        for (uint256 i = 0; i < count; ++i) {
+            adminsBatch[i] = topHatId;
+            detailsBatch[i] = "deets";
+            maxSuppliesBatch[i] = 10;
+            eligibilityModulesBatch[i] = _eligibility;
+            toggleModulesBatch[i] = _toggle;
+            imageURIsBatch[i] = "";
+        }
+
+        hats.batchCreateHats(
+            adminsBatch,
+            detailsBatch,
+            maxSuppliesBatch,
+            eligibilityModulesBatch,
+            toggleModulesBatch,
+            imageURIsBatch
+        );
+
+        (, , , , , , uint8 lastHatId, ) = hats.viewHat(topHatId);
+
+        assertEq(lastHatId, count);
+
+        (, , , , address t, , , ) = hats.viewHat(
+            hats.buildHatId(topHatId, uint8(count))
+        );
+        assertEq(t, _toggle);
+    }
+
+    function testTemp() public {
+        hats.getHatLevel(
+            27065671948198289362489238675596178244906309694785829628088330289409
+        );
+    }
+
+    function testBatchCreateHatsSkinnyFullBranch() public {
+        uint256 count = 28;
+
+        adminsBatch = new uint256[](count);
+        detailsBatch = new string[](count);
+        maxSuppliesBatch = new uint32[](count);
+        eligibilityModulesBatch = new address[](count);
+        toggleModulesBatch = new address[](count);
+        imageURIsBatch = new string[](count);
+
+        uint256 adminId = topHatId;
+
+        // populate the creating arrays
+        for (uint256 i = 0; i < count; ++i) {
+            uint32 level = uint32(i) + 1;
+
+            adminsBatch[i] = adminId;
+            detailsBatch[i] = string.concat("level ", vm.toString(level));
+            maxSuppliesBatch[i] = level;
+            eligibilityModulesBatch[i] = _eligibility;
+            toggleModulesBatch[i] = _toggle;
+            imageURIsBatch[i] = vm.toString(level);
+
+            adminId = hats.buildHatId(adminId, 1);
+        }
+
+        vm.prank(topHatWearer);
+
+        hats.batchCreateHats(
+            adminsBatch,
+            detailsBatch,
+            maxSuppliesBatch,
+            eligibilityModulesBatch,
+            toggleModulesBatch,
+            imageURIsBatch
+        );
+
+        assertEq(
+            hats.getHatLevel( // should be adminId
+                hats.buildHatId(
+                    hats.getAdminAtLevel(adminId, uint8(count - 1)),
+                    1
+                )
+            ),
+            count
+        );
+    }
+
+    function testBatchCreateHatsErrorArrayLength(
+        uint256 count,
+        uint256 offset,
+        uint256 array
+    ) public {
+        count = bound(count, 1, 254);
+        // count = 2;
+        offset = bound(offset, 1, 255 - count);
+        // offset = 1;
+        array = bound(array, 1, 6);
+
+        uint256 extra = count + offset;
+        // initiate the creation arrays
+        if (array == 1) {
+            adminsBatch = new uint256[](extra);
+            detailsBatch = new string[](count);
+            maxSuppliesBatch = new uint32[](count);
+            eligibilityModulesBatch = new address[](count);
+            toggleModulesBatch = new address[](count);
+            imageURIsBatch = new string[](count);
+        } else if (array == 2) {
+            adminsBatch = new uint256[](count);
+            detailsBatch = new string[](extra);
+            maxSuppliesBatch = new uint32[](count);
+            eligibilityModulesBatch = new address[](count);
+            toggleModulesBatch = new address[](count);
+            imageURIsBatch = new string[](count);
+        } else if (array == 3) {
+            adminsBatch = new uint256[](count);
+            detailsBatch = new string[](count);
+            maxSuppliesBatch = new uint32[](extra);
+            eligibilityModulesBatch = new address[](count);
+            toggleModulesBatch = new address[](count);
+            imageURIsBatch = new string[](count);
+        } else if (array == 4) {
+            adminsBatch = new uint256[](count);
+            detailsBatch = new string[](count);
+            maxSuppliesBatch = new uint32[](count);
+            eligibilityModulesBatch = new address[](extra);
+            toggleModulesBatch = new address[](count);
+            imageURIsBatch = new string[](count);
+        } else if (array == 5) {
+            adminsBatch = new uint256[](count);
+            detailsBatch = new string[](count);
+            maxSuppliesBatch = new uint32[](count);
+            eligibilityModulesBatch = new address[](count);
+            toggleModulesBatch = new address[](extra);
+            imageURIsBatch = new string[](count);
+        } else if (array == 6) {
+            adminsBatch = new uint256[](count);
+            detailsBatch = new string[](count);
+            maxSuppliesBatch = new uint32[](count);
+            eligibilityModulesBatch = new address[](count);
+            toggleModulesBatch = new address[](count);
+            imageURIsBatch = new string[](extra);
+        }
+
+        vm.prank(topHatWearer);
+
+        // populate the creation arrays
+        for (uint32 i = 0; i < count; ++i) {
+            adminsBatch[i] = topHatId;
+            detailsBatch[i] = vm.toString(i);
+            maxSuppliesBatch[i] = i;
+            eligibilityModulesBatch[i] = _eligibility;
+            toggleModulesBatch[i] = _toggle;
+            imageURIsBatch[i] = vm.toString(i);
+        }
+
+        // add `offset` number of hats to the batch, but only with one array filled out
+        for (uint32 j = 0; j < offset; ++j) {
+            if (array == 1) adminsBatch[j] = topHatId;
+            if (array == 2) detailsBatch[j] = vm.toString(j);
+            if (array == 3) maxSuppliesBatch[j] = j;
+            if (array == 4) eligibilityModulesBatch[j] = _eligibility;
+            if (array == 5) toggleModulesBatch[j] = _toggle;
+            if (array == 6) imageURIsBatch[j] = vm.toString(j);
+        }
+
+        // adminsBatch[count] = topHatId;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(Hats.BatchArrayLengthMismatch.selector)
+        );
+
+        hats.batchCreateHats(
+            adminsBatch,
+            detailsBatch,
+            maxSuppliesBatch,
+            eligibilityModulesBatch,
+            toggleModulesBatch,
+            imageURIsBatch
+        );
+    }
+}
+
 contract ImageURITest is TestSetup2 {
     function testTopHatImageURI() public {
         string memory uri = hats.getImageURIForHat(topHatId);

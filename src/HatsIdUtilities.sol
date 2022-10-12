@@ -30,11 +30,11 @@ contract HatsIdUtilities {
     /// @dev Check hats[_admin].lastHatId for the previous hat created underneath _admin
     /// @param _admin the id of the admin for the new hat
     /// @param _newHat the uint8 id of the new hat
-    /// @return uint256 the constructed hat id
+    /// @return id The constructed hat id
     function buildHatId(uint256 _admin, uint8 _newHat)
         public
         pure
-        returns (uint256)
+        returns (uint256 id)
     {
         uint256 mask;
         for (uint256 i = 0; i < MAX_LEVELS; ++i) {
@@ -43,10 +43,11 @@ contract HatsIdUtilities {
                     (TOPHAT_ADDRESS_SPACE + (LOWER_LEVEL_ADDRESS_SPACE * i))
             );
             if (_admin & mask == 0) {
-                return
+                id =
                     _admin |
                     (uint256(_newHat) <<
                         (LOWER_LEVEL_ADDRESS_SPACE * (MAX_LEVELS - 1 - i)));
+                return id;
             }
         }
     }
@@ -54,7 +55,7 @@ contract HatsIdUtilities {
     /// @notice Identifies the level a given hat in its hat tree
     /// @param _hatId the id of the hat in question
     /// @return level (0 to 28)
-    function getHatLevel(uint256 _hatId) public pure returns (uint8 level) {
+    function getHatLevel(uint256 _hatId) public pure returns (uint8) {
         uint256 mask;
         uint256 i;
         for (i = 0; i < MAX_LEVELS; ++i) {
@@ -65,6 +66,8 @@ contract HatsIdUtilities {
 
             if (_hatId & mask == 0) return uint8(i);
         }
+
+        return uint8(MAX_LEVELS);
     }
 
     /// @notice Checks whether a hat is a topHat
