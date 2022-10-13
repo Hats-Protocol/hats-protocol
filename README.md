@@ -75,6 +75,7 @@ Hats are represented on-chain by ERC1155 tokens. An address with a balance of a 
 
 #### Beta 4
 
+- Gnosis Chain (chain id #100) &mdash; `0x72c89eb08444bc16396dd9432b3e82d956c412ec`
 - Polygon (chain id #137) &mdash; `0xe81597289a249ae725c2d80e7848dbfa9708c22d`
 
 <!-- GETTING STARTED -->
