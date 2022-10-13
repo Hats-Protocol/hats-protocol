@@ -69,7 +69,13 @@ Hats are represented on-chain by ERC1155 tokens. An address with a balance of a 
 
 ### Latest Deployments
 
+#### Beta 3
+
 - Gnosis Chain (chain id #100) &mdash; `0x245e5B56C18B18aC2d72F94C5F7bE1D52497A8aD`
+
+#### Beta 4
+
+- Polygon (chain id #137) &mdash; `0xe81597289a249ae725c2d80e7848dbfa9708c22d`
 
 <!-- GETTING STARTED -->
 ## Getting Started
@@ -305,19 +311,15 @@ The creator of a Hat must be its admin. In other words, the admin of a Hat must 
 
 Creating a Tophat (a Hat that serves as its own admin) requires a special function `createTophat`, which creates a new Hat, sets that Hat as its own admin, and then mints its token to a `_target`. Any address wanting to create a Hat that is not already wearing an admin Hat of some kind must first create a Tophat with itself as the wearer.
 
-<!--
-TODO add back in after implementing batchCreateHat
-#### Creating a Hat Tree
+#### Batch Creation
 
-In some scenarios, a DAO may want to create an entire tree of Hats at once. This is particularly useful when setting up an initial structure for a DAO or working group (e.g., from a Hats template) or when forking an existing Hats structure from a template.
+In some scenarios, a DAO may want to create many Hats at once -- including an entire hat tree -- at once. This is particularly useful when setting up an initial structure for a DAO or working group (e.g., from a Hats template) or when forking an existing Hats structure from a template.
 
 Enabling this latter forking/exit scenario is an important protection for Hat wearers against potential abuse of power by their DAO.
 
-To create a Hat tree, a DAO can call the `Hats.createHatsTree()` function. This function takes arrays as its arguments, from which it constructs multiple Hats. As long as each of these Hats is part of the same tree of Hats &mdash; i.e., they either have the same existing Hat or any of the newly created Hats as admin(s) &mdash; they can all be created together.
+To create a batch of Hats, a DAO can call the `Hats.batchCreateHats()` function. This function takes arrays as its arguments, from which it constructs multiple Hats.  As long as each of these Hats is part of the same tree of Hats &mdash; i.e., they either have the same existing Hat or any of the newly created Hats as admin(s) &mdash; they can all be created together.
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
-
--->
 
 ### Minting a Hat
 
