@@ -9,7 +9,8 @@ solc = "0.8.16"
 remappings = [
   "ds-test/=lib/forge-std/lib/ds-test/src/",
   "forge-std/=lib/forge-std/src/",
-  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+  "hats-auth/=lib/hats-auth/src/"
 ]
 
 [rpc_endpoints]

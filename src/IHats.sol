@@ -7,7 +7,8 @@ interface IHats {
         string memory details, // encode as bytes32 ??
         uint32 maxSupply,
         address eligibility,
-        address toggle
+        address toggle,
+        string memory imageURI
     ) external returns (uint256 hatId);
 
     function mintHat(uint256 _hatId, address _wearer) external returns (bool);
@@ -56,7 +57,8 @@ interface IHats {
             uint32 supply,
             address oracle,
             address conditions,
-            bool active
+            bool active,
+            string memory imageURI
         );
 
     function isTopHat(uint256 _hatId) external pure returns (bool);
