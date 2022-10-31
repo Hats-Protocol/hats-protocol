@@ -771,10 +771,21 @@ contract Hats is ERC1155, HatsIdUtilities {
             hatAdmin = getAdminAtLevel(_hatId, getHatLevel(_hatId) - 1);
         }
 
-        string memory domain = Strings.toString(getTophatDomain(_hatId));
+        // split into two objects to avoid stack too deep error
+        string memory idProperties = string.concat(
+            '"domain": "',
+            Strings.toString(getTophatDomain(_hatId)),
+            '", "id": "',
+            Strings.toString(_hatId),
+            '", "pretty id": "',
+            "{id}",
+            '",'
+        );
 
-        bytes memory properties = abi.encodePacked(
-            '{"current supply": "',
+        string memory otherProperties = string.concat(
+            '"status": "',
+            (_isActive(hat, _hatId) ? "active" : "inactive"),
+            '", "current supply": "',
             Strings.toString(hatSupply[_hatId]),
             '", "supply cap": "',
             Strings.toString(hat.maxSupply),
@@ -782,34 +793,29 @@ contract Hats is ERC1155, HatsIdUtilities {
             Strings.toString(hatAdmin),
             '", "admin (pretty id)": "',
             Strings.toHexString(hatAdmin, 32),
-            '", "eligibility address": "',
+            '", "eligibility module": "',
             Strings.toHexString(hat.eligibility),
-            '", "toggle address": "',
+            '", "toggle module": "',
             Strings.toHexString(hat.toggle),
-            '"}'
+            '"'
         );
-        string memory status = (_isActive(hat, _hatId) ? "active" : "inactive");
 
         string memory json = Base64.encode(
             bytes(
-                string(
-                    abi.encodePacked(
-                        '{"name & description": "',
-                        hat.details, // alternatively, could point to a URI for offchain flexibility
-                        '", "domain": "',
-                        domain,
-                        '", "id": "',
-                        Strings.toString(_hatId),
-                        '", "pretty id": "',
-                        Strings.toHexString(_hatId, 32),
-                        '", "status": "',
-                        status,
-                        '", "image": "',
-                        getImageURIForHat(_hatId),
-                        '", "properties": ',
-                        properties,
-                        "}"
-                    )
+                string.concat(
+                    '{"name": "',
+                    "Hats Protocol Hat",
+                    '", "description": "',
+                    "this is a test of Hats Protocol nfts", // alternatively, could point to a URI for offchain flexibility
+                    '", "image": "',
+                    getImageURIForHat(_hatId),
+                    '",',
+                    '"attributes":',
+                    "{",
+                    idProperties,
+                    otherProperties,
+                    "}",
+                    "}"
                 )
             )
         );
