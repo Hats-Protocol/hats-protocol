@@ -295,13 +295,15 @@ contract ImageURITest is TestSetup2 {
     function testTopHatImageURI() public {
         string memory uri = hats.getImageURIForHat(topHatId);
 
-        assertEq(string.concat(topHatImageURI, "0"), uri);
+        // assertEq(string.concat(topHatImageURI, "0"), uri);
+        assertEq(uri, topHatImageURI);
     }
 
     function testHatImageURI() public {
         string memory uri = hats.getImageURIForHat(secondHatId);
 
-        assertEq(string.concat(secondHatImageURI, "0"), uri);
+        // assertEq(string.concat(secondHatImageURI, "0"), uri);
+        assertEq(uri, secondHatImageURI);
     }
 
     function testEmptyHatImageURI() public {
@@ -318,10 +320,12 @@ contract ImageURITest is TestSetup2 {
 
         string memory uri3 = hats.getImageURIForHat(thirdHatId);
 
-        assertEq(
-            uri3,
-            string.concat(secondHatImageURI, Strings.toString(thirdHatId))
-        );
+        // assertEq(
+        //     uri3,
+        //     string.concat(secondHatImageURI, Strings.toString(thirdHatId))
+        // );
+
+        assertEq(uri3, secondHatImageURI);
     }
 
     function testEmptyTopHatImageURI() public {
@@ -329,7 +333,8 @@ contract ImageURITest is TestSetup2 {
 
         string memory uri = hats.getImageURIForHat(topHat);
 
-        assertEq(uri, string.concat(_baseImageURI, Strings.toString(topHat)));
+        // assertEq(uri, string.concat(_baseImageURI, Strings.toString(topHat)));
+        assertEq(uri, _baseImageURI);
     }
 
     function testEmptyHatBranchImageURI() public {
@@ -339,7 +344,8 @@ contract ImageURITest is TestSetup2 {
 
         string memory uri = hats.getImageURIForHat(ids[4]);
 
-        assertEq(uri, string.concat(_baseImageURI, Strings.toString(ids[4])));
+        // assertEq(uri, string.concat(_baseImageURI, Strings.toString(ids[4])));
+        assertEq(uri, _baseImageURI);
     }
 
     // function testChangeGlobalBaseImageURI() public {
@@ -668,7 +674,8 @@ contract ViewHatTests is TestSetup2 {
         assertEq(retsupply, 1);
         assertEq(reteligibility, address(555));
         assertEq(rettoggle, address(333));
-        assertEq(retimageURI, string.concat(secondHatImageURI, "0"));
+        // assertEq(retimageURI, string.concat(secondHatImageURI, "0"));
+        assertEq(retimageURI, secondHatImageURI);
         assertEq(retlastHatId, 0);
         assertEq(retactive, true);
     }
