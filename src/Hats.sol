@@ -828,7 +828,7 @@ contract Hats is ERC1155, HatsIdUtilities {
                     '", "image": "',
                     getImageURIForHat(_hatId),
                     '",',
-                    '"attributes":',
+                    '"properties": ',
                     "{",
                     idProperties,
                     otherProperties,
