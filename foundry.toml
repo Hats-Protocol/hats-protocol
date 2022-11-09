@@ -18,6 +18,7 @@ optimism = "${OPTIMISM_RPC}"
 goerli = "${GOERLI_RPC}"
 gnosis = "${GC_RPC}"
 polygon = "${POLYGON_RPC}"
+local = "http://localhost:8545"
 
 [etherscan]
 arbitrum = {key = "${ARBISCAN_KEY}", url = "https://api.arbiscan.io/api"}

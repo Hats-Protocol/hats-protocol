@@ -727,30 +727,48 @@ contract Hats is ERC1155, HatsIdUtilities {
 
         string memory imageURI = hat.imageURI; // save 1 SLOAD
 
+        // if _hatId has an imageURI, we return it
         if (bytes(imageURI).length > 0) {
+            return imageURI;
+
+            /// TODO bring back the following in a way that actually works
             // since there's only one hat with this imageURI at this level, by convention
             // we refer to it with `id = 0`
-            return string.concat(imageURI, "0");
+            // return string.concat(imageURI, "0");
         }
 
-        // if _hatId doesn't have an imageURI, we fall back to its admin tree
+        // otherwise, we check its branch of admins
         uint256 level = getHatLevel(_hatId);
 
-        // already checked at `level`, so we start the loop at `level - 1`
-        for (uint256 i = level; i > 0; --i) {
-            uint256 id = getAdminAtLevel(_hatId, uint8(i - 1));
+        // but first we check if _hatId is a tophat, in which case we fall back to the global image uri
+        if (level == 0) return baseImageURI;
+
+        // otherwise, we check each of its admins for a valid imageURI
+        uint256 id;
+        console2.log("level", level);
+
+        // already checked at `level` above, so we start the loop at `level - 1`
+        for (uint256 i = level - 1; i > 0; --i) {
+            console2.log("i", i);
+            id = getAdminAtLevel(_hatId, uint8(i));
             hat = _hats[id];
             imageURI = hat.imageURI;
 
             if (bytes(imageURI).length > 0) {
+                return imageURI;
+
+                /// TODO bring back the following in a way that actually works
                 // since there are multiple hats with this imageURI at _hatId's level,
                 // we need to use _hatId to disambiguate
-                return string.concat(imageURI, Strings.toString(_hatId));
+                // return string.concat(imageURI, Strings.toString(_hatId));
             }
         }
 
-        // if no hat in _hatId's admin tre has an imageURI, we fall back to the global image uri
-        return string.concat(baseImageURI, Strings.toString(_hatId));
+        // if none of _hatId's admins has an imageURI of its own, we again fall back to the global image uri
+        return baseImageURI;
+
+        /// TODO bring back the following in a way that actually works
+        // return string.concat(baseImageURI, Strings.toString(_hatId));
     }
 
     /// @notice Constructs the URI for a Hat, using data from the Hat struct
@@ -771,10 +789,21 @@ contract Hats is ERC1155, HatsIdUtilities {
             hatAdmin = getAdminAtLevel(_hatId, getHatLevel(_hatId) - 1);
         }
 
-        string memory domain = Strings.toString(getTophatDomain(_hatId));
+        // split into two objects to avoid stack too deep error
+        string memory idProperties = string.concat(
+            '"domain": "',
+            Strings.toString(getTophatDomain(_hatId)),
+            '", "id": "',
+            Strings.toString(_hatId),
+            '", "pretty id": "',
+            "{id}",
+            '",'
+        );
 
-        bytes memory properties = abi.encodePacked(
-            '{"current supply": "',
+        string memory otherProperties = string.concat(
+            '"status": "',
+            (_isActive(hat, _hatId) ? "active" : "inactive"),
+            '", "current supply": "',
             Strings.toString(hatSupply[_hatId]),
             '", "supply cap": "',
             Strings.toString(hat.maxSupply),
@@ -782,34 +811,29 @@ contract Hats is ERC1155, HatsIdUtilities {
             Strings.toString(hatAdmin),
             '", "admin (pretty id)": "',
             Strings.toHexString(hatAdmin, 32),
-            '", "eligibility address": "',
+            '", "eligibility module": "',
             Strings.toHexString(hat.eligibility),
-            '", "toggle address": "',
+            '", "toggle module": "',
             Strings.toHexString(hat.toggle),
-            '"}'
+            '"'
         );
-        string memory status = (_isActive(hat, _hatId) ? "active" : "inactive");
 
         string memory json = Base64.encode(
             bytes(
-                string(
-                    abi.encodePacked(
-                        '{"name & description": "',
-                        hat.details, // alternatively, could point to a URI for offchain flexibility
-                        '", "domain": "',
-                        domain,
-                        '", "id": "',
-                        Strings.toString(_hatId),
-                        '", "pretty id": "',
-                        Strings.toHexString(_hatId, 32),
-                        '", "status": "',
-                        status,
-                        '", "image": "',
-                        getImageURIForHat(_hatId),
-                        '", "properties": ',
-                        properties,
-                        "}"
-                    )
+                string.concat(
+                    '{"name": "',
+                    "Hats Protocol Hat",
+                    '", "description": "',
+                    "this is a test of Hats Protocol nfts", // alternatively, could point to a URI for offchain flexibility
+                    '", "image": "',
+                    getImageURIForHat(_hatId),
+                    '",',
+                    '"properties": ',
+                    "{",
+                    idProperties,
+                    otherProperties,
+                    "}",
+                    "}"
                 )
             )
         );
