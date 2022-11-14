@@ -3,7 +3,7 @@
 pragma solidity >=0.8.13;
 
 import "./IHatsEligibility.sol";
-import "../IHats.sol";
+import "../Interfaces/IHats.sol";
 import "utils/Auth.sol";
 
 abstract contract OwnableHatsEligibility is IHats, IHatsEligibility, Auth {

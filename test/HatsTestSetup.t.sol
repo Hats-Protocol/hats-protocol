@@ -3,8 +3,10 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../src/Hats.sol";
+import "../src/Interfaces/HatsEvents.sol";
+import "../src/Interfaces/HatsErrors.sol";
 
-abstract contract TestVariables {
+abstract contract TestVariables is HatsEvents, HatsErrors {
     Hats hats;
 
     address internal topHatWearer;
@@ -37,22 +39,22 @@ abstract contract TestVariables {
     address[] toggleModulesBatch;
     string[] imageURIsBatch;
 
-    event HatCreated(
-        uint256 id,
-        string details,
-        uint32 maxSupply,
-        address eligibility,
-        address toggle,
-        string imageURI
-    );
-    event HatRenounced(uint256 hatId, address wearer);
-    event WearerStatus(
-        uint256 hatId,
-        address wearer,
-        bool revoke,
-        bool wearerStanding
-    );
-    event HatStatusChanged(uint256 hatId, bool newStatus);
+    // event HatCreated(
+    //     uint256 id,
+    //     string details,
+    //     uint32 maxSupply,
+    //     address eligibility,
+    //     address toggle,
+    //     string imageURI
+    // );
+    // event HatRenounced(uint256 hatId, address wearer);
+    // event WearerStatus(
+    //     uint256 hatId,
+    //     address wearer,
+    //     bool revoke,
+    //     bool wearerStanding
+    // );
+    // event HatStatusChanged(uint256 hatId, bool newStatus);
     event TransferSingle(
         address indexed operator,
         address indexed from,

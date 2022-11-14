@@ -3,7 +3,7 @@
 pragma solidity >=0.8.13;
 
 import "../HatsEligibility/IHatsEligibility.sol";
-import "../IHats.sol";
+import "../Interfaces/IHats.sol";
 import "utils/Auth.sol";
 
 /// @notice designed to serve as the admin for multiple hats
@@ -28,16 +28,18 @@ abstract contract SampleMultiHatter is Auth {
         uint256 _admin,
         string memory _details,
         uint32 _maxSupply,
-        address _oracle,
+        address _eligibility,
         address _toggle,
-        address _wearer
+        address _wearer,
+        string memory _imageURI
     ) public virtual requiresAuth {
         uint256 id = HATS.createHat(
             _admin,
             _details,
             _maxSupply,
-            _oracle,
-            _toggle
+            _eligibility,
+            _toggle,
+            _imageURI
         );
         _mint(id, _wearer);
     }
@@ -51,11 +53,4 @@ abstract contract SampleMultiHatter is Auth {
         HATS.transferHat(_hatId, _wearer, _newWearer);
     }
 
-    function batchTransfer(
-        uint256[] memory _hatIds,
-        address[] memory _wearers,
-        address[] memory _newWearers
-    ) public virtual requiresAuth {
-        HATS.batchTransferHats(_hatIds, _wearers, _newWearers);
-    }
 }

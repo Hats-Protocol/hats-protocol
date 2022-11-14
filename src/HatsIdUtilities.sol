@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: CC0
 pragma solidity >=0.8.13;
 
+import "./Interfaces/IHatsIdUtilities.sol";
+
 /// @title Hats Id Utilities
 /// @dev Functions for working with Hat Ids from Hats Protocol. Factored out of Hats.sol
 /// for easier use by other contracts.
 /// @author Hats Protocol
-contract HatsIdUtilities {
+contract HatsIdUtilities is IHatsIdUtilities {
     /**
      * Hat Ids serve as addresses. A given Hat's Id represents its location in its
      * hat tree: its level, its admin, its admin's admin (etc, all the way up to the
