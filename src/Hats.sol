@@ -2,8 +2,8 @@
 pragma solidity >=0.8.13;
 
 import {ERC1155} from "ERC1155/ERC1155.sol";
-// do we need an interface for Hatter / admin?
 import "forge-std/Test.sol"; //remove after testing
+import "./Interfaces/IHats.sol";
 import "./HatsIdUtilities.sol";
 import "./HatsToggle/IHatsToggle.sol";
 import "./HatsEligibility/IHatsEligibility.sol";
@@ -14,51 +14,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 /// @notice Hats are DAO-native revocable roles that are represented as semi-fungable tokens for composability
 /// @dev This is a multitenant contract that can manage all Hats for a given chain
 /// @author Hats Protocol
-contract Hats is ERC1155, HatsIdUtilities {
-    /*//////////////////////////////////////////////////////////////
-                              HATS ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    // QUESTION should we add arguments to any of these errors? See github issue #21
-    error NotAdmin(address _user, uint256 _hatId);
-    error AllHatsWorn(uint256 _hatId);
-    error AlreadyWearingHat(address _wearer, uint256 _hatId);
-    error HatDoesNotExist(uint256 _hatId);
-    error NotEligible(address _wearer, uint256 _hatId);
-    error NoApprovalsNeeded();
-    error OnlyAdminsCanTransfer();
-    error NotHatWearer();
-    error NotHatToggle();
-    error NotHatEligibility();
-    error NotIHatsToggleContract();
-    error NotIHatsEligibilityContract();
-    error BatchArrayLengthMismatch();
-    error SafeTransfersNotNecessary();
-    error MaxLevelsReached();
-
-    /*//////////////////////////////////////////////////////////////
-                              HATS EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    event HatCreated(
-        uint256 id,
-        string details,
-        uint32 maxSupply,
-        address eligibility,
-        address toggle,
-        string imageURI
-    );
-
-    event HatRenounced(uint256 hatId, address wearer);
-
-    event WearerStatus(
-        uint256 hatId,
-        address wearer,
-        bool eligible,
-        bool wearerStanding
-    );
-
-    event HatStatusChanged(uint256 hatId, bool newStatus);
+contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /*//////////////////////////////////////////////////////////////
                               HATS DATA MODELS
@@ -852,7 +808,7 @@ contract Hats is ERC1155, HatsIdUtilities {
     function balanceOf(address wearer, uint256 hatId)
         public
         view
-        override
+        override(ERC1155, IHats)
         returns (uint256 balance)
     {
         Hat memory hat = _hats[hatId];
@@ -937,7 +893,7 @@ contract Hats is ERC1155, HatsIdUtilities {
     /// @notice View the uri for a Hat
     /// @param id The id of the Hat
     /// @return string An 1155-compatible JSON object
-    function uri(uint256 id) public view override returns (string memory) {
+    function uri(uint256 id) public view override(ERC1155, IHats) returns (string memory) {
         return _constructURI(uint256(id));
     }
 }

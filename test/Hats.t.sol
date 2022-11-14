@@ -277,7 +277,7 @@ contract BatchCreateHats is TestSetupBatch {
         // adminsBatch[count] = topHatId;
 
         vm.expectRevert(
-            abi.encodeWithSelector(Hats.BatchArrayLengthMismatch.selector)
+            abi.encodeWithSelector(HatsErrors.BatchArrayLengthMismatch.selector)
         );
 
         hats.batchCreateHats(
@@ -446,7 +446,7 @@ contract MintHatsTest is TestSetup {
         // expect error AlreadyWearingHat()
         vm.expectRevert(
             abi.encodeWithSelector(
-                Hats.AlreadyWearingHat.selector,
+                HatsErrors.AlreadyWearingHat.selector,
                 secondWearer,
                 secondHatId
             )
@@ -478,7 +478,7 @@ contract MintHatsTest is TestSetup {
         // expect NotAdmin Error
         vm.expectRevert(
             abi.encodeWithSelector(
-                Hats.NotAdmin.selector,
+                HatsErrors.NotAdmin.selector,
                 nonWearer,
                 secondHatId
             )
@@ -511,7 +511,7 @@ contract MintHatsTest is TestSetup {
 
         // expect error AllHatsWorn()
         vm.expectRevert(
-            abi.encodeWithSelector(Hats.AllHatsWorn.selector, secondHatId)
+            abi.encodeWithSelector(HatsErrors.AllHatsWorn.selector, secondHatId)
         );
 
         // 2-3. fail to mint hat 3
@@ -556,7 +556,7 @@ contract MintHatsTest is TestSetup {
         uint256 badHatId = 123e18;
 
         vm.expectRevert(
-            abi.encodeWithSelector(Hats.HatDoesNotExist.selector, badHatId)
+            abi.encodeWithSelector(HatsErrors.HatDoesNotExist.selector, badHatId)
         );
 
         hats.mintHat(badHatId, secondWearer);
@@ -639,7 +639,7 @@ contract MintHatsTest is TestSetup {
         }
 
         vm.expectRevert(
-            abi.encodeWithSelector(Hats.BatchArrayLengthMismatch.selector)
+            abi.encodeWithSelector(HatsErrors.BatchArrayLengthMismatch.selector)
         );
 
         hats.batchMintHats(hatBatch, wearerBatch);
@@ -727,7 +727,7 @@ contract TransferHatTests is TestSetup2 {
     function testCannotTransferHatFromNonAdmin() public {
         // expect OnlyAdminsCanTransfer error
         vm.expectRevert(
-            abi.encodeWithSelector(Hats.OnlyAdminsCanTransfer.selector)
+            abi.encodeWithSelector(HatsErrors.OnlyAdminsCanTransfer.selector)
         );
 
         // 4-1. transfer from wearer / other wallet
@@ -821,7 +821,7 @@ contract EligibilitySetHatsTests is TestSetup2 {
     function testCannotRevokeHatAsNonWearer() public {
         // expect NotHatEligibility error
         vm.expectRevert(
-            abi.encodeWithSelector(Hats.NotHatEligibility.selector)
+            abi.encodeWithSelector(HatsErrors.NotHatEligibility.selector)
         );
 
         // attempt to setHatWearerStatus as non-wearer
@@ -870,7 +870,7 @@ contract EligibilityGetHatsTests is TestSetup2 {
     {
         // expect NotIHatsEligibilityContract error
         vm.expectRevert(
-            abi.encodeWithSelector(Hats.NotIHatsEligibilityContract.selector)
+            abi.encodeWithSelector(HatsErrors.NotIHatsEligibilityContract.selector)
         );
 
         // fail attempt to pull wearer status from eligibility
@@ -1009,7 +1009,7 @@ contract RenounceHatsTest is TestSetup2 {
 
     function testCannotRenounceHatAsNonWearer() public {
         // expect NotHatWearer error
-        vm.expectRevert(abi.encodeWithSelector(Hats.NotHatWearer.selector));
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatWearer.selector));
 
         //  6-1. attempt to renounce from non-wearer
         vm.prank(address(nonWearer));
@@ -1036,7 +1036,7 @@ contract ToggleSetHatsTest is TestSetup2 {
 
     function testCannotDeactivateHatAsNonWearer() public {
         // expect NotHattoggle error
-        vm.expectRevert(abi.encodeWithSelector(Hats.NotHatToggle.selector));
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatToggle.selector));
 
         // 7-1. attempt to change Hat Status hat from non-wearer
         vm.prank(address(nonWearer));
@@ -1065,7 +1065,7 @@ contract ToggleSetHatsTest is TestSetup2 {
         hats.setHatStatus(secondHatId, false);
 
         // expect NotHattoggle error
-        vm.expectRevert(abi.encodeWithSelector(Hats.NotHatToggle.selector));
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatToggle.selector));
 
         // 8-1. attempt to changeHatStatus hat from wearer / other wallet / admin
         vm.prank(address(nonWearer));
@@ -1077,7 +1077,7 @@ contract ToggleGetHatsTest is TestSetup2 {
     function testCannotCheckHatStatusNoFunctionInToggleContract() public {
         // expect NotIHatsToggleContract error
         vm.expectRevert(
-            abi.encodeWithSelector(Hats.NotIHatsToggleContract.selector)
+            abi.encodeWithSelector(HatsErrors.NotIHatsToggleContract.selector)
         );
 
         // fail attempt to pull Hat Status
