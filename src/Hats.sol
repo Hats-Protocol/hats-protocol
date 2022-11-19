@@ -22,17 +22,21 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     struct Hat {
         // 1st storage slot
-        address eligibility; // can revoke Hat based on ruling; 20 bytes (+20)
-        uint32 maxSupply; // the max number of identical hats that can exist; 24 bytes (+4)
-        bool active; // can be altered by toggle, via setHatStatus(); 25 bytes (+1)
-        uint8 lastHatId; // indexes how many different hats an admin is holding; 26 bytes (+1)
-        // 2nd storage slot
-        address toggle; // controls when Hat is active; 20 bytes (+20)
-        // 3rd+ storage slot
+        address eligibility; // ─┐ can revoke Hat based on ruling | 20
+        uint32 maxSupply;    //  │ the max number of identical hats that can exist | 4
+        uint8 lastHatId;     // ─┘ indexes how many different hats an admin is holding | 1
+        // 2nd slot
+        address toggle;      // ─┐ controls when Hat is active | 20
+        uint96 config;       // ─┘ active status & other settings (see schema below) | 12
+        // 3rd+ slot (optional)
         string details;
-        // optional
         string imageURI;
     }
+
+    /* Hat.config schema (by bit)
+    *  0th bit  | `active` status; can be altered by toggle, via setHatStatus()
+    *  1 - 95   | unassigned
+    */
 
     /*//////////////////////////////////////////////////////////////
                               HATS STORAGE
@@ -399,7 +403,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         hat.toggle = _toggle;
         hat.imageURI = _imageURI;
-        hat.active = true;
+        hat.config = uint96(1 << 95);
 
         _hats[_id] = hat;
 
@@ -421,8 +425,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         // optimize later
         Hat storage hat = _hats[_hatId];
 
-        if (_newStatus != hat.active) {
-            hat.active = _newStatus;
+        if (_newStatus != _getHatStatus(hat)) {
+            _setHatStatus(hat, _newStatus);
             emit HatStatusChanged(_hatId, _newStatus);
             updated = true;
         }
@@ -582,7 +586,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (success && returndata.length > 0) {
             active = abi.decode(returndata, (bool));
         } else {
-            active = _hat.active;
+            active = _getHatStatus(_hat);
         }
     }
 
@@ -593,6 +597,19 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     function isActive(uint256 _hatId) public view returns (bool) {
         Hat memory hat = _hats[_hatId];
         return _isActive(hat, _hatId);
+    }
+
+    function _getHatStatus(Hat memory _hat) internal view returns (bool) {
+        return (_hat.config >> 95 != 0);
+    }
+
+    function _setHatStatus(Hat storage _hat, bool _status) internal {
+        if (_status) {
+            _hat.config |= uint96(1 << 95);
+        } else {
+            _hat.config &= ~uint96(1 << 95);
+        }
+        
     }
 
     /// @notice Checks whether a wearer of a Hat is in good standing
