@@ -158,9 +158,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         newHatId = getNextId(_admin);
 
         // to create a hat, you must be wearing one of its admin hats
-        if (!isAdminOfHat(msg.sender, newHatId)) {
-            revert NotAdmin(msg.sender, newHatId);
-        }
+        _checkAdmin(newHatId);
 
         // create the new hat
         _createHat(
@@ -239,9 +237,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (hat.maxSupply == 0) revert HatDoesNotExist(_hatId);
 
         // only the wearer of a hat's admin Hat can mint it
-        if (!isAdminOfHat(msg.sender, _hatId)) {
-            revert NotAdmin(msg.sender, _hatId);
-        }
+        _checkAdmin(_hatId);
 
         if (hatSupply[_hatId] >= hat.maxSupply) {
             revert AllHatsWorn(_hatId);
@@ -531,6 +527,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         emit TransferSingle(msg.sender, _from, _to, _hatId, 1);
     }
 
+    function _checkAdmin(uint256 _hatId) internal {
+        if (!isAdminOfHat(msg.sender, _hatId)) {
+            revert NotAdmin(msg.sender, _hatId);
+        }
+    } 
     /*//////////////////////////////////////////////////////////////
                               HATS VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
