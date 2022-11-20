@@ -35,7 +35,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /* Hat.config schema (by bit)
     *  0th bit  | `active` status; can be altered by toggle, via setHatStatus()
-    *  1 - 95   | unassigned
+    *  1        | `mutable` option, only se
+    *  2 - 95   | unassigned
     */
 
     /*//////////////////////////////////////////////////////////////
@@ -89,6 +90,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             1, // maxSupply = 1
             address(0), // there is no eligibility
             address(0), // it has no toggle
+            false, // its immutable
             _imageURI
         );
 
@@ -100,6 +102,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _maxSupply The total instances of the Hat that can be worn at once
     /// @param _eligibility The address that can report on the Hat wearer's standing
     /// @param _toggle The address that can deactivate the hat [optional]
+    /// @param _mutable Whether the hat's properties are changeable after creation
     /// @param _topHatImageURI The image uri for this top hat and the fallback for its
     ///                        downstream hats [optional]
     /// @param _firstHatImageURI The image uri for the first hat and the fallback for its
@@ -111,6 +114,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint32 _maxSupply,
         address _eligibility,
         address _toggle,
+        bool _mutable,
         string memory _topHatImageURI,
         string memory _firstHatImageURI
     ) public returns (uint256 topHatId, uint256 firstHatId) {
@@ -122,6 +126,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             _maxSupply,
             _eligibility,
             _toggle,
+            _mutable,
             _firstHatImageURI
         );
     }
@@ -133,6 +138,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _admin The id of the Hat that will control who wears the newly created hat
     /// @param _eligibility The address that can report on the Hat wearer's status
     /// @param _toggle The address that can deactivate the Hat
+    /// @param _mutable Whether the hat's properties are changeable after creation
     /// @param _imageURI The image uri for this hat and the fallback for its
     ///                  downstream hats [optional]
     /// @return newHatId The id of the newly created Hat
@@ -142,6 +148,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint32 _maxSupply,
         address _eligibility,
         address _toggle,
+        bool _mutable,
         string memory _imageURI
     ) public returns (uint256 newHatId) {
         if (uint8(_admin) > 0) {
@@ -162,6 +169,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             _maxSupply,
             _eligibility,
             _toggle,
+            _mutable,
             _imageURI
         );
 
@@ -185,6 +193,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint32[] memory _maxSupplies,
         address[] memory _eligibilityModules,
         address[] memory _toggleModules,
+        bool[] memory _mutables,
         string[] memory _imageURIs
     ) public returns (bool) {
         // check if array lengths are the same
@@ -194,6 +203,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             length == _maxSupplies.length &&
             length == _eligibilityModules.length &&
             length == _toggleModules.length &&
+            length == _mutables.length &&
             length == _imageURIs.length);
 
         if (!sameLengths) revert BatchArrayLengthMismatch();
@@ -206,6 +216,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
                 _maxSupplies[i],
                 _eligibilityModules[i],
                 _toggleModules[i],
+                _mutables[i],
                 _imageURIs[i]
             );
         }
@@ -384,6 +395,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _maxSupply The total instances of the Hat that can be worn at once
     /// @param _eligibility The address that can report on the Hat wearer's status
     /// @param _toggle The address that can deactivate the hat [optional]
+    /// @param _mutable Whether the hat's properties are changeable after creation
     /// @param _imageURI The image uri for this top hat and the fallback for its
     ///                  downstream hats [optional]
     /// @return hat The contents of the newly created hat
@@ -393,6 +405,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint32 _maxSupply,
         address _eligibility,
         address _toggle,
+        bool _mutable,
         string memory _imageURI
     ) internal returns (Hat memory hat) {
         hat.details = _details;
@@ -403,7 +416,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         hat.toggle = _toggle;
         hat.imageURI = _imageURI;
-        hat.config = uint96(1 << 95);
+
+        hat.config = _mutable ? uint96(3 << 94) : uint96(1 << 95);
 
         _hats[_id] = hat;
 
@@ -413,6 +427,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             _maxSupply,
             _eligibility,
             _toggle,
+            _mutable,
             _imageURI
         );
     }
@@ -500,6 +515,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @return toggle The toggle address for this Hat
     /// @return imageURI The image URI used for this Hat
     /// @return lastHatId The most recently created Hat with this Hat as admin; also the count of Hats with this Hat as admin
+    /// @return mutable_ Whether this hat's properties can be changed
     /// @return active Whether the Hat is current active, as read from `_isActive`
     function viewHat(uint256 _hatId)
         public
@@ -512,6 +528,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             address toggle,
             string memory imageURI,
             uint8 lastHatId,
+            bool mutable_,
             bool active
         )
     {
@@ -523,6 +540,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         toggle = hat.toggle;
         imageURI = getImageURIForHat(_hatId);
         lastHatId = hat.lastHatId;
+        mutable_ = _isMutable(hat);
         active = _isActive(hat, _hatId);
     }
 
@@ -610,6 +628,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             _hat.config &= ~uint96(1 << 95);
         }
         
+    }
+
+    function _isMutable(Hat memory _hat) internal view returns (bool) {
+        uint96 mask = uint96(1 << 94);
+        return (_hat.config & mask != 0);
     }
 
     /// @notice Checks whether a wearer of a Hat is in good standing
@@ -746,16 +769,16 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /// @notice Constructs the URI for a Hat, using data from the Hat struct
     /// @param _hatId The id of the Hat
-    /// @return uri_ An ERC1155-compatible JSON string
+    /// @return An ERC1155-compatible JSON string
     function _constructURI(uint256 _hatId)
         internal
         view
-        returns (string memory uri_)
+        returns (string memory)
     {
         Hat memory hat = _hats[_hatId];
 
         uint256 hatAdmin;
-
+        
         if (isTopHat(_hatId)) {
             hatAdmin = _hatId;
         } else {
@@ -788,6 +811,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             Strings.toHexString(hat.eligibility),
             '", "toggle module": "',
             Strings.toHexString(hat.toggle),
+            '", "mutable": "',
+            _isMutable(hat) ? "true" : "false",
             '"'
         );
 
@@ -811,7 +836,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             )
         );
 
-        uri_ = string(abi.encodePacked("data:application/json;base64,", json));
+        return string(abi.encodePacked("data:application/json;base64,", json));
     }
 
     /*//////////////////////////////////////////////////////////////

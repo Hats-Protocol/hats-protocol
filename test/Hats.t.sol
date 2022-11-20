@@ -4,7 +4,6 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import "../src/Hats.sol";
 import "./HatsTestSetup.t.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract DeployTest is TestSetup {
     function testDeployWithParams() public {
@@ -22,7 +21,7 @@ contract CreateTopHatTest is TestSetup {
 
     function testTopHatCreated() public {
         vm.expectEmit(false, false, false, true);
-        emit HatCreated(2**224, "", 1, address(0), address(0), topHatImageURI);
+        emit HatCreated(2**224, "", 1, address(0), address(0), false, topHatImageURI);
 
         topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
 
@@ -55,9 +54,12 @@ contract CreateTopHatTest is TestSetup {
 contract CreateHatsTest is TestSetup {
     function testHatCreated() public {
         // get prelim values
-        (, , , , , , uint8 lastHatId, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastHatId, , ) = hats.viewHat(topHatId);
 
-        topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
+        vm.expectEmit(false, false, false, true);
+        emit HatCreated(hats.getNextId(topHatId), _details, _maxSupply, _eligibility, _toggle, false, secondHatImageURI);
+
+        // topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
         vm.prank(address(topHatWearer));
         hats.createHat(
             topHatId,
@@ -65,22 +67,24 @@ contract CreateHatsTest is TestSetup {
             _maxSupply,
             _eligibility,
             _toggle,
+            false,
             secondHatImageURI
         );
 
         // assert admin's lastHatId is incremented
-        (, , , , , , uint8 lastHatIdPost, ) = hats.viewHat(topHatId);
-        assertEq(++lastHatId, lastHatIdPost);
+        (, , , , , , uint8 lastHatIdPost, , ) = hats.viewHat(topHatId);
+        assertEq(lastHatId + 1, lastHatIdPost);
     }
 
     function testHatsBranchCreated() public {
         // mint TopHat
-        topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
+        // topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
 
         (uint256[] memory ids, address[] memory wearers) = createHatsBranch(
             3,
             topHatId,
-            topHatWearer
+            topHatWearer,
+            false
         );
         assertEq(hats.getHatLevel(ids[2]), 3);
         assertEq(hats.getAdminAtLevel(ids[0], 0), topHatId);
@@ -108,6 +112,7 @@ contract BatchCreateHats is TestSetupBatch {
         maxSuppliesBatch = new uint32[](count);
         eligibilityModulesBatch = new address[](count);
         toggleModulesBatch = new address[](count);
+        mutablesBatch = new bool[](count);
         imageURIsBatch = new string[](count);
 
         vm.prank(topHatWearer);
@@ -119,6 +124,7 @@ contract BatchCreateHats is TestSetupBatch {
             maxSuppliesBatch[i] = 10;
             eligibilityModulesBatch[i] = _eligibility;
             toggleModulesBatch[i] = _toggle;
+            mutablesBatch[i] = false;
             imageURIsBatch[i] = "";
         }
 
@@ -128,23 +134,18 @@ contract BatchCreateHats is TestSetupBatch {
             maxSuppliesBatch,
             eligibilityModulesBatch,
             toggleModulesBatch,
+            mutablesBatch,
             imageURIsBatch
         );
 
-        (, , , , , , uint8 lastHatId, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastHatId, , ) = hats.viewHat(topHatId);
 
         assertEq(lastHatId, count);
 
-        (, , , , address t, , , ) = hats.viewHat(
+        (, , , , address t, , , , ) = hats.viewHat(
             hats.buildHatId(topHatId, uint8(count))
         );
         assertEq(t, _toggle);
-    }
-
-    function testTemp() public {
-        hats.getHatLevel(
-            27065671948198289362489238675596178244906309694785829628088330289409
-        );
     }
 
     function testBatchCreateHatsSkinnyFullBranch() public {
@@ -155,6 +156,7 @@ contract BatchCreateHats is TestSetupBatch {
         maxSuppliesBatch = new uint32[](count);
         eligibilityModulesBatch = new address[](count);
         toggleModulesBatch = new address[](count);
+        mutablesBatch = new bool[](count);
         imageURIsBatch = new string[](count);
 
         uint256 adminId = topHatId;
@@ -168,6 +170,7 @@ contract BatchCreateHats is TestSetupBatch {
             maxSuppliesBatch[i] = level;
             eligibilityModulesBatch[i] = _eligibility;
             toggleModulesBatch[i] = _toggle;
+            mutablesBatch[i] = false;
             imageURIsBatch[i] = vm.toString(level);
 
             adminId = hats.buildHatId(adminId, 1);
@@ -181,6 +184,7 @@ contract BatchCreateHats is TestSetupBatch {
             maxSuppliesBatch,
             eligibilityModulesBatch,
             toggleModulesBatch,
+            mutablesBatch,
             imageURIsBatch
         );
 
@@ -204,7 +208,7 @@ contract BatchCreateHats is TestSetupBatch {
         // count = 2;
         offset = bound(offset, 1, 255 - count);
         // offset = 1;
-        array = bound(array, 1, 6);
+        array = bound(array, 1, 7);
 
         uint256 extra = count + offset;
         // initiate the creation arrays
@@ -214,6 +218,7 @@ contract BatchCreateHats is TestSetupBatch {
             maxSuppliesBatch = new uint32[](count);
             eligibilityModulesBatch = new address[](count);
             toggleModulesBatch = new address[](count);
+            mutablesBatch = new bool[](count);
             imageURIsBatch = new string[](count);
         } else if (array == 2) {
             adminsBatch = new uint256[](count);
@@ -221,6 +226,7 @@ contract BatchCreateHats is TestSetupBatch {
             maxSuppliesBatch = new uint32[](count);
             eligibilityModulesBatch = new address[](count);
             toggleModulesBatch = new address[](count);
+            mutablesBatch = new bool[](count);
             imageURIsBatch = new string[](count);
         } else if (array == 3) {
             adminsBatch = new uint256[](count);
@@ -228,6 +234,7 @@ contract BatchCreateHats is TestSetupBatch {
             maxSuppliesBatch = new uint32[](extra);
             eligibilityModulesBatch = new address[](count);
             toggleModulesBatch = new address[](count);
+            mutablesBatch = new bool[](count);
             imageURIsBatch = new string[](count);
         } else if (array == 4) {
             adminsBatch = new uint256[](count);
@@ -235,6 +242,7 @@ contract BatchCreateHats is TestSetupBatch {
             maxSuppliesBatch = new uint32[](count);
             eligibilityModulesBatch = new address[](extra);
             toggleModulesBatch = new address[](count);
+            mutablesBatch = new bool[](count);
             imageURIsBatch = new string[](count);
         } else if (array == 5) {
             adminsBatch = new uint256[](count);
@@ -242,6 +250,7 @@ contract BatchCreateHats is TestSetupBatch {
             maxSuppliesBatch = new uint32[](count);
             eligibilityModulesBatch = new address[](count);
             toggleModulesBatch = new address[](extra);
+            mutablesBatch = new bool[](count);
             imageURIsBatch = new string[](count);
         } else if (array == 6) {
             adminsBatch = new uint256[](count);
@@ -249,6 +258,15 @@ contract BatchCreateHats is TestSetupBatch {
             maxSuppliesBatch = new uint32[](count);
             eligibilityModulesBatch = new address[](count);
             toggleModulesBatch = new address[](count);
+            mutablesBatch = new bool[](extra);
+            imageURIsBatch = new string[](count);
+        }else if (array == 7) {
+            adminsBatch = new uint256[](count);
+            detailsBatch = new string[](count);
+            maxSuppliesBatch = new uint32[](count);
+            eligibilityModulesBatch = new address[](count);
+            toggleModulesBatch = new address[](count);
+            mutablesBatch = new bool[](count);
             imageURIsBatch = new string[](extra);
         }
 
@@ -261,6 +279,7 @@ contract BatchCreateHats is TestSetupBatch {
             maxSuppliesBatch[i] = i;
             eligibilityModulesBatch[i] = _eligibility;
             toggleModulesBatch[i] = _toggle;
+            mutablesBatch[i] = false;
             imageURIsBatch[i] = vm.toString(i);
         }
 
@@ -271,7 +290,8 @@ contract BatchCreateHats is TestSetupBatch {
             if (array == 3) maxSuppliesBatch[j] = j;
             if (array == 4) eligibilityModulesBatch[j] = _eligibility;
             if (array == 5) toggleModulesBatch[j] = _toggle;
-            if (array == 6) imageURIsBatch[j] = vm.toString(j);
+            if (array == 6) mutablesBatch[j] = false;
+            if (array == 7) imageURIsBatch[j] = vm.toString(j);
         }
 
         // adminsBatch[count] = topHatId;
@@ -286,6 +306,7 @@ contract BatchCreateHats is TestSetupBatch {
             maxSuppliesBatch,
             eligibilityModulesBatch,
             toggleModulesBatch,
+            mutablesBatch,
             imageURIsBatch
         );
     }
@@ -315,6 +336,7 @@ contract ImageURITest is TestSetup2 {
             2, // maxSupply
             _eligibility,
             _toggle,
+            false,
             ""
         );
 
@@ -340,7 +362,7 @@ contract ImageURITest is TestSetup2 {
     function testEmptyHatBranchImageURI() public {
         uint256 topHat = hats.mintTopHat(topHatWearer, "");
 
-        (uint256[] memory ids, ) = createHatsBranch(5, topHat, topHatWearer);
+        (uint256[] memory ids, ) = createHatsBranch(5, topHat, topHatWearer, false);
 
         string memory uri = hats.getImageURIForHat(ids[4]);
 
@@ -368,6 +390,7 @@ contract MintHatsTest is TestSetup {
             2, // maxSupply
             _eligibility,
             _toggle,
+            false,
             secondHatImageURI
         );
     }
@@ -409,7 +432,7 @@ contract MintHatsTest is TestSetup {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(thirdWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
-        (, , , , , , uint8 lastHatId_pre, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastHatId_pre, , ) = hats.viewHat(topHatId);
 
         // mint hat
         vm.prank(address(topHatWearer));
@@ -429,7 +452,7 @@ contract MintHatsTest is TestSetup {
         assertEq(hats.hatSupply(secondHatId), supply_pre + 2);
 
         // assert admin's lastHatId is *not* incremented
-        (, , , , , , uint8 lastHatId_post, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastHatId_post, , ) = hats.viewHat(topHatId);
         assertEq(lastHatId_post, lastHatId_pre);
     }
 
@@ -437,7 +460,7 @@ contract MintHatsTest is TestSetup {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(thirdWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
-        (, , , , , , uint8 lastHatId_pre, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastHatId_pre, , ) = hats.viewHat(topHatId);
 
         // mint hat
         vm.prank(address(topHatWearer));
@@ -457,7 +480,7 @@ contract MintHatsTest is TestSetup {
         hats.mintHat(secondHatId, secondWearer);
 
         // assert balance is only incremented by 1
-        assertEq(hats.balanceOf(secondWearer, secondHatId), ++balance_pre);
+        assertEq(hats.balanceOf(secondWearer, secondHatId), balance_pre + 1);
 
         // assert isWearer is true
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
@@ -466,7 +489,7 @@ contract MintHatsTest is TestSetup {
         assertEq(hats.hatSupply(secondHatId), supply_pre + 1);
 
         // assert admin's lastHatId is *not* incremented
-        (, , , , , , uint8 lastHatId_post, ) = hats.viewHat(topHatId);
+        (, , , , , , uint8 lastHatId_post, , ) = hats.viewHat(topHatId);
         assertEq(lastHatId_post, lastHatId_pre);
     }
 
@@ -518,8 +541,8 @@ contract MintHatsTest is TestSetup {
         hats.mintHat(secondHatId, thirdWearer);
 
         // assert balances are modified correctly
-        assertEq(hats.balanceOf(topHatWearer, secondHatId), ++balance1_pre);
-        assertEq(hats.balanceOf(secondWearer, secondHatId), ++balance2_pre);
+        assertEq(hats.balanceOf(topHatWearer, secondHatId), balance1_pre + 1);
+        assertEq(hats.balanceOf(secondWearer, secondHatId), balance2_pre + 1);
         assertEq(hats.balanceOf(thirdWearer, secondHatId), balance3_pre);
 
         // assert correct Wearers is true
@@ -582,6 +605,7 @@ contract MintHatsTest is TestSetup {
                 1,
                 topHatWearer,
                 topHatWearer,
+                false,
                 ""
             );
 
@@ -591,7 +615,7 @@ contract MintHatsTest is TestSetup {
 
         hats.batchMintHats(hatBatch, wearerBatch);
 
-        (, , , , , , uint8 lastHatId, ) = hats.viewHat(secondHatId);
+        (, , , , , , uint8 lastHatId, , ) = hats.viewHat(secondHatId);
 
         assertEq(lastHatId, count);
     }
@@ -618,6 +642,7 @@ contract MintHatsTest is TestSetup {
                 1,
                 topHatWearer,
                 topHatWearer,
+                false,
                 ""
             );
 
@@ -633,6 +658,7 @@ contract MintHatsTest is TestSetup {
                 1,
                 topHatWearer,
                 topHatWearer,
+                false,
                 ""
             );
             hatBatch[count - 1 + j] = id;
@@ -647,25 +673,39 @@ contract MintHatsTest is TestSetup {
 }
 
 contract ViewHatTests is TestSetup2 {
-    function testViewHat() public {
-        string memory retdetails;
-        uint32 retmaxSupply;
-        uint32 retsupply;
-        address reteligibility;
-        address rettoggle;
-        string memory retimageURI;
-        uint8 retlastHatId;
-        bool retactive;
+    function testViewHat1() public {
+
+        (
+            ,
+            ,
+            ,
+            ,
+            rettoggle,
+            retimageURI,
+            retlastHatId,
+            retmutable,
+            retactive
+        ) = hats.viewHat(secondHatId);
+
+        assertEq(rettoggle, address(333));
+        assertEq(retimageURI, secondHatImageURI);
+        assertEq(retlastHatId, 0);
+        assertEq(retmutable, false);
+        assertEq(retactive, true);
+    }
+
+    function testViewHat2() public {
 
         (
             retdetails,
             retmaxSupply,
             retsupply,
             reteligibility,
-            rettoggle,
-            retimageURI,
-            retlastHatId,
-            retactive
+            ,
+            ,
+            ,
+            ,
+            
         ) = hats.viewHat(secondHatId);
 
         // 3-1. viewHat - displays params as expected
@@ -673,45 +713,44 @@ contract ViewHatTests is TestSetup2 {
         assertEq(retmaxSupply, 2);
         assertEq(retsupply, 1);
         assertEq(reteligibility, address(555));
-        assertEq(rettoggle, address(333));
-        // assertEq(retimageURI, string.concat(secondHatImageURI, "0"));
-        assertEq(retimageURI, secondHatImageURI);
-        assertEq(retlastHatId, 0);
+    }
+
+    function testViewHatOfTopHat1() public {
+        (
+            ,
+            ,
+            ,
+            ,
+            rettoggle,
+            retimageURI,
+            retlastHatId,
+            retmutable,
+            retactive
+        ) = hats.viewHat(topHatId);
+
+        assertEq(rettoggle, address(0));
+        assertEq(retlastHatId, 1);
+        assertEq(retmutable, false);
         assertEq(retactive, true);
     }
 
-    function testViewHatOfTopHat() public {
-        string memory retdetails;
-        uint32 retmaxSupply;
-        uint32 retsupply;
-        address reteligibility;
-        address rettoggle;
-        string memory retimageURI;
-        uint8 retlastHatId;
-        bool retactive;
-
+    function testViewHatOfTopHat2() public {
         (
             retdetails,
             retmaxSupply,
             retsupply,
             reteligibility,
-            rettoggle,
-            retimageURI,
-            retlastHatId,
-            retactive
+            ,
+            ,
+            ,
+            ,
         ) = hats.viewHat(topHatId);
 
         assertEq(retdetails, "");
         assertEq(retmaxSupply, 1);
         assertEq(retsupply, 1);
         assertEq(reteligibility, address(0));
-        assertEq(rettoggle, address(0));
-        assertEq(retlastHatId, 1);
-        assertEq(retactive, true);
     }
-
-    // TODO: do any other public functions need to be added here?
-    // many of the other public functions are tested in the assertions of other tests (e.g. getAdminAtLevel)
 
     function testIsAdminOfHat() public {
         assertTrue(hats.isAdminOfHat(topHatWearer, secondHatId));

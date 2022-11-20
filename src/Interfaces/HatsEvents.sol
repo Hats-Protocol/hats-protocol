@@ -8,6 +8,7 @@ interface HatsEvents {
         uint32 maxSupply,
         address eligibility,
         address toggle,
+        bool mutable_,
         string imageURI
     );
 

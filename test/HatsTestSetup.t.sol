@@ -37,24 +37,19 @@ abstract contract TestVariables is HatsEvents, HatsErrors {
     uint32[] maxSuppliesBatch;
     address[] eligibilityModulesBatch;
     address[] toggleModulesBatch;
+    bool[] mutablesBatch;
     string[] imageURIsBatch;
 
-    // event HatCreated(
-    //     uint256 id,
-    //     string details,
-    //     uint32 maxSupply,
-    //     address eligibility,
-    //     address toggle,
-    //     string imageURI
-    // );
-    // event HatRenounced(uint256 hatId, address wearer);
-    // event WearerStatus(
-    //     uint256 hatId,
-    //     address wearer,
-    //     bool revoke,
-    //     bool wearerStanding
-    // );
-    // event HatStatusChanged(uint256 hatId, bool newStatus);
+    string retdetails;
+    uint32 retmaxSupply;
+    uint32 retsupply;
+    address reteligibility;
+    address rettoggle;
+    string retimageURI;
+    uint8 retlastHatId;
+    bool retmutable;
+    bool retactive;
+
     event TransferSingle(
         address indexed operator,
         address indexed from,
@@ -107,7 +102,8 @@ abstract contract TestSetup is Test, TestVariables {
     function createHatsBranch(
         uint256 _length,
         uint256 _topHatId,
-        address _topHatWearer
+        address _topHatWearer,
+        bool _mutable
     ) internal returns (uint256[] memory ids, address[] memory wearers) {
         uint256 id;
         address wearer;
@@ -131,6 +127,7 @@ abstract contract TestSetup is Test, TestVariables {
                 _maxSupply,
                 _eligibility,
                 _toggle,
+                _mutable,
                 "" // imageURI
             );
             ids[i] = id;
@@ -159,6 +156,7 @@ abstract contract TestSetup2 is TestSetup {
             2, // maxSupply
             _eligibility,
             _toggle,
+            false,
             secondHatImageURI
         );
 

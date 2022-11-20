@@ -15,6 +15,7 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
         uint32 _maxSupply,
         address _eligibility,
         address _toggle,
+        bool _mutable,
         string memory _topHatImageURI,
         string memory _firstHatImageURI
     ) external returns (uint256 topHatId, uint256 firstHatId);
@@ -25,6 +26,7 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
         uint32 _maxSupply,
         address _eligibility,
         address _toggle,
+        bool _mutable,
         string memory _imageURI
     ) external returns (uint256 newHatId);
 
@@ -34,6 +36,7 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
         uint32[] memory _maxSupplies,
         address[] memory _eligibilityModules,
         address[] memory _toggleModules,
+        bool[] memory _mutables,
         string[] memory _imageURIs
     ) external returns (bool);
 
@@ -85,6 +88,7 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
             address toggle,
             string memory imageURI,
             uint8 lastHatId,
+            bool mutable_,
             bool active
         );
 
