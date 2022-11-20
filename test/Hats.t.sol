@@ -1194,7 +1194,6 @@ contract MutabilityTests is TestSetup {
 
         // create a mutable Hat
         vm.prank(topHatWearer);
-        console2.log("-- second hat --");
         secondHatId = hats.createHat(
             topHatId,
             "mutable hat",
@@ -1208,9 +1207,12 @@ contract MutabilityTests is TestSetup {
 
     function testAdminCanMakeMutableHatImmutable() public {
         assertTrue(hats.isMutable(secondHatId));
+
+        vm.expectEmit(false, false, false, true);
+        emit HatMutabilityChanged(secondHatId);
+
         vm.prank(topHatWearer);
-        
-        hats.makeImmutable(secondHatId);
+        hats.makeHatImmutable(secondHatId);
         
         assertFalse(hats.isMutable(secondHatId));
     }
@@ -1228,16 +1230,159 @@ contract MutabilityTests is TestSetup {
 
         assertFalse(hats.isMutable(thirdHatId));
 
-        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyImmutable.selector));
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
 
         vm.prank(topHatWearer);
-        hats.makeImmutable(thirdHatId);
+        hats.makeHatImmutable(thirdHatId);
     }
 
     function testNonAdminCannotMakeMutableHatImmutable() public {
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, address(this), secondHatId));
         
-        hats.makeImmutable(secondHatId);
+        hats.makeHatImmutable(secondHatId);
+    }
+
+    function testAdminCannotChangeImutableHatProperties() public {
+        vm.startPrank(topHatWearer);
+        thirdHatId = hats.createHat(topHatId,
+            "immutable hat",
+            3, // maxSupply
+            _eligibility,
+            _toggle,
+            false,
+            secondHatImageURI);
+
+        assertFalse(hats.isMutable(thirdHatId));
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
+        hats.changeHatDetails(thirdHatId, "should not work");
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
+        hats.changeHatEligibility(thirdHatId, address(this));
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
+        hats.changeHatToggle(thirdHatId, address(this));
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
+        hats.changeHatImageURI(thirdHatId, "should not work either");
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
+        hats.changeHatMaxSupply(thirdHatId, uint32(100));
+
+        vm.stopPrank();
+    }
+
+    function testAdminCanChangeMutableHatDetails() public {
+        string memory new_ = "should work";
+
+        vm.expectEmit(false, false, false, true);
+        emit HatDetailsChanged(secondHatId, new_);
+
+        vm.prank(topHatWearer);
+        hats.changeHatDetails(secondHatId, new_);
+
+        (string memory changed,,,,,,,,) = hats.viewHat(secondHatId);
+        assertEq(changed, new_);
+    }
+
+    function testAdminCanChangeMutableHatEligibility() public {
+        address new_ = address(this);
+
+        vm.expectEmit(false, false, false, true);
+        emit HatEligibilityChanged(secondHatId, new_);
+
+        vm.prank(topHatWearer);
+        hats.changeHatEligibility(secondHatId, new_);
+
+        (,,,address changed,,,,,) = hats.viewHat(secondHatId);
+        assertEq(changed, new_);
+    }
+
+    function testAdminCanChangeMutableHatToggle() public {
+        address new_ = address(this);
+
+        vm.expectEmit(false, false, false, true);
+        emit HatToggleChanged(secondHatId, new_);
+
+        vm.prank(topHatWearer);
+        hats.changeHatToggle(secondHatId, new_);
+
+        (,,,,address changed,,,,) = hats.viewHat(secondHatId);
+        assertEq(changed, new_);
+    }
+
+    function testAdminCanChangeMutableHatImageURI() public {
+        string memory new_ = "should work";
+
+        vm.expectEmit(false, false, false, true);
+        emit HatImageURIChanged(secondHatId, new_);
+
+        vm.prank(topHatWearer);
+        hats.changeHatImageURI(secondHatId, new_);
+
+        (,,,,,string memory changed,,,) = hats.viewHat(secondHatId);
+        assertEq(changed, new_);
+    }
+
+    function testAdminCanIncreaseMutableHatMaxSupply() public {
+        uint32 new_ = 100;
+
+        vm.expectEmit(false, false, false, true);
+        emit HatMaxSupplyChanged(secondHatId, new_);
+
+        vm.prank(topHatWearer);
+        hats.changeHatMaxSupply(secondHatId, new_);
+
+        (,uint32 changed,,,,,,,) = hats.viewHat(secondHatId);
+        assertEq(changed, new_);
+    }
+
+    function testAdminCanDecreaseMutableHatMaxSupplyToAboveCurrentSupply() public {
+        uint32 new_ = 100;
+        uint32 decreased = 5;
+
+        vm.startPrank(topHatWearer);
+        hats.changeHatMaxSupply(secondHatId, new_);
+        hats.mintHat(secondHatId, secondWearer);
+
+        vm.expectEmit(false, false, false, true);
+        emit HatMaxSupplyChanged(secondHatId, decreased);
+
+        hats.changeHatMaxSupply(secondHatId, decreased);
+
+        (,uint32 changed,,,,,,,) = hats.viewHat(secondHatId);
+        assertEq(changed, decreased);
+    }
+
+    function testAdminCanDecreaseMutableHatMaxSupplyToEqualToCurrentSupply() public {
+        uint32 new_ = 100;
+        uint32 decreased = 1;
+
+        vm.startPrank(topHatWearer);
+        hats.changeHatMaxSupply(secondHatId, new_);
+        hats.mintHat(secondHatId, secondWearer);
+
+        vm.expectEmit(false, false, false, true);
+        emit HatMaxSupplyChanged(secondHatId, decreased);
+
+        hats.changeHatMaxSupply(secondHatId, decreased);
+
+        (,uint32 changed,,,,,,,) = hats.viewHat(secondHatId);
+        assertEq(changed, decreased);
+    }
+
+    function testAdminCannotDecreaseMutableHatMaxSupplyBelowCurrentSupply() public {
+        uint32 new_ = 100;
+        uint32 decreased = 1;
+
+        vm.startPrank(topHatWearer);
+        hats.changeHatMaxSupply(secondHatId, new_);
+        hats.mintHat(secondHatId, secondWearer);
+        hats.mintHat(secondHatId, thirdWearer);
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NewMaxSupplyTooLow.selector));
+
+        hats.changeHatMaxSupply(secondHatId, decreased);
     }
 }
 

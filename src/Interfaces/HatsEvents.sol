@@ -22,4 +22,16 @@ interface HatsEvents {
     );
 
     event HatStatusChanged(uint256 hatId, bool newStatus);
+
+    event HatDetailsChanged(uint256 hatId, string newDetails);
+
+    event HatEligibilityChanged(uint256 hatId, address newEligibility);
+
+    event HatToggleChanged(uint256 hatId, address newToggle);
+
+    event HatMutabilityChanged(uint256 hatId);
+
+    event HatMaxSupplyChanged(uint256 hatId, uint32 newMaxSupply);
+
+    event HatImageURIChanged(uint256 hatId, string newImageURI);
 }

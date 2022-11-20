@@ -2,7 +2,7 @@
 pragma solidity >=0.8.13;
 
 import {ERC1155} from "ERC1155/ERC1155.sol";
-import "forge-std/Test.sol"; //remove after testing
+// import "forge-std/Test.sol"; //remove after testing
 import "./Interfaces/IHats.sol";
 import "./HatsIdUtilities.sol";
 import "./HatsToggle/IHatsToggle.sol";
@@ -35,7 +35,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /* Hat.config schema (by bit)
     *  0th bit  | `active` status; can be altered by toggle, via setHatStatus()
-    *  1        | `mutable` option, only se
+    *  1        | `mutable` option
     *  2 - 95   | unassigned
     */
 
@@ -380,39 +380,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         emit HatRenounced(_hatId, msg.sender);
     }
 
-    function makeImmutable(uint256 _hatId) external returns (uint96) {
-        // only the wearer of a hat's admin Hat can turn it to immutable
-        if (!isAdminOfHat(msg.sender, _hatId)) {
-            revert NotAdmin(msg.sender, _hatId);
-        }
-
-        Hat storage hat = _hats[_hatId];
-
-        
-
-        // console2.log("before...mutable?", _isMutable(hat));
-        console2.log("before...config", Strings.toHexString(hat.config));
-
-        if (!_isMutable(hat)) { 
-            revert AlreadyImmutable();
-        }
-
-        console.log("--- makeMutable ---");
-        console2.log("make config ", Strings.toHexString(hat.config));
-        console2.log("make ~mask  ", Strings.toHexString(uint96(1 << 94)));
-        console2.log("make mask   ", Strings.toHexString(~uint96(1 << 94)));
-        console2.log("make result ", Strings.toHexString(hat.config & ~uint96(1 << 94)));
-
-        hat.config &= ~uint96(1 << 94);
-
-        // console2.log("after...mutable?", _isMutable(hat));
-        console2.log("after...config", Strings.toHexString(hat.config));
-        console2.log("after...hatId", Strings.toString(_hatId));
-
-        console2.log("make view config", Strings.toHexString(hat.config));
-
-        return hat.config;
-    }
+    
 
     /*//////////////////////////////////////////////////////////////
                               HATS INTERNAL LOGIC
@@ -527,11 +495,122 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         emit TransferSingle(msg.sender, _from, _to, _hatId, 1);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                              HATS ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
     function _checkAdmin(uint256 _hatId) internal {
         if (!isAdminOfHat(msg.sender, _hatId)) {
             revert NotAdmin(msg.sender, _hatId);
         }
     } 
+
+    /// @notice Set a mutable hat to immutable
+    /// @dev Sets the second bit of hat.config to 0
+    /// @param _hatId The id of the Hat to make immutable
+    function makeHatImmutable(uint256 _hatId) external {
+        _checkAdmin(_hatId);
+
+        Hat storage hat = _hats[_hatId];
+
+        if (!_isMutable(hat)) { 
+            revert Immutable();
+        }
+
+        hat.config &= ~uint96(1 << 94);
+
+        emit HatMutabilityChanged(_hatId);
+    }
+
+    /// @notice Change a hat's details
+    /// @dev Hat must be mutable
+    /// @param _hatId The id of the Hat to change
+    /// @param _newDetails The new details
+    function changeHatDetails(uint256 _hatId, string memory _newDetails) external  {
+        _checkAdmin(_hatId);
+        Hat storage hat = _hats[_hatId];
+
+        if (!_isMutable(hat)) {
+            revert Immutable();
+        }
+
+        hat.details = _newDetails;
+
+        emit HatDetailsChanged(_hatId, _newDetails);
+    }
+
+    /// @notice Change a hat's details
+    /// @dev Hat must be mutable
+    /// @param _hatId The id of the Hat to change
+    /// @param _newEligibility The new eligibility module
+    function changeHatEligibility(uint256 _hatId, address _newEligibility) external  {
+        _checkAdmin(_hatId);
+        Hat storage hat = _hats[_hatId];
+
+        if (!_isMutable(hat)) {
+            revert Immutable();
+        }
+
+        hat.eligibility = _newEligibility;
+
+        emit HatEligibilityChanged(_hatId, _newEligibility);
+    }
+
+    /// @notice Change a hat's details
+    /// @dev Hat must be mutable
+    /// @param _hatId The id of the Hat to change
+    /// @param _newToggle The new toggle module
+    function changeHatToggle(uint256 _hatId, address _newToggle) external  {
+        _checkAdmin(_hatId);
+        Hat storage hat = _hats[_hatId];
+
+        if (!_isMutable(hat)) {
+            revert Immutable();
+        }
+
+        hat.toggle = _newToggle;
+
+        emit HatToggleChanged(_hatId, _newToggle);
+    }
+
+    /// @notice Change a hat's details
+    /// @dev Hat must be mutable
+    /// @param _hatId The id of the Hat to change
+    /// @param _newImageURI The new imageURI
+    function changeHatImageURI(uint256 _hatId, string memory _newImageURI) external  {
+        _checkAdmin(_hatId);
+        Hat storage hat = _hats[_hatId];
+
+        if (!_isMutable(hat)) {
+            revert Immutable();
+        }
+
+        hat.imageURI = _newImageURI;
+
+        emit HatImageURIChanged(_hatId, _newImageURI);
+    }
+
+    /// @notice Change a hat's details
+    /// @dev Hat must be mutable; new max supply cannot be greater than current supply
+    /// @param _hatId The id of the Hat to change
+    /// @param _newMaxSupply The new max supply
+    function changeHatMaxSupply(uint256 _hatId, uint32 _newMaxSupply) external  {
+        _checkAdmin(_hatId);
+        Hat storage hat = _hats[_hatId];
+
+        if (!_isMutable(hat)) {
+            revert Immutable();
+        }
+
+        if (_newMaxSupply < hatSupply[_hatId]) {
+            revert NewMaxSupplyTooLow();
+        }
+
+        hat.maxSupply = _newMaxSupply;
+
+        emit HatMaxSupplyChanged(_hatId, _newMaxSupply);
+    }
+
     /*//////////////////////////////////////////////////////////////
                               HATS VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -562,9 +641,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             bool active
         )
     {
-        console2.log("-- viewHat --");
         Hat memory hat = _hats[_hatId];
-        console2.log("view config", Strings.toHexString(hat.config));
         details = hat.details;
         maxSupply = hat.maxSupply;
         supply = hatSupply[_hatId];
@@ -681,9 +758,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     {
         (bool success, bytes memory returndata) = _hats[_hatId].eligibility.staticcall(
             abi.encodeWithSignature(
-            "getWearerStatus(address,uint256)",
-            _wearer,
-            _hatId
+                "getWearerStatus(address,uint256)",
+                _wearer,
+                _hatId
             )
         );
 
@@ -707,9 +784,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     ) internal view returns (bool eligible) {
         (bool success, bytes memory returndata) = _hat.eligibility.staticcall(
                 abi.encodeWithSignature(
-            "getWearerStatus(address,uint256)",
-            _wearer,
-            _hatId
+                "getWearerStatus(address,uint256)",
+                _wearer,
+                _hatId
             )
         );
 

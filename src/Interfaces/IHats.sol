@@ -74,6 +74,22 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
     ) external;
 
     /*//////////////////////////////////////////////////////////////
+                              HATS ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    function makeHatImmutable(uint256 _hatId) external;
+
+    function changeHatDetails(uint256 _hatId, string memory _newDetails) external;
+
+    function changeHatEligibility(uint256 _hatId, address _newEligibility) external;
+
+    function changeHatToggle(uint256 _hatId, address _newToggle) external;
+
+    function changeHatImageURI(uint256 _hatId, string memory _newImageURI) external;
+
+    function changeHatMaxSupply(uint256 _hatId, uint32 _newMaxSupply) external;
+
+    /*//////////////////////////////////////////////////////////////
                               VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
