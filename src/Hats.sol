@@ -623,7 +623,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     function _isActive(Hat memory _hat, uint256 _hatId)
         internal
         view
-        returns (bool active)
+        returns (bool)
     {
         bytes memory data = abi.encodeWithSignature(
             "getHatStatus(uint256)",
@@ -633,9 +633,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         (bool success, bytes memory returndata) = _hat.toggle.staticcall(data);
 
         if (success && returndata.length > 0) {
-            active = abi.decode(returndata, (bool));
+            return abi.decode(returndata, (bool));
         } else {
-            active = _getHatStatus(_hat);
+            return _getHatStatus(_hat);
         }
     }
 
@@ -644,8 +644,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hatId The id of the hat
     /// @return bool The active status of the hat
     function isActive(uint256 _hatId) public view returns (bool) {
-        Hat memory hat = _hats[_hatId];
-        return _isActive(hat, _hatId);
+        return _isActive(_hats[_hatId], _hatId);
     }
 
     function _getHatStatus(Hat memory _hat) internal view returns (bool) {
@@ -662,22 +661,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     function _isMutable(Hat memory _hat) internal view returns (bool) {
-        uint96 mask = uint96(1 << 94);
-        // TODO enter logs to check values
-
-        console2.log("-- _isMutable -- ");
-
-        console2.log("is config ", Strings.toHexString(_hat.config));
-        console2.log("is mask  ", Strings.toHexString(mask));
-        console2.log("is bit    ", Strings.toHexString(_hat.config & mask));
-        console2.log("is result ", _hat.config & mask != 0);
-
-        return (_hat.config & mask != 0);
+        return (_hat.config & uint96(1 << 94) != 0);
     }
 
     function isMutable(uint256 _hatId) public view returns (bool) {
-        Hat memory hat = _hats[_hatId];
-        return _isMutable(hat);
+        return _isMutable(_hats[_hatId]);
     }
 
     /// @notice Checks whether a wearer of a Hat is in good standing
@@ -690,15 +678,12 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         view
         returns (bool standing)
     {
-        Hat memory hat = _hats[_hatId];
-        bytes memory data = abi.encodeWithSignature(
+        (bool success, bytes memory returndata) = _hats[_hatId].eligibility.staticcall(
+            abi.encodeWithSignature(
             "getWearerStatus(address,uint256)",
             _wearer,
             _hatId
-        );
-
-        (bool success, bytes memory returndata) = hat.eligibility.staticcall(
-            data
+            )
         );
 
         if (success && returndata.length > 0) {
@@ -719,14 +704,12 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         Hat memory _hat,
         uint256 _hatId
     ) internal view returns (bool eligible) {
-        bytes memory data = abi.encodeWithSignature(
+        (bool success, bytes memory returndata) = _hat.eligibility.staticcall(
+                abi.encodeWithSignature(
             "getWearerStatus(address,uint256)",
             _wearer,
             _hatId
-        );
-
-        (bool success, bytes memory returndata) = _hat.eligibility.staticcall(
-            data
+            )
         );
 
         if (success && returndata.length > 0) {
@@ -749,8 +732,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         view
         returns (bool)
     {
-        Hat memory hat = _hats[_hatId];
-        return _isEligible(_wearer, hat, _hatId);
+        // Hat memory hat = _hats[_hatId];
+        return _isEligible(_wearer, _hats[_hatId], _hatId);
     }
 
     /// @notice Gets the imageURI for a given hat
@@ -859,7 +842,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             '"'
         );
 
-        string memory json = Base64.encode(
+        return string(abi.encodePacked("data:application/json;base64,", Base64.encode(
             bytes(
                 string.concat(
                     '{"name": "',
@@ -877,9 +860,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
                     "}"
                 )
             )
-        );
-
-        return string(abi.encodePacked("data:application/json;base64,", json));
+        )));
     }
 
     /*//////////////////////////////////////////////////////////////
