@@ -409,16 +409,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         string memory _imageURI
     ) internal returns (Hat memory hat) {
         hat.details = _details;
-
         hat.maxSupply = _maxSupply;
-
         hat.eligibility = _eligibility;
-
         hat.toggle = _toggle;
         hat.imageURI = _imageURI;
-
         hat.config = _mutable ? uint96(3 << 94) : uint96(1 << 95);
-
         _hats[_id] = hat;
 
         emit HatCreated(
@@ -636,7 +631,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Checks whether a wearer of a Hat is in good standing
-    /// @dev Public function for use when passing a Hat object is not possible or preferable
+    /// @dev Public function for use when pa    ssing a Hat object is not possible or preferable
     /// @param _wearer The address of the Hat wearer
     /// @param _hatId The id of the Hat
     /// @return standing Whether the wearer is in good standing
@@ -741,11 +736,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         // otherwise, we check each of its admins for a valid imageURI
         uint256 id;
-        console2.log("level", level);
 
         // already checked at `level` above, so we start the loop at `level - 1`
         for (uint256 i = level - 1; i > 0; --i) {
-            console2.log("i", i);
             id = getAdminAtLevel(_hatId, uint8(i));
             hat = _hats[id];
             imageURI = hat.imageURI;

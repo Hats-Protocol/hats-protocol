@@ -52,7 +52,7 @@ contract CreateTopHatTest is TestSetup {
 }
 
 contract CreateHatsTest is TestSetup {
-    function testHatCreated() public {
+    function testImmutableHatCreated() public {
         // get prelim values
         (, , , , , , uint8 lastHatId, , ) = hats.viewHat(topHatId);
 
@@ -61,7 +61,8 @@ contract CreateHatsTest is TestSetup {
 
         // topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
         vm.prank(address(topHatWearer));
-        hats.createHat(
+
+        secondHatId = hats.createHat(
             topHatId,
             _details,
             _maxSupply,
@@ -73,7 +74,30 @@ contract CreateHatsTest is TestSetup {
 
         // assert admin's lastHatId is incremented
         (, , , , , , uint8 lastHatIdPost, , ) = hats.viewHat(topHatId);
+        (, , , , , , , bool mutable_, ) = hats.viewHat(secondHatId);
         assertEq(lastHatId + 1, lastHatIdPost);
+        assertFalse(mutable_);
+    }
+
+    function testMutableHatCreated() public {
+        vm.expectEmit(false, false, false, true);
+        emit HatCreated(hats.getNextId(topHatId), _details, _maxSupply, _eligibility, _toggle, true, secondHatImageURI);
+
+        console2.log("secondHat");
+
+        vm.prank(address(topHatWearer));
+        secondHatId = hats.createHat(
+            topHatId,
+            _details,
+            _maxSupply,
+            _eligibility,
+            _toggle,
+            true,
+            secondHatImageURI
+        );
+
+        (, , , , , , , bool mutable_, ) = hats.viewHat(secondHatId);
+        assertTrue(mutable_);
     }
 
     function testHatsBranchCreated() public {
