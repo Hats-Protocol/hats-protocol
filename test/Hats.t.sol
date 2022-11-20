@@ -1188,6 +1188,59 @@ contract ToggleGetHatsTest is TestSetup2 {
     }
 }
 
+contract MutabilityTests is TestSetup {
+    function setUp() public override {
+        super.setUp();
+
+        // create a mutable Hat
+        vm.prank(topHatWearer);
+        console2.log("-- second hat --");
+        secondHatId = hats.createHat(
+            topHatId,
+            "mutable hat",
+            2, // maxSupply
+            _eligibility,
+            _toggle,
+            true,
+            secondHatImageURI
+        );
+    }
+
+    function testAdminCanMakeMutableHatImmutable() public {
+        assertTrue(hats.isMutable(secondHatId));
+        vm.prank(topHatWearer);
+        
+        hats.makeImmutable(secondHatId);
+        
+        assertFalse(hats.isMutable(secondHatId));
+    }
+
+    function testCannotChangeImmutableHatMutability() public {
+        // create immutable hat    
+        vm.prank(topHatWearer);
+        thirdHatId = hats.createHat(topHatId,
+            "immutable hat",
+            3, // maxSupply
+            _eligibility,
+            _toggle,
+            false,
+            secondHatImageURI);
+
+        assertFalse(hats.isMutable(thirdHatId));
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyImmutable.selector));
+
+        vm.prank(topHatWearer);
+        hats.makeImmutable(thirdHatId);
+    }
+
+    function testNonAdminCannotMakeMutableHatImmutable() public {
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, address(this), secondHatId));
+        
+        hats.makeImmutable(secondHatId);
+    }
+}
+
 contract OverridesHatTests is TestSetup2 {
     function testFailSetApprovalForAll() public {
         hats.setApprovalForAll(topHatWearer, true);

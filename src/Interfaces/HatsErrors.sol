@@ -17,4 +17,5 @@ interface HatsErrors {
     error BatchArrayLengthMismatch();
     error SafeTransfersNotNecessary();
     error MaxLevelsReached();
+    error AlreadyImmutable();
 }

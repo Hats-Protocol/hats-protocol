@@ -384,6 +384,40 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         emit HatRenounced(_hatId, msg.sender);
     }
 
+    function makeImmutable(uint256 _hatId) external returns (uint96) {
+        // only the wearer of a hat's admin Hat can turn it to immutable
+        if (!isAdminOfHat(msg.sender, _hatId)) {
+            revert NotAdmin(msg.sender, _hatId);
+        }
+
+        Hat storage hat = _hats[_hatId];
+
+        
+
+        // console2.log("before...mutable?", _isMutable(hat));
+        console2.log("before...config", Strings.toHexString(hat.config));
+
+        if (!_isMutable(hat)) { 
+            revert AlreadyImmutable();
+        }
+
+        console.log("--- makeMutable ---");
+        console2.log("make config ", Strings.toHexString(hat.config));
+        console2.log("make ~mask  ", Strings.toHexString(uint96(1 << 94)));
+        console2.log("make mask   ", Strings.toHexString(~uint96(1 << 94)));
+        console2.log("make result ", Strings.toHexString(hat.config & ~uint96(1 << 94)));
+
+        hat.config &= ~uint96(1 << 94);
+
+        // console2.log("after...mutable?", _isMutable(hat));
+        console2.log("after...config", Strings.toHexString(hat.config));
+        console2.log("after...hatId", Strings.toString(_hatId));
+
+        console2.log("make view config", Strings.toHexString(hat.config));
+
+        return hat.config;
+    }
+
     /*//////////////////////////////////////////////////////////////
                               HATS INTERNAL LOGIC
     //////////////////////////////////////////////////////////////*/
@@ -527,7 +561,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             bool active
         )
     {
+        console2.log("-- viewHat --");
         Hat memory hat = _hats[_hatId];
+        console2.log("view config", Strings.toHexString(hat.config));
         details = hat.details;
         maxSupply = hat.maxSupply;
         supply = hatSupply[_hatId];
@@ -627,7 +663,21 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     function _isMutable(Hat memory _hat) internal view returns (bool) {
         uint96 mask = uint96(1 << 94);
+        // TODO enter logs to check values
+
+        console2.log("-- _isMutable -- ");
+
+        console2.log("is config ", Strings.toHexString(_hat.config));
+        console2.log("is mask  ", Strings.toHexString(mask));
+        console2.log("is bit    ", Strings.toHexString(_hat.config & mask));
+        console2.log("is result ", _hat.config & mask != 0);
+
         return (_hat.config & mask != 0);
+    }
+
+    function isMutable(uint256 _hatId) public view returns (bool) {
+        Hat memory hat = _hats[_hatId];
+        return _isMutable(hat);
     }
 
     /// @notice Checks whether a wearer of a Hat is in good standing
