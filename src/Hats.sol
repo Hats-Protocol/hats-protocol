@@ -2,7 +2,7 @@
 pragma solidity >=0.8.13;
 
 import {ERC1155} from "ERC1155/ERC1155.sol";
-import "forge-std/Test.sol"; //remove after testing
+// import "forge-std/Test.sol"; //remove after testing
 import "./Interfaces/IHats.sol";
 import "./HatsIdUtilities.sol";
 import "./HatsToggle/IHatsToggle.sol";
@@ -35,7 +35,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /* Hat.config schema (by bit)
     *  0th bit  | `active` status; can be altered by toggle, via setHatStatus()
-    *  1 - 95   | unassigned
+    *  1        | `mutable` option
+    *  2 - 95   | unassigned
     */
 
     /*//////////////////////////////////////////////////////////////
@@ -89,6 +90,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             1, // maxSupply = 1
             address(0), // there is no eligibility
             address(0), // it has no toggle
+            false, // its immutable
             _imageURI
         );
 
@@ -100,6 +102,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _maxSupply The total instances of the Hat that can be worn at once
     /// @param _eligibility The address that can report on the Hat wearer's standing
     /// @param _toggle The address that can deactivate the hat [optional]
+    /// @param _mutable Whether the hat's properties are changeable after creation
     /// @param _topHatImageURI The image uri for this top hat and the fallback for its
     ///                        downstream hats [optional]
     /// @param _firstHatImageURI The image uri for the first hat and the fallback for its
@@ -111,6 +114,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint32 _maxSupply,
         address _eligibility,
         address _toggle,
+        bool _mutable,
         string memory _topHatImageURI,
         string memory _firstHatImageURI
     ) public returns (uint256 topHatId, uint256 firstHatId) {
@@ -122,6 +126,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             _maxSupply,
             _eligibility,
             _toggle,
+            _mutable,
             _firstHatImageURI
         );
     }
@@ -133,6 +138,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _admin The id of the Hat that will control who wears the newly created hat
     /// @param _eligibility The address that can report on the Hat wearer's status
     /// @param _toggle The address that can deactivate the Hat
+    /// @param _mutable Whether the hat's properties are changeable after creation
     /// @param _imageURI The image uri for this hat and the fallback for its
     ///                  downstream hats [optional]
     /// @return newHatId The id of the newly created Hat
@@ -142,6 +148,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint32 _maxSupply,
         address _eligibility,
         address _toggle,
+        bool _mutable,
         string memory _imageURI
     ) public returns (uint256 newHatId) {
         if (uint8(_admin) > 0) {
@@ -151,9 +158,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         newHatId = getNextId(_admin);
 
         // to create a hat, you must be wearing one of its admin hats
-        if (!isAdminOfHat(msg.sender, newHatId)) {
-            revert NotAdmin(msg.sender, newHatId);
-        }
+        _checkAdmin(newHatId);
 
         // create the new hat
         _createHat(
@@ -162,6 +167,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             _maxSupply,
             _eligibility,
             _toggle,
+            _mutable,
             _imageURI
         );
 
@@ -185,6 +191,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint32[] memory _maxSupplies,
         address[] memory _eligibilityModules,
         address[] memory _toggleModules,
+        bool[] memory _mutables,
         string[] memory _imageURIs
     ) public returns (bool) {
         // check if array lengths are the same
@@ -194,6 +201,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             length == _maxSupplies.length &&
             length == _eligibilityModules.length &&
             length == _toggleModules.length &&
+            length == _mutables.length &&
             length == _imageURIs.length);
 
         if (!sameLengths) revert BatchArrayLengthMismatch();
@@ -206,6 +214,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
                 _maxSupplies[i],
                 _eligibilityModules[i],
                 _toggleModules[i],
+                _mutables[i],
                 _imageURIs[i]
             );
         }
@@ -228,9 +237,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (hat.maxSupply == 0) revert HatDoesNotExist(_hatId);
 
         // only the wearer of a hat's admin Hat can mint it
-        if (!isAdminOfHat(msg.sender, _hatId)) {
-            revert NotAdmin(msg.sender, _hatId);
-        }
+        _checkAdmin(_hatId);
 
         if (hatSupply[_hatId] >= hat.maxSupply) {
             revert AllHatsWorn(_hatId);
@@ -373,6 +380,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         emit HatRenounced(_hatId, msg.sender);
     }
 
+    
+
     /*//////////////////////////////////////////////////////////////
                               HATS INTERNAL LOGIC
     //////////////////////////////////////////////////////////////*/
@@ -384,6 +393,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _maxSupply The total instances of the Hat that can be worn at once
     /// @param _eligibility The address that can report on the Hat wearer's status
     /// @param _toggle The address that can deactivate the hat [optional]
+    /// @param _mutable Whether the hat's properties are changeable after creation
     /// @param _imageURI The image uri for this top hat and the fallback for its
     ///                  downstream hats [optional]
     /// @return hat The contents of the newly created hat
@@ -393,18 +403,15 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint32 _maxSupply,
         address _eligibility,
         address _toggle,
+        bool _mutable,
         string memory _imageURI
     ) internal returns (Hat memory hat) {
         hat.details = _details;
-
         hat.maxSupply = _maxSupply;
-
         hat.eligibility = _eligibility;
-
         hat.toggle = _toggle;
         hat.imageURI = _imageURI;
-        hat.config = uint96(1 << 95);
-
+        hat.config = _mutable ? uint96(3 << 94) : uint96(1 << 95);
         _hats[_id] = hat;
 
         emit HatCreated(
@@ -413,6 +420,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             _maxSupply,
             _eligibility,
             _toggle,
+            _mutable,
             _imageURI
         );
     }
@@ -488,6 +496,122 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /*//////////////////////////////////////////////////////////////
+                              HATS ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    function _checkAdmin(uint256 _hatId) internal {
+        if (!isAdminOfHat(msg.sender, _hatId)) {
+            revert NotAdmin(msg.sender, _hatId);
+        }
+    } 
+
+    /// @notice Set a mutable hat to immutable
+    /// @dev Sets the second bit of hat.config to 0
+    /// @param _hatId The id of the Hat to make immutable
+    function makeHatImmutable(uint256 _hatId) external {
+        _checkAdmin(_hatId);
+
+        Hat storage hat = _hats[_hatId];
+
+        if (!_isMutable(hat)) { 
+            revert Immutable();
+        }
+
+        hat.config &= ~uint96(1 << 94);
+
+        emit HatMutabilityChanged(_hatId);
+    }
+
+    /// @notice Change a hat's details
+    /// @dev Hat must be mutable
+    /// @param _hatId The id of the Hat to change
+    /// @param _newDetails The new details
+    function changeHatDetails(uint256 _hatId, string memory _newDetails) external  {
+        _checkAdmin(_hatId);
+        Hat storage hat = _hats[_hatId];
+
+        if (!_isMutable(hat)) {
+            revert Immutable();
+        }
+
+        hat.details = _newDetails;
+
+        emit HatDetailsChanged(_hatId, _newDetails);
+    }
+
+    /// @notice Change a hat's details
+    /// @dev Hat must be mutable
+    /// @param _hatId The id of the Hat to change
+    /// @param _newEligibility The new eligibility module
+    function changeHatEligibility(uint256 _hatId, address _newEligibility) external  {
+        _checkAdmin(_hatId);
+        Hat storage hat = _hats[_hatId];
+
+        if (!_isMutable(hat)) {
+            revert Immutable();
+        }
+
+        hat.eligibility = _newEligibility;
+
+        emit HatEligibilityChanged(_hatId, _newEligibility);
+    }
+
+    /// @notice Change a hat's details
+    /// @dev Hat must be mutable
+    /// @param _hatId The id of the Hat to change
+    /// @param _newToggle The new toggle module
+    function changeHatToggle(uint256 _hatId, address _newToggle) external  {
+        _checkAdmin(_hatId);
+        Hat storage hat = _hats[_hatId];
+
+        if (!_isMutable(hat)) {
+            revert Immutable();
+        }
+
+        hat.toggle = _newToggle;
+
+        emit HatToggleChanged(_hatId, _newToggle);
+    }
+
+    /// @notice Change a hat's details
+    /// @dev Hat must be mutable
+    /// @param _hatId The id of the Hat to change
+    /// @param _newImageURI The new imageURI
+    function changeHatImageURI(uint256 _hatId, string memory _newImageURI) external  {
+        _checkAdmin(_hatId);
+        Hat storage hat = _hats[_hatId];
+
+        if (!_isMutable(hat)) {
+            revert Immutable();
+        }
+
+        hat.imageURI = _newImageURI;
+
+        emit HatImageURIChanged(_hatId, _newImageURI);
+    }
+
+    /// @notice Change a hat's details
+    /// @dev Hat must be mutable; new max supply cannot be greater than current supply
+    /// @param _hatId The id of the Hat to change
+    /// @param _newMaxSupply The new max supply
+    function changeHatMaxSupply(uint256 _hatId, uint32 _newMaxSupply) external  {
+        _checkAdmin(_hatId);
+        Hat storage hat = _hats[_hatId];
+
+        if (!_isMutable(hat)) {
+            revert Immutable();
+        }
+
+        if (_newMaxSupply < hatSupply[_hatId]) {
+            revert NewMaxSupplyTooLow();
+        }
+
+        hat.maxSupply = _newMaxSupply;
+
+        emit HatMaxSupplyChanged(_hatId, _newMaxSupply);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                               HATS VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
@@ -500,6 +624,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @return toggle The toggle address for this Hat
     /// @return imageURI The image URI used for this Hat
     /// @return lastHatId The most recently created Hat with this Hat as admin; also the count of Hats with this Hat as admin
+    /// @return mutable_ Whether this hat's properties can be changed
     /// @return active Whether the Hat is current active, as read from `_isActive`
     function viewHat(uint256 _hatId)
         public
@@ -512,6 +637,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             address toggle,
             string memory imageURI,
             uint8 lastHatId,
+            bool mutable_,
             bool active
         )
     {
@@ -523,6 +649,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         toggle = hat.toggle;
         imageURI = getImageURIForHat(_hatId);
         lastHatId = hat.lastHatId;
+        mutable_ = _isMutable(hat);
         active = _isActive(hat, _hatId);
     }
 
@@ -574,7 +701,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     function _isActive(Hat memory _hat, uint256 _hatId)
         internal
         view
-        returns (bool active)
+        returns (bool)
     {
         bytes memory data = abi.encodeWithSignature(
             "getHatStatus(uint256)",
@@ -584,9 +711,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         (bool success, bytes memory returndata) = _hat.toggle.staticcall(data);
 
         if (success && returndata.length > 0) {
-            active = abi.decode(returndata, (bool));
+            return abi.decode(returndata, (bool));
         } else {
-            active = _getHatStatus(_hat);
+            return _getHatStatus(_hat);
         }
     }
 
@@ -595,8 +722,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hatId The id of the hat
     /// @return bool The active status of the hat
     function isActive(uint256 _hatId) public view returns (bool) {
-        Hat memory hat = _hats[_hatId];
-        return _isActive(hat, _hatId);
+        return _isActive(_hats[_hatId], _hatId);
     }
 
     function _getHatStatus(Hat memory _hat) internal view returns (bool) {
@@ -612,8 +738,16 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         
     }
 
+    function _isMutable(Hat memory _hat) internal view returns (bool) {
+        return (_hat.config & uint96(1 << 94) != 0);
+    }
+
+    function isMutable(uint256 _hatId) public view returns (bool) {
+        return _isMutable(_hats[_hatId]);
+    }
+
     /// @notice Checks whether a wearer of a Hat is in good standing
-    /// @dev Public function for use when passing a Hat object is not possible or preferable
+    /// @dev Public function for use when pa    ssing a Hat object is not possible or preferable
     /// @param _wearer The address of the Hat wearer
     /// @param _hatId The id of the Hat
     /// @return standing Whether the wearer is in good standing
@@ -622,15 +756,12 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         view
         returns (bool standing)
     {
-        Hat memory hat = _hats[_hatId];
-        bytes memory data = abi.encodeWithSignature(
-            "getWearerStatus(address,uint256)",
-            _wearer,
-            _hatId
-        );
-
-        (bool success, bytes memory returndata) = hat.eligibility.staticcall(
-            data
+        (bool success, bytes memory returndata) = _hats[_hatId].eligibility.staticcall(
+            abi.encodeWithSignature(
+                "getWearerStatus(address,uint256)",
+                _wearer,
+                _hatId
+            )
         );
 
         if (success && returndata.length > 0) {
@@ -651,14 +782,12 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         Hat memory _hat,
         uint256 _hatId
     ) internal view returns (bool eligible) {
-        bytes memory data = abi.encodeWithSignature(
-            "getWearerStatus(address,uint256)",
-            _wearer,
-            _hatId
-        );
-
         (bool success, bytes memory returndata) = _hat.eligibility.staticcall(
-            data
+                abi.encodeWithSignature(
+                "getWearerStatus(address,uint256)",
+                _wearer,
+                _hatId
+            )
         );
 
         if (success && returndata.length > 0) {
@@ -681,8 +810,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         view
         returns (bool)
     {
-        Hat memory hat = _hats[_hatId];
-        return _isEligible(_wearer, hat, _hatId);
+        // Hat memory hat = _hats[_hatId];
+        return _isEligible(_wearer, _hats[_hatId], _hatId);
     }
 
     /// @notice Gets the imageURI for a given hat
@@ -718,11 +847,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         // otherwise, we check each of its admins for a valid imageURI
         uint256 id;
-        console2.log("level", level);
 
         // already checked at `level` above, so we start the loop at `level - 1`
         for (uint256 i = level - 1; i > 0; --i) {
-            console2.log("i", i);
             id = getAdminAtLevel(_hatId, uint8(i));
             hat = _hats[id];
             imageURI = hat.imageURI;
@@ -746,16 +873,16 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /// @notice Constructs the URI for a Hat, using data from the Hat struct
     /// @param _hatId The id of the Hat
-    /// @return uri_ An ERC1155-compatible JSON string
+    /// @return An ERC1155-compatible JSON string
     function _constructURI(uint256 _hatId)
         internal
         view
-        returns (string memory uri_)
+        returns (string memory)
     {
         Hat memory hat = _hats[_hatId];
 
         uint256 hatAdmin;
-
+        
         if (isTopHat(_hatId)) {
             hatAdmin = _hatId;
         } else {
@@ -788,10 +915,12 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             Strings.toHexString(hat.eligibility),
             '", "toggle module": "',
             Strings.toHexString(hat.toggle),
+            '", "mutable": "',
+            _isMutable(hat) ? "true" : "false",
             '"'
         );
 
-        string memory json = Base64.encode(
+        return string(abi.encodePacked("data:application/json;base64,", Base64.encode(
             bytes(
                 string.concat(
                     '{"name": "',
@@ -809,9 +938,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
                     "}"
                 )
             )
-        );
-
-        uri_ = string(abi.encodePacked("data:application/json;base64,", json));
+        )));
     }
 
     /*//////////////////////////////////////////////////////////////
