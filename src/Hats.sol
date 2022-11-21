@@ -277,7 +277,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         Hat storage hat = _hats[_hatId];
 
         if (msg.sender != hat.toggle) {
-            revert NotHatToggle();
+            revert NotHatsToggle();
         }
 
         return _processHatStatus(_hatId, newStatus);
@@ -303,7 +303,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (success && returndata.length > 0) {
             newStatus = abi.decode(returndata, (bool));
         } else {
-            revert NotIHatsToggleContract();
+            revert NotHatsToggle();
         }
 
         return _processHatStatus(_hatId, newStatus);
@@ -326,7 +326,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         Hat memory hat = _hats[_hatId];
 
         if (msg.sender != hat.eligibility) {
-            revert NotHatEligibility();
+            revert NotHatsEligibility();
         }
 
         _processHatWearerStatus(_hatId, _wearer, _eligible, _standing);
@@ -361,7 +361,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (success && returndata.length > 0) {
             (eligible, standing) = abi.decode(returndata, (bool, bool));
         } else {
-            revert NotIHatsEligibilityContract();
+            revert NotHatsEligibility();
         }
 
         return _processHatWearerStatus(_hatId, _wearer, eligible, standing);
@@ -377,7 +377,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         // remove the hat
         _burn(msg.sender, _hatId, 1);
 
-        emit HatRenounced(_hatId, msg.sender);
+        // emit HatRenounced(_hatId, msg.sender);
     }
 
     
@@ -471,7 +471,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             updated = true;
         }
 
-        emit WearerStatus(_hatId, _wearer, _eligible, _standing);
+        // emit WearerStatus(_hatId, _wearer, _eligible, _standing);
     }
 
     function transferHat(
@@ -479,9 +479,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         address _from,
         address _to
     ) public {
-        if (!isAdminOfHat(msg.sender, _hatId)) {
-            revert OnlyAdminsCanTransfer();
-        }
+        _checkAdmin(_hatId);
 
         // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
         if (_balanceOf[_from][_hatId] < 1) {
@@ -1007,7 +1005,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         pure
         override
     {
-        revert NoApprovalsNeeded();
+        revert();
     }
 
     /// @notice Safe transfers are not necessary for Hats since transfers are not handled by the wearer
@@ -1019,7 +1017,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256 amount,
         bytes calldata data
     ) public pure override {
-        revert SafeTransfersNotNecessary();
+        revert();
     }
 
     /// @notice Safe transfers are not necessary for Hats since transfers are not handled by the wearer
@@ -1031,7 +1029,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256[] calldata amounts,
         bytes calldata data
     ) public pure override {
-        revert SafeTransfersNotNecessary();
+        revert();
     }
 
     /// @notice View the uri for a Hat
