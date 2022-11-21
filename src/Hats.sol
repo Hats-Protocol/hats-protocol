@@ -97,39 +97,39 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         _mint(_target, topHatId, 1, "");
     }
 
-    /// @notice Mints a topHat to the msg.sender and creates another Hat admin'd by the topHat
-    /// @param _details A description of the hat
-    /// @param _maxSupply The total instances of the Hat that can be worn at once
-    /// @param _eligibility The address that can report on the Hat wearer's standing
-    /// @param _toggle The address that can deactivate the hat [optional]
-    /// @param _mutable Whether the hat's properties are changeable after creation
-    /// @param _topHatImageURI The image uri for this top hat and the fallback for its
-    ///                        downstream hats [optional]
-    /// @param _firstHatImageURI The image uri for the first hat and the fallback for its
-    ///                        downstream hats [optional]
-    /// @return topHatId The id of the newly created topHat
-    /// @return firstHatId The id of the other newly created hat
-    function createTopHatAndHat(
-        string memory _details, // encode as bytes32 ??
-        uint32 _maxSupply,
-        address _eligibility,
-        address _toggle,
-        bool _mutable,
-        string memory _topHatImageURI,
-        string memory _firstHatImageURI
-    ) public returns (uint256 topHatId, uint256 firstHatId) {
-        topHatId = mintTopHat(msg.sender, _topHatImageURI);
+    // /// @notice Mints a topHat to the msg.sender and creates another Hat admin'd by the topHat
+    // /// @param _details A description of the hat
+    // /// @param _maxSupply The total instances of the Hat that can be worn at once
+    // /// @param _eligibility The address that can report on the Hat wearer's standing
+    // /// @param _toggle The address that can deactivate the hat [optional]
+    // /// @param _mutable Whether the hat's properties are changeable after creation
+    // /// @param _topHatImageURI The image uri for this top hat and the fallback for its
+    // ///                        downstream hats [optional]
+    // /// @param _firstHatImageURI The image uri for the first hat and the fallback for its
+    // ///                        downstream hats [optional]
+    // /// @return topHatId The id of the newly created topHat
+    // /// @return firstHatId The id of the other newly created hat
+    // function createTopHatAndHat(
+    //     string memory _details, // encode as bytes32 ??
+    //     uint32 _maxSupply,
+    //     address _eligibility,
+    //     address _toggle,
+    //     bool _mutable,
+    //     string memory _topHatImageURI,
+    //     string memory _firstHatImageURI
+    // ) public returns (uint256 topHatId, uint256 firstHatId) {
+    //     topHatId = mintTopHat(msg.sender, _topHatImageURI);
 
-        firstHatId = createHat(
-            topHatId,
-            _details,
-            _maxSupply,
-            _eligibility,
-            _toggle,
-            _mutable,
-            _firstHatImageURI
-        );
-    }
+    //     firstHatId = createHat(
+    //         topHatId,
+    //         _details,
+    //         _maxSupply,
+    //         _eligibility,
+    //         _toggle,
+    //         _mutable,
+    //         _firstHatImageURI
+    //     );
+    // }
 
     /// @notice Creates a new hat. The msg.sender must wear the `_admin` hat.
     /// @dev Initializes a new Hat struct, but does not mint any tokens.
