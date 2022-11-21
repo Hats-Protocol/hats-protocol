@@ -12,14 +12,14 @@ interface HatsEvents {
         string imageURI
     );
 
-    event HatRenounced(uint256 hatId, address wearer);
+    // event HatRenounced(uint256 hatId, address wearer);
 
-    event WearerStatus(
-        uint256 hatId,
-        address wearer,
-        bool eligible,
-        bool wearerStanding
-    );
+    // event WearerStatus(
+    //     uint256 hatId,
+    //     address wearer,
+    //     bool eligible,
+    //     bool wearerStanding
+    // );
 
     event HatStatusChanged(uint256 hatId, bool newStatus);
 

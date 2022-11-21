@@ -7,8 +7,8 @@ import "./Interfaces/IHats.sol";
 import "./HatsIdUtilities.sol";
 import "./HatsToggle/IHatsToggle.sol";
 import "./HatsEligibility/IHatsEligibility.sol";
-import "@openzeppelin/contracts/utils/Base64.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
+import "solbase/utils/Base64.sol";
+import "solbase/utils/LibString.sol";
 
 /// @title Hats Protocol
 /// @notice Hats are DAO-native revocable roles that are represented as semi-fungable tokens for composability
@@ -97,39 +97,39 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         _mint(_target, topHatId, 1, "");
     }
 
-    /// @notice Mints a topHat to the msg.sender and creates another Hat admin'd by the topHat
-    /// @param _details A description of the hat
-    /// @param _maxSupply The total instances of the Hat that can be worn at once
-    /// @param _eligibility The address that can report on the Hat wearer's standing
-    /// @param _toggle The address that can deactivate the hat [optional]
-    /// @param _mutable Whether the hat's properties are changeable after creation
-    /// @param _topHatImageURI The image uri for this top hat and the fallback for its
-    ///                        downstream hats [optional]
-    /// @param _firstHatImageURI The image uri for the first hat and the fallback for its
-    ///                        downstream hats [optional]
-    /// @return topHatId The id of the newly created topHat
-    /// @return firstHatId The id of the other newly created hat
-    function createTopHatAndHat(
-        string memory _details, // encode as bytes32 ??
-        uint32 _maxSupply,
-        address _eligibility,
-        address _toggle,
-        bool _mutable,
-        string memory _topHatImageURI,
-        string memory _firstHatImageURI
-    ) public returns (uint256 topHatId, uint256 firstHatId) {
-        topHatId = mintTopHat(msg.sender, _topHatImageURI);
+    // /// @notice Mints a topHat to the msg.sender and creates another Hat admin'd by the topHat
+    // /// @param _details A description of the hat
+    // /// @param _maxSupply The total instances of the Hat that can be worn at once
+    // /// @param _eligibility The address that can report on the Hat wearer's standing
+    // /// @param _toggle The address that can deactivate the hat [optional]
+    // /// @param _mutable Whether the hat's properties are changeable after creation
+    // /// @param _topHatImageURI The image uri for this top hat and the fallback for its
+    // ///                        downstream hats [optional]
+    // /// @param _firstHatImageURI The image uri for the first hat and the fallback for its
+    // ///                        downstream hats [optional]
+    // /// @return topHatId The id of the newly created topHat
+    // /// @return firstHatId The id of the other newly created hat
+    // function createTopHatAndHat(
+    //     string memory _details, // encode as bytes32 ??
+    //     uint32 _maxSupply,
+    //     address _eligibility,
+    //     address _toggle,
+    //     bool _mutable,
+    //     string memory _topHatImageURI,
+    //     string memory _firstHatImageURI
+    // ) public returns (uint256 topHatId, uint256 firstHatId) {
+    //     topHatId = mintTopHat(msg.sender, _topHatImageURI);
 
-        firstHatId = createHat(
-            topHatId,
-            _details,
-            _maxSupply,
-            _eligibility,
-            _toggle,
-            _mutable,
-            _firstHatImageURI
-        );
-    }
+    //     firstHatId = createHat(
+    //         topHatId,
+    //         _details,
+    //         _maxSupply,
+    //         _eligibility,
+    //         _toggle,
+    //         _mutable,
+    //         _firstHatImageURI
+    //     );
+    // }
 
     /// @notice Creates a new hat. The msg.sender must wear the `_admin` hat.
     /// @dev Initializes a new Hat struct, but does not mint any tokens.
@@ -277,7 +277,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         Hat storage hat = _hats[_hatId];
 
         if (msg.sender != hat.toggle) {
-            revert NotHatToggle();
+            revert NotHatsToggle();
         }
 
         return _processHatStatus(_hatId, newStatus);
@@ -303,7 +303,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (success && returndata.length > 0) {
             newStatus = abi.decode(returndata, (bool));
         } else {
-            revert NotIHatsToggleContract();
+            revert NotHatsToggle();
         }
 
         return _processHatStatus(_hatId, newStatus);
@@ -326,7 +326,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         Hat memory hat = _hats[_hatId];
 
         if (msg.sender != hat.eligibility) {
-            revert NotHatEligibility();
+            revert NotHatsEligibility();
         }
 
         _processHatWearerStatus(_hatId, _wearer, _eligible, _standing);
@@ -361,7 +361,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (success && returndata.length > 0) {
             (eligible, standing) = abi.decode(returndata, (bool, bool));
         } else {
-            revert NotIHatsEligibilityContract();
+            revert NotHatsEligibility();
         }
 
         return _processHatWearerStatus(_hatId, _wearer, eligible, standing);
@@ -377,7 +377,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         // remove the hat
         _burn(msg.sender, _hatId, 1);
 
-        emit HatRenounced(_hatId, msg.sender);
+        // emit HatRenounced(_hatId, msg.sender);
     }
 
     
@@ -471,7 +471,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             updated = true;
         }
 
-        emit WearerStatus(_hatId, _wearer, _eligible, _standing);
+        // emit WearerStatus(_hatId, _wearer, _eligible, _standing);
     }
 
     function transferHat(
@@ -479,9 +479,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         address _from,
         address _to
     ) public {
-        if (!isAdminOfHat(msg.sender, _hatId)) {
-            revert OnlyAdminsCanTransfer();
-        }
+        _checkAdmin(_hatId);
 
         // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
         if (_balanceOf[_from][_hatId] < 1) {
@@ -860,7 +858,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
                 /// TODO bring back the following in a way that actually works
                 // since there are multiple hats with this imageURI at _hatId's level,
                 // we need to use _hatId to disambiguate
-                // return string.concat(imageURI, Strings.toString(_hatId));
+                // return string.concat(imageURI, LibString.toString(_hatId));
             }
         }
 
@@ -868,7 +866,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         return baseImageURI;
 
         /// TODO bring back the following in a way that actually works
-        // return string.concat(baseImageURI, Strings.toString(_hatId));
+        // return string.concat(baseImageURI, LibString.toString(_hatId));
     }
 
     /// @notice Constructs the URI for a Hat, using data from the Hat struct
@@ -892,9 +890,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         // split into two objects to avoid stack too deep error
         string memory idProperties = string.concat(
             '"domain": "',
-            Strings.toString(getTophatDomain(_hatId)),
+            LibString.toString(getTophatDomain(_hatId)),
             '", "id": "',
-            Strings.toString(_hatId),
+            LibString.toString(_hatId),
             '", "pretty id": "',
             "{id}",
             '",'
@@ -904,17 +902,17 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             '"status": "',
             (_isActive(hat, _hatId) ? "active" : "inactive"),
             '", "current supply": "',
-            Strings.toString(hatSupply[_hatId]),
+            LibString.toString(hatSupply[_hatId]),
             '", "supply cap": "',
-            Strings.toString(hat.maxSupply),
+            LibString.toString(hat.maxSupply),
             '", "admin (id)": "',
-            Strings.toString(hatAdmin),
+            LibString.toString(hatAdmin),
             '", "admin (pretty id)": "',
-            Strings.toHexString(hatAdmin, 32),
+            LibString.toHexString(hatAdmin, 32),
             '", "eligibility module": "',
-            Strings.toHexString(hat.eligibility),
+            LibString.toHexString(hat.eligibility),
             '", "toggle module": "',
-            Strings.toHexString(hat.toggle),
+            LibString.toHexString(hat.toggle),
             '", "mutable": "',
             _isMutable(hat) ? "true" : "false",
             '"'
@@ -1007,7 +1005,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         pure
         override
     {
-        revert NoApprovalsNeeded();
+        revert();
     }
 
     /// @notice Safe transfers are not necessary for Hats since transfers are not handled by the wearer
@@ -1019,7 +1017,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256 amount,
         bytes calldata data
     ) public pure override {
-        revert SafeTransfersNotNecessary();
+        revert();
     }
 
     /// @notice Safe transfers are not necessary for Hats since transfers are not handled by the wearer
@@ -1031,7 +1029,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256[] calldata amounts,
         bytes calldata data
     ) public pure override {
-        revert SafeTransfersNotNecessary();
+        revert();
     }
 
     /// @notice View the uri for a Hat
