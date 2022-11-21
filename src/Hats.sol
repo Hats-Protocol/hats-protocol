@@ -7,8 +7,8 @@ import "./Interfaces/IHats.sol";
 import "./HatsIdUtilities.sol";
 import "./HatsToggle/IHatsToggle.sol";
 import "./HatsEligibility/IHatsEligibility.sol";
-import "@openzeppelin/contracts/utils/Base64.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
+import "solbase/utils/Base64.sol";
+import "solbase/utils/LibString.sol";
 
 /// @title Hats Protocol
 /// @notice Hats are DAO-native revocable roles that are represented as semi-fungable tokens for composability
@@ -860,7 +860,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
                 /// TODO bring back the following in a way that actually works
                 // since there are multiple hats with this imageURI at _hatId's level,
                 // we need to use _hatId to disambiguate
-                // return string.concat(imageURI, Strings.toString(_hatId));
+                // return string.concat(imageURI, LibString.toString(_hatId));
             }
         }
 
@@ -868,7 +868,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         return baseImageURI;
 
         /// TODO bring back the following in a way that actually works
-        // return string.concat(baseImageURI, Strings.toString(_hatId));
+        // return string.concat(baseImageURI, LibString.toString(_hatId));
     }
 
     /// @notice Constructs the URI for a Hat, using data from the Hat struct
@@ -892,9 +892,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         // split into two objects to avoid stack too deep error
         string memory idProperties = string.concat(
             '"domain": "',
-            Strings.toString(getTophatDomain(_hatId)),
+            LibString.toString(getTophatDomain(_hatId)),
             '", "id": "',
-            Strings.toString(_hatId),
+            LibString.toString(_hatId),
             '", "pretty id": "',
             "{id}",
             '",'
@@ -904,17 +904,17 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             '"status": "',
             (_isActive(hat, _hatId) ? "active" : "inactive"),
             '", "current supply": "',
-            Strings.toString(hatSupply[_hatId]),
+            LibString.toString(hatSupply[_hatId]),
             '", "supply cap": "',
-            Strings.toString(hat.maxSupply),
+            LibString.toString(hat.maxSupply),
             '", "admin (id)": "',
-            Strings.toString(hatAdmin),
+            LibString.toString(hatAdmin),
             '", "admin (pretty id)": "',
-            Strings.toHexString(hatAdmin, 32),
+            LibString.toHexString(hatAdmin, 32),
             '", "eligibility module": "',
-            Strings.toHexString(hat.eligibility),
+            LibString.toHexString(hat.eligibility),
             '", "toggle module": "',
-            Strings.toHexString(hat.toggle),
+            LibString.toHexString(hat.toggle),
             '", "mutable": "',
             _isMutable(hat) ? "true" : "false",
             '"'
