@@ -39,6 +39,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
         returns (uint256 id)
     {
         uint256 mask;
+        // TODO: remove this loop
         for (uint256 i = 0; i < MAX_LEVELS; ++i) {
             mask = uint256(
                 type(uint256).max >>
@@ -60,6 +61,8 @@ contract HatsIdUtilities is IHatsIdUtilities {
     function getHatLevel(uint256 _hatId) public pure returns (uint8) {
         uint256 mask;
         uint256 i;
+        // TODO: get rid of this for loop and possibly use the YUL switch/case
+        // syntax. Otherwise, return to the original syntax
         for (i = 0; i < MAX_LEVELS; ++i) {
             mask = uint256(
                 type(uint256).max >>
