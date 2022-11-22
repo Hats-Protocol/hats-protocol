@@ -176,6 +176,8 @@ Each Hat has several properties:
 - `admin` - the Hat that controls who can wear the Hat
 - `eligibility` - the address that controls eligibility criteria and whether a given wearer of the Hat is in good standing
 - `toggle` - the address that controls whether the Hat is active
+- `mutable` - whether the hat's properties can be changed by the admin
+- `imageURI` - the URI for the image used in the Hat's ERC1155 NFT
 
 For more information on each property, refer to the detailed sections below.
 
@@ -307,11 +309,42 @@ Unlike admins, toggle modules are explicitly set as addresses, not Hats.
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
+### Hat Mutability
+
+In some cases, a Hat's properties should be immutable to give everybody (particularly the wearer(s)) maximal confidence in what they are signing up for. But this certainty comes at the expense of flexibility, which is often valuable for DAOs as they evolve and learn more about what their various roles are all about. With this trade-off in mind, Hats can be created as either mutable or immutable.
+
+An **immutable** Hat cannot be changed at all once it has been created. A **mutable** Hat can be changed after it has been created. Only its admin(s) can make the change.
+
+Changes are allowed to the following Hat properties:
+
+- `details`
+- `maxSupply` - as long as the new maxSupply is not less than the current supply
+- `eligibility`
+- `toggle`
+- `mutable` - this is a one-way change
+- `imageURI`
+
+<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+
+### Hat Image URIs
+
+Like any other NFT, Hats have images. The image for a given Hat is determined by the following logic:
+
+1. If the Hat's `imageURI` property is set, use that
+2. If the Hat's `imageURI` property is _not_ set, then use the `imageURI` of the Hat's admin Hat
+3. If the admin Hat's `imageURI` property is _not_ set, then use the `imageURI` of _that_ Hat's admin
+4. Repeat (3) until you find an `imageURI` that is set
+5. If no set `imageURI` is found within the original Hat's hat tree (including the Tophat), then use the `globalImageURI` set in the Hats Protocol contract
+
+This logic creates flexibility for DAOs to efficiently customize images for their Hats, while keeping images as optional.
+
+<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+
 ### Creating a Hat
 
 The creator of a Hat must be its admin. In other words, the admin of a Hat must be the `msg.sender` of the `Hats.createHat` function call. Though remember, by delegating its authority to a hatter contract, an admin can enable eligible others to create Hats based on whatever logic it desires.
 
-Creating a Tophat (a Hat that serves as its own admin) requires a special function `createTophat`, which creates a new Hat, sets that Hat as its own admin, and then mints its token to a `_target`. Any address wanting to create a Hat that is not already wearing an admin Hat of some kind must first create a Tophat with itself as the wearer.
+Creating a Tophat (a Hat that serves as its own admin) requires a special function `mintTophat`, which creates a new Hat, sets that Hat as its own admin, and then mints its token to a `_target`. Any address wanting to create a Hat that is not already wearing an admin Hat of some kind must first create a Tophat with itself as the wearer.
 
 #### Batch Creation
 
