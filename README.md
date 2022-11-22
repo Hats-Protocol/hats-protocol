@@ -176,6 +176,7 @@ Each Hat has several properties:
 - `admin` - the Hat that controls who can wear the Hat
 - `eligibility` - the address that controls eligibility criteria and whether a given wearer of the Hat is in good standing
 - `toggle` - the address that controls whether the Hat is active
+- `mutable` - whether the hat's properties can be changed by the admin
 
 For more information on each property, refer to the detailed sections below.
 
@@ -320,6 +321,23 @@ In some scenarios, a DAO may want to create many Hats at once -- including an en
 Enabling this latter forking/exit scenario is an important protection for Hat wearers against potential abuse of power by their DAO.
 
 To create a batch of Hats, a DAO can call the `Hats.batchCreateHats()` function. This function takes arrays as its arguments, from which it constructs multiple Hats.  As long as each of these Hats is part of the same tree of Hats &mdash; i.e., they either have the same existing Hat or any of the newly created Hats as admin(s) &mdash; they can all be created together.
+
+<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+
+### Hat Mutability
+
+In some cases, a Hat's properties should be immutable to give everybody (particularly the wearer(s)) maximal confidence in what they are signing up for. But this certainty comes at the expense of flexibility, which is often valuable for DAOs as they evolve and learn more about what their various roles are all about. With this trade-off in mind, Hats can be created as either mutable or immutable.
+
+An **immutable** Hat cannot be changed at all once it has been created. A **mutable** Hat can be changed after it has been created. Only its admin(s) can make the change.
+
+Changes are allowed to the following Hat properties:
+
+- `details`
+- `maxSupply` - as long as the new maxSupply is not less than the current supply
+- `eligibility`
+- `toggle`
+- `mutable` - this is a one-way change
+- `imageURI`
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
