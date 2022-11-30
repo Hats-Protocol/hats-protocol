@@ -1,4 +1,18 @@
-// SPDX-License-Identifier: CC0
+// Copyright (C) 2022 Hats Protocol
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 pragma solidity >=0.8.13;
 
 import "./IHatsIdUtilities.sol";
@@ -9,7 +23,7 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
     function mintTopHat(address _target, string memory _imageURI)
         external
         returns (uint256 topHatId);
-    
+
     // function createTopHatAndHat(
     //     string memory _details,
     //     uint32 _maxSupply,
@@ -51,7 +65,7 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
     function setHatStatus(uint256 _hatId, bool _newStatus)
         external
         returns (bool);
-    
+
     function checkHatStatus(uint256 _hatId) external returns (bool);
 
     function setHatWearerStatus(
@@ -60,7 +74,7 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
         bool _eligible,
         bool _standing
     ) external returns (bool);
-    
+
     function checkHatWearerStatus(uint256 _hatId, address _wearer)
         external
         returns (bool);
@@ -79,13 +93,16 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
 
     function makeHatImmutable(uint256 _hatId) external;
 
-    function changeHatDetails(uint256 _hatId, string memory _newDetails) external;
+    function changeHatDetails(uint256 _hatId, string memory _newDetails)
+        external;
 
-    function changeHatEligibility(uint256 _hatId, address _newEligibility) external;
+    function changeHatEligibility(uint256 _hatId, address _newEligibility)
+        external;
 
     function changeHatToggle(uint256 _hatId, address _newToggle) external;
 
-    function changeHatImageURI(uint256 _hatId, string memory _newImageURI) external;
+    function changeHatImageURI(uint256 _hatId, string memory _newImageURI)
+        external;
 
     function changeHatMaxSupply(uint256 _hatId, uint32 _newMaxSupply) external;
 
@@ -124,7 +141,7 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
         external
         view
         returns (bool);
-    
+
     function isEligible(address _wearer, uint256 _hatId)
         external
         view

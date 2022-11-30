@@ -1,4 +1,18 @@
-// SPDX-License-Identifier: CC0
+// Copyright (C) 2022 Hats Protocol
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 pragma solidity >=0.8.13;
 
 import {ERC1155} from "ERC1155/ERC1155.sol";
@@ -15,7 +29,6 @@ import "solbase/utils/LibString.sol";
 /// @dev This is a multitenant contract that can manage all Hats for a given chain
 /// @author Hats Protocol
 contract Hats is IHats, ERC1155, HatsIdUtilities {
-
     /*//////////////////////////////////////////////////////////////
                               HATS DATA MODELS
     //////////////////////////////////////////////////////////////*/
@@ -23,21 +36,21 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     struct Hat {
         // 1st storage slot
         address eligibility; // ─┐ can revoke Hat based on ruling | 20
-        uint32 maxSupply;    //  │ the max number of identical hats that can exist | 4
-        uint8 lastHatId;     // ─┘ indexes how many different hats an admin is holding | 1
+        uint32 maxSupply; //  │ the max number of identical hats that can exist | 4
+        uint8 lastHatId; // ─┘ indexes how many different hats an admin is holding | 1
         // 2nd slot
-        address toggle;      // ─┐ controls when Hat is active | 20
-        uint96 config;       // ─┘ active status & other settings (see schema below) | 12
+        address toggle; // ─┐ controls when Hat is active | 20
+        uint96 config; // ─┘ active status & other settings (see schema below) | 12
         // 3rd+ slot (optional)
         string details;
         string imageURI;
     }
 
     /* Hat.config schema (by bit)
-    *  0th bit  | `active` status; can be altered by toggle, via setHatStatus()
-    *  1        | `mutable` option
-    *  2 - 95   | unassigned
-    */
+     *  0th bit  | `active` status; can be altered by toggle, via setHatStatus()
+     *  1        | `mutable` option
+     *  2 - 95   | unassigned
+     */
 
     /*//////////////////////////////////////////////////////////////
                               HATS STORAGE
@@ -380,8 +393,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         // emit HatRenounced(_hatId, msg.sender);
     }
 
-    
-
     /*//////////////////////////////////////////////////////////////
                               HATS INTERNAL LOGIC
     //////////////////////////////////////////////////////////////*/
@@ -501,7 +512,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (!isAdminOfHat(msg.sender, _hatId)) {
             revert NotAdmin(msg.sender, _hatId);
         }
-    } 
+    }
 
     /// @notice Set a mutable hat to immutable
     /// @dev Sets the second bit of hat.config to 0
@@ -511,7 +522,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         Hat storage hat = _hats[_hatId];
 
-        if (!_isMutable(hat)) { 
+        if (!_isMutable(hat)) {
             revert Immutable();
         }
 
@@ -524,7 +535,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev Hat must be mutable
     /// @param _hatId The id of the Hat to change
     /// @param _newDetails The new details
-    function changeHatDetails(uint256 _hatId, string memory _newDetails) external  {
+    function changeHatDetails(uint256 _hatId, string memory _newDetails)
+        external
+    {
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 
@@ -541,7 +554,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev Hat must be mutable
     /// @param _hatId The id of the Hat to change
     /// @param _newEligibility The new eligibility module
-    function changeHatEligibility(uint256 _hatId, address _newEligibility) external  {
+    function changeHatEligibility(uint256 _hatId, address _newEligibility)
+        external
+    {
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 
@@ -558,7 +573,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev Hat must be mutable
     /// @param _hatId The id of the Hat to change
     /// @param _newToggle The new toggle module
-    function changeHatToggle(uint256 _hatId, address _newToggle) external  {
+    function changeHatToggle(uint256 _hatId, address _newToggle) external {
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 
@@ -575,7 +590,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev Hat must be mutable
     /// @param _hatId The id of the Hat to change
     /// @param _newImageURI The new imageURI
-    function changeHatImageURI(uint256 _hatId, string memory _newImageURI) external  {
+    function changeHatImageURI(uint256 _hatId, string memory _newImageURI)
+        external
+    {
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 
@@ -592,7 +609,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev Hat must be mutable; new max supply cannot be greater than current supply
     /// @param _hatId The id of the Hat to change
     /// @param _newMaxSupply The new max supply
-    function changeHatMaxSupply(uint256 _hatId, uint32 _newMaxSupply) external  {
+    function changeHatMaxSupply(uint256 _hatId, uint32 _newMaxSupply) external {
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 
@@ -733,7 +750,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         } else {
             _hat.config &= ~uint96(1 << 95);
         }
-        
     }
 
     function _isMutable(Hat memory _hat) internal view returns (bool) {
@@ -754,13 +770,15 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         view
         returns (bool standing)
     {
-        (bool success, bytes memory returndata) = _hats[_hatId].eligibility.staticcall(
-            abi.encodeWithSignature(
-                "getWearerStatus(address,uint256)",
-                _wearer,
-                _hatId
-            )
-        );
+        (bool success, bytes memory returndata) = _hats[_hatId]
+            .eligibility
+            .staticcall(
+                abi.encodeWithSignature(
+                    "getWearerStatus(address,uint256)",
+                    _wearer,
+                    _hatId
+                )
+            );
 
         if (success && returndata.length > 0) {
             (, standing) = abi.decode(returndata, (bool, bool));
@@ -781,7 +799,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256 _hatId
     ) internal view returns (bool eligible) {
         (bool success, bytes memory returndata) = _hat.eligibility.staticcall(
-                abi.encodeWithSignature(
+            abi.encodeWithSignature(
                 "getWearerStatus(address,uint256)",
                 _wearer,
                 _hatId
@@ -880,7 +898,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         Hat memory hat = _hats[_hatId];
 
         uint256 hatAdmin;
-        
+
         if (isTopHat(_hatId)) {
             hatAdmin = _hatId;
         } else {
@@ -918,25 +936,31 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             '"'
         );
 
-        return string(abi.encodePacked("data:application/json;base64,", Base64.encode(
-            bytes(
-                string.concat(
-                    '{"name": "',
-                    "Hats Protocol Hat",
-                    '", "description": "',
-                    "this is a test of Hats Protocol nfts", // alternatively, could point to a URI for offchain flexibility
-                    '", "image": "',
-                    getImageURIForHat(_hatId),
-                    '",',
-                    '"properties": ',
-                    "{",
-                    idProperties,
-                    otherProperties,
-                    "}",
-                    "}"
+        return
+            string(
+                abi.encodePacked(
+                    "data:application/json;base64,",
+                    Base64.encode(
+                        bytes(
+                            string.concat(
+                                '{"name": "',
+                                "Hats Protocol Hat",
+                                '", "description": "',
+                                "this is a test of Hats Protocol nfts", // alternatively, could point to a URI for offchain flexibility
+                                '", "image": "',
+                                getImageURIForHat(_hatId),
+                                '",',
+                                '"properties": ',
+                                "{",
+                                idProperties,
+                                otherProperties,
+                                "}",
+                                "}"
+                            )
+                        )
+                    )
                 )
-            )
-        )));
+            );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -1035,7 +1059,12 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @notice View the uri for a Hat
     /// @param id The id of the Hat
     /// @return string An 1155-compatible JSON object
-    function uri(uint256 id) public view override(ERC1155, IHats) returns (string memory) {
+    function uri(uint256 id)
+        public
+        view
+        override(ERC1155, IHats)
+        returns (string memory)
+    {
         return _constructURI(uint256(id));
     }
 }
