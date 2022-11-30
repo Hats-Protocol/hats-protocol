@@ -133,11 +133,10 @@ abstract contract TestSetup is Test, TestVariables {
 
 // in addition to TestSetup, TestSetup2 creates and mints a second hat
 abstract contract TestSetup2 is TestSetup {
-     function setUp() public override {
-        
+    function setUp() public override {
         // expand on TestSetup
         super.setUp();
-        
+
         // create second Hat
         vm.prank(topHatWearer);
         secondHatId = hats.createHat(

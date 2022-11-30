@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CC0
+// SPDX-License-Identifier: AGPL v3
 
 pragma solidity >=0.8.13;
 

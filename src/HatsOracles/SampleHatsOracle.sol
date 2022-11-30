@@ -1,4 +1,17 @@
-// SPDX-License-Identifier: CC0
+// Copyright (C) 2022 Hats Protocol
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pragma solidity >=0.8.13;
 
@@ -7,7 +20,12 @@ import "../IHats.sol";
 import "utils/Auth.sol";
 
 abstract contract OwnableHatsOracle is IHats, IHatsOracle, Auth {
-    event HatStandingSet(address _wearer, uint256 _hatId, bool _revoke, bool _standing);
+    event HatStandingSet(
+        address _wearer,
+        uint256 _hatId,
+        bool _revoke,
+        bool _standing
+    );
 
     IHats public HATS;
 
@@ -25,21 +43,24 @@ abstract contract OwnableHatsOracle is IHats, IHatsOracle, Auth {
         return standings[_wearer][_hatId];
     }
 
-    function setWearerStatus(address _wearer, uint256 _hatId, bool _revoke, bool _standing)
-        public
-        virtual
-        requiresAuth
-    {
+    function setWearerStatus(
+        address _wearer,
+        uint256 _hatId,
+        bool _revoke,
+        bool _standing
+    ) public virtual requiresAuth {
         standings[_wearer][_hatId] = _standing;
         _updateHatWearerStatus(_wearer, _hatId, _revoke, _standing);
 
         emit HatStandingSet(_wearer, _hatId, _revoke, _standing);
     }
 
-    function _updateHatWearerStatus(address _wearer, uint256 _hatId, bool _revoke, bool _standing)
-        internal
-        virtual
-    {
+    function _updateHatWearerStatus(
+        address _wearer,
+        uint256 _hatId,
+        bool _revoke,
+        bool _standing
+    ) internal virtual {
         HATS.setHatWearerStatus(_hatId, _wearer, _revoke, _standing);
     }
 }
