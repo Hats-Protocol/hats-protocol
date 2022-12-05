@@ -89,17 +89,18 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _imageURI The image uri for this top hat and the fallback for its
     ///                  downstream hats [optional]
     /// @return topHatId The id of the newly created topHat
-    function mintTopHat(address _target, string memory _imageURI)
-        public
-        returns (uint256 topHatId)
-    {
+    function mintTopHat(
+        address _target,
+        string memory _details,
+        string memory _imageURI
+    ) public returns (uint256 topHatId) {
         // create hat
 
         topHatId = uint256(++lastTopHatId) << 224;
 
         _createHat(
             topHatId,
-            "", // details
+            _details, // details
             1, // maxSupply = 1
             address(0), // there is no eligibility
             address(0), // it has no toggle

@@ -20,10 +20,19 @@ contract CreateTopHatTest is TestSetup {
     }
 
     function testTopHatCreated() public {
+        string memory details = "tophat";
         vm.expectEmit(false, false, false, true);
-        emit HatCreated(2**224, "", 1, address(0), address(0), false, topHatImageURI);
+        emit HatCreated(
+            2**224,
+            details,
+            1,
+            address(0),
+            address(0),
+            false,
+            topHatImageURI
+        );
 
-        topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
+        topHatId = hats.mintTopHat(topHatWearer, details, topHatImageURI);
 
         assertTrue(hats.isTopHat(topHatId));
         assertEq(2**224, topHatId);
@@ -34,14 +43,14 @@ contract CreateTopHatTest is TestSetup {
 
         emit TransferSingle(address(this), address(0), topHatWearer, 2**224, 1);
 
-        topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
+        topHatId = hats.mintTopHat(topHatWearer, "tophat", topHatImageURI);
 
         assertTrue(hats.isWearerOfHat(topHatWearer, topHatId));
         assertFalse(hats.isWearerOfHat(nonWearer, topHatId));
     }
 
     function testTransferTopHat() public {
-        topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
+        topHatId = hats.mintTopHat(topHatWearer, "tophat", topHatImageURI);
 
         emit log_uint(topHatId);
         emit log_address(nonWearer);
@@ -57,7 +66,15 @@ contract CreateHatsTest is TestSetup {
         (, , , , , , uint8 lastHatId, , ) = hats.viewHat(topHatId);
 
         vm.expectEmit(false, false, false, true);
-        emit HatCreated(hats.getNextId(topHatId), _details, _maxSupply, _eligibility, _toggle, false, secondHatImageURI);
+        emit HatCreated(
+            hats.getNextId(topHatId),
+            _details,
+            _maxSupply,
+            _eligibility,
+            _toggle,
+            false,
+            secondHatImageURI
+        );
 
         // topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
         vm.prank(address(topHatWearer));
@@ -81,7 +98,15 @@ contract CreateHatsTest is TestSetup {
 
     function testMutableHatCreated() public {
         vm.expectEmit(false, false, false, true);
-        emit HatCreated(hats.getNextId(topHatId), _details, _maxSupply, _eligibility, _toggle, true, secondHatImageURI);
+        emit HatCreated(
+            hats.getNextId(topHatId),
+            _details,
+            _maxSupply,
+            _eligibility,
+            _toggle,
+            true,
+            secondHatImageURI
+        );
 
         console2.log("secondHat");
 
@@ -284,7 +309,7 @@ contract BatchCreateHats is TestSetupBatch {
             toggleModulesBatch = new address[](count);
             mutablesBatch = new bool[](extra);
             imageURIsBatch = new string[](count);
-        }else if (array == 7) {
+        } else if (array == 7) {
             adminsBatch = new uint256[](count);
             detailsBatch = new string[](count);
             maxSuppliesBatch = new uint32[](count);
@@ -375,7 +400,7 @@ contract ImageURITest is TestSetup2 {
     }
 
     function testEmptyTopHatImageURI() public {
-        uint256 topHat = hats.mintTopHat(topHatWearer, "");
+        uint256 topHat = hats.mintTopHat(topHatWearer, "", "");
 
         string memory uri = hats.getImageURIForHat(topHat);
 
@@ -384,9 +409,14 @@ contract ImageURITest is TestSetup2 {
     }
 
     function testEmptyHatBranchImageURI() public {
-        uint256 topHat = hats.mintTopHat(topHatWearer, "");
+        uint256 topHat = hats.mintTopHat(topHatWearer, "", "");
 
-        (uint256[] memory ids, ) = createHatsBranch(5, topHat, topHatWearer, false);
+        (uint256[] memory ids, ) = createHatsBranch(
+            5,
+            topHat,
+            topHatWearer,
+            false
+        );
 
         string memory uri = hats.getImageURIForHat(ids[4]);
 
@@ -603,7 +633,10 @@ contract MintHatsTest is TestSetup {
         uint256 badHatId = 123e18;
 
         vm.expectRevert(
-            abi.encodeWithSelector(HatsErrors.HatDoesNotExist.selector, badHatId)
+            abi.encodeWithSelector(
+                HatsErrors.HatDoesNotExist.selector,
+                badHatId
+            )
         );
 
         hats.mintHat(badHatId, secondWearer);
@@ -698,7 +731,6 @@ contract MintHatsTest is TestSetup {
 
 contract ViewHatTests is TestSetup2 {
     function testViewHat1() public {
-
         (
             ,
             ,
@@ -719,18 +751,8 @@ contract ViewHatTests is TestSetup2 {
     }
 
     function testViewHat2() public {
-
-        (
-            retdetails,
-            retmaxSupply,
-            retsupply,
-            reteligibility,
-            ,
-            ,
-            ,
-            ,
-            
-        ) = hats.viewHat(secondHatId);
+        (retdetails, retmaxSupply, retsupply, reteligibility, , , , , ) = hats
+            .viewHat(secondHatId);
 
         // 3-1. viewHat - displays params as expected
         assertEq(retdetails, "second hat");
@@ -759,18 +781,10 @@ contract ViewHatTests is TestSetup2 {
     }
 
     function testViewHatOfTopHat2() public {
-        (
-            retdetails,
-            retmaxSupply,
-            retsupply,
-            reteligibility,
-            ,
-            ,
-            ,
-            ,
-        ) = hats.viewHat(topHatId);
+        (retdetails, retmaxSupply, retsupply, reteligibility, , , , , ) = hats
+            .viewHat(topHatId);
 
-        assertEq(retdetails, "");
+        assertEq(retdetails, "tophat");
         assertEq(retmaxSupply, 1);
         assertEq(retsupply, 1);
         assertEq(reteligibility, address(0));
@@ -790,7 +804,11 @@ contract TransferHatTests is TestSetup2 {
     function testCannotTransferHatFromNonAdmin() public {
         // expect NotAdmin error
         vm.expectRevert(
-            abi.encodeWithSelector(HatsErrors.NotAdmin.selector, nonWearer, secondHatId)
+            abi.encodeWithSelector(
+                HatsErrors.NotAdmin.selector,
+                nonWearer,
+                secondHatId
+            )
         );
 
         // 4-1. transfer from wearer / other wallet
@@ -1072,7 +1090,9 @@ contract RenounceHatsTest is TestSetup2 {
 
     function testCannotRenounceHatAsNonWearer() public {
         // expect NotHatWearer error
-        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatWearer.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(HatsErrors.NotHatWearer.selector)
+        );
 
         //  6-1. attempt to renounce from non-wearer
         vm.prank(address(nonWearer));
@@ -1099,7 +1119,9 @@ contract ToggleSetHatsTest is TestSetup2 {
 
     function testCannotDeactivateHatAsNonWearer() public {
         // expect NotHatstoggle error
-        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatsToggle.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(HatsErrors.NotHatsToggle.selector)
+        );
 
         // 7-1. attempt to change Hat Status hat from non-wearer
         vm.prank(address(nonWearer));
@@ -1128,7 +1150,9 @@ contract ToggleSetHatsTest is TestSetup2 {
         hats.setHatStatus(secondHatId, false);
 
         // expect NotHatstoggle error
-        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatsToggle.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(HatsErrors.NotHatsToggle.selector)
+        );
 
         // 8-1. attempt to changeHatStatus hat from wearer / other wallet / admin
         vm.prank(address(nonWearer));
@@ -1213,20 +1237,22 @@ contract MutabilityTests is TestSetup {
 
         vm.prank(topHatWearer);
         hats.makeHatImmutable(secondHatId);
-        
+
         assertFalse(hats.isMutable(secondHatId));
     }
 
     function testCannotChangeImmutableHatMutability() public {
-        // create immutable hat    
+        // create immutable hat
         vm.prank(topHatWearer);
-        thirdHatId = hats.createHat(topHatId,
+        thirdHatId = hats.createHat(
+            topHatId,
             "immutable hat",
             3, // maxSupply
             _eligibility,
             _toggle,
             false,
-            secondHatImageURI);
+            secondHatImageURI
+        );
 
         assertFalse(hats.isMutable(thirdHatId));
 
@@ -1237,20 +1263,28 @@ contract MutabilityTests is TestSetup {
     }
 
     function testNonAdminCannotMakeMutableHatImmutable() public {
-        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, address(this), secondHatId));
-        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                HatsErrors.NotAdmin.selector,
+                address(this),
+                secondHatId
+            )
+        );
+
         hats.makeHatImmutable(secondHatId);
     }
 
     function testAdminCannotChangeImutableHatProperties() public {
         vm.startPrank(topHatWearer);
-        thirdHatId = hats.createHat(topHatId,
+        thirdHatId = hats.createHat(
+            topHatId,
             "immutable hat",
             3, // maxSupply
             _eligibility,
             _toggle,
             false,
-            secondHatImageURI);
+            secondHatImageURI
+        );
 
         assertFalse(hats.isMutable(thirdHatId));
 
@@ -1281,7 +1315,7 @@ contract MutabilityTests is TestSetup {
         vm.prank(topHatWearer);
         hats.changeHatDetails(secondHatId, new_);
 
-        (string memory changed,,,,,,,,) = hats.viewHat(secondHatId);
+        (string memory changed, , , , , , , , ) = hats.viewHat(secondHatId);
         assertEq(changed, new_);
     }
 
@@ -1294,7 +1328,7 @@ contract MutabilityTests is TestSetup {
         vm.prank(topHatWearer);
         hats.changeHatEligibility(secondHatId, new_);
 
-        (,,,address changed,,,,,) = hats.viewHat(secondHatId);
+        (, , , address changed, , , , , ) = hats.viewHat(secondHatId);
         assertEq(changed, new_);
     }
 
@@ -1307,7 +1341,7 @@ contract MutabilityTests is TestSetup {
         vm.prank(topHatWearer);
         hats.changeHatToggle(secondHatId, new_);
 
-        (,,,,address changed,,,,) = hats.viewHat(secondHatId);
+        (, , , , address changed, , , , ) = hats.viewHat(secondHatId);
         assertEq(changed, new_);
     }
 
@@ -1320,7 +1354,7 @@ contract MutabilityTests is TestSetup {
         vm.prank(topHatWearer);
         hats.changeHatImageURI(secondHatId, new_);
 
-        (,,,,,string memory changed,,,) = hats.viewHat(secondHatId);
+        (, , , , , string memory changed, , , ) = hats.viewHat(secondHatId);
         assertEq(changed, new_);
     }
 
@@ -1333,11 +1367,13 @@ contract MutabilityTests is TestSetup {
         vm.prank(topHatWearer);
         hats.changeHatMaxSupply(secondHatId, new_);
 
-        (,uint32 changed,,,,,,,) = hats.viewHat(secondHatId);
+        (, uint32 changed, , , , , , , ) = hats.viewHat(secondHatId);
         assertEq(changed, new_);
     }
 
-    function testAdminCanDecreaseMutableHatMaxSupplyToAboveCurrentSupply() public {
+    function testAdminCanDecreaseMutableHatMaxSupplyToAboveCurrentSupply()
+        public
+    {
         uint32 new_ = 100;
         uint32 decreased = 5;
 
@@ -1350,11 +1386,13 @@ contract MutabilityTests is TestSetup {
 
         hats.changeHatMaxSupply(secondHatId, decreased);
 
-        (,uint32 changed,,,,,,,) = hats.viewHat(secondHatId);
+        (, uint32 changed, , , , , , , ) = hats.viewHat(secondHatId);
         assertEq(changed, decreased);
     }
 
-    function testAdminCanDecreaseMutableHatMaxSupplyToEqualToCurrentSupply() public {
+    function testAdminCanDecreaseMutableHatMaxSupplyToEqualToCurrentSupply()
+        public
+    {
         uint32 new_ = 100;
         uint32 decreased = 1;
 
@@ -1367,11 +1405,13 @@ contract MutabilityTests is TestSetup {
 
         hats.changeHatMaxSupply(secondHatId, decreased);
 
-        (,uint32 changed,,,,,,,) = hats.viewHat(secondHatId);
+        (, uint32 changed, , , , , , , ) = hats.viewHat(secondHatId);
         assertEq(changed, decreased);
     }
 
-    function testAdminCannotDecreaseMutableHatMaxSupplyBelowCurrentSupply() public {
+    function testAdminCannotDecreaseMutableHatMaxSupplyBelowCurrentSupply()
+        public
+    {
         uint32 new_ = 100;
         uint32 decreased = 1;
 
@@ -1380,7 +1420,9 @@ contract MutabilityTests is TestSetup {
         hats.mintHat(secondHatId, secondWearer);
         hats.mintHat(secondHatId, thirdWearer);
 
-        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NewMaxSupplyTooLow.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(HatsErrors.NewMaxSupplyTooLow.selector)
+        );
 
         hats.changeHatMaxSupply(secondHatId, decreased);
     }
