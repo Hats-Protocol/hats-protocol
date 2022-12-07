@@ -1103,7 +1103,8 @@ contract RenounceHatsTest is TestSetup2 {
 contract ToggleSetHatsTest is TestSetup2 {
     function testDeactivateHat() public {
         // confirm second hat is active
-        assertTrue(hats.isActive(secondHatId));
+        (, , , , , , , , active_) = hats.viewHat(secondHatId);
+        assertTrue(active_);
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
 
         // expectEmit HatStatusChanged to false
@@ -1113,7 +1114,8 @@ contract ToggleSetHatsTest is TestSetup2 {
         // 7-2. change Hat Status true->false via setHatStatus
         vm.prank(address(_toggle));
         hats.setHatStatus(secondHatId, false);
-        assertFalse(hats.isActive(secondHatId));
+        (, , , , , , , mutable_, ) = hats.viewHat(secondHatId);
+        assertFalse(mutable_);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 
@@ -1140,7 +1142,8 @@ contract ToggleSetHatsTest is TestSetup2 {
         // changeHatStatus false->true via setHatStatus
         vm.prank(address(_toggle));
         hats.setHatStatus(secondHatId, true);
-        assertTrue(hats.isActive(secondHatId));
+        (, , , , , , , , active_) = hats.viewHat(secondHatId);
+        assertTrue(active_);
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 
@@ -1185,7 +1188,8 @@ contract ToggleGetHatsTest is TestSetup2 {
 
         // call mocked function within checkHatStatus to deactivate
         hats.checkHatStatus(secondHatId);
-        assertFalse(hats.isActive(secondHatId));
+        (, , , , , , , mutable_, ) = hats.viewHat(secondHatId);
+        assertFalse(mutable_);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 
@@ -1207,7 +1211,8 @@ contract ToggleGetHatsTest is TestSetup2 {
 
         // call mocked function within checkHatStatus to reactivate
         hats.checkHatStatus(secondHatId);
-        assertTrue(hats.isActive(secondHatId));
+        (, , , , , , , , active_) = hats.viewHat(secondHatId);
+        assertTrue(active_);
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 }
@@ -1230,7 +1235,8 @@ contract MutabilityTests is TestSetup {
     }
 
     function testAdminCanMakeMutableHatImmutable() public {
-        assertTrue(hats.isMutable(secondHatId));
+        (, , , , , , , mutable_, ) = hats.viewHat(secondHatId);
+        assertTrue(mutable_);
 
         vm.expectEmit(false, false, false, true);
         emit HatMutabilityChanged(secondHatId);
@@ -1238,7 +1244,8 @@ contract MutabilityTests is TestSetup {
         vm.prank(topHatWearer);
         hats.makeHatImmutable(secondHatId);
 
-        assertFalse(hats.isMutable(secondHatId));
+        (, , , , , , , mutable_, ) = hats.viewHat(secondHatId);
+        assertFalse(mutable_);
     }
 
     function testCannotChangeImmutableHatMutability() public {
@@ -1254,7 +1261,8 @@ contract MutabilityTests is TestSetup {
             secondHatImageURI
         );
 
-        assertFalse(hats.isMutable(thirdHatId));
+        (, , , , , , , mutable_, ) = hats.viewHat(thirdHatId);
+        assertFalse(mutable_);
 
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
 
@@ -1286,7 +1294,8 @@ contract MutabilityTests is TestSetup {
             secondHatImageURI
         );
 
-        assertFalse(hats.isMutable(thirdHatId));
+        (, , , , , , , mutable_, ) = hats.viewHat(thirdHatId);
+        assertFalse(mutable_);
 
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
         hats.changeHatDetails(thirdHatId, "should not work");

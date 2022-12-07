@@ -733,13 +733,13 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
     }
 
-    /// @notice Checks the active status of a hat
-    /// @dev Use `_isActive` for internal calls that can take a Hat as a param
-    /// @param _hatId The id of the hat
-    /// @return bool The active status of the hat
-    function isActive(uint256 _hatId) public view returns (bool) {
-        return _isActive(_hats[_hatId], _hatId);
-    }
+    // /// @notice Checks the active status of a hat
+    // /// @dev Use `_isActive` for internal calls that can take a Hat as a param
+    // /// @param _hatId The id of the hat
+    // /// @return bool The active status of the hat
+    // function isActive(uint256 _hatId) public view returns (bool) {
+    //     return _isActive(_hats[_hatId], _hatId);
+    // }
 
     function _getHatStatus(Hat memory _hat) internal view returns (bool) {
         return (_hat.config >> 95 != 0);
@@ -757,9 +757,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         return (_hat.config & uint96(1 << 94) != 0);
     }
 
-    function isMutable(uint256 _hatId) public view returns (bool) {
-        return _isMutable(_hats[_hatId]);
-    }
+    // function isMutable(uint256 _hatId) public view returns (bool) {
+    //     return _isMutable(_hats[_hatId]);
+    // }
 
     /// @notice Checks whether a wearer of a Hat is in good standing
     /// @dev Public function for use when pa    ssing a Hat object is not possible or preferable
