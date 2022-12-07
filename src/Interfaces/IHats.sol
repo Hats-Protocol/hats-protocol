@@ -137,7 +137,7 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
         view
         returns (bool);
 
-    function isActive(uint256 _hatId) external view returns (bool);
+    // function isActive(uint256 _hatId) external view returns (bool);
 
     function isInGoodStanding(address _wearer, uint256 _hatId)
         external

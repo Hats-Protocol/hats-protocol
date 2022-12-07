@@ -50,6 +50,9 @@ abstract contract TestVariables is HatsEvents, HatsErrors {
     bool retmutable;
     bool retactive;
 
+    bool active_;
+    bool mutable_;
+
     event TransferSingle(
         address indexed operator,
         address indexed from,
