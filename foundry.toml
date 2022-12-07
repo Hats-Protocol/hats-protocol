@@ -5,6 +5,28 @@ libs = ['lib']
 optimizer_runs = 1000000
 gas_reports = ["*"]
 auto_detect_solc = false
-solc = "0.8.15"
+solc = "0.8.17"
+remappings = [
+  "ds-test/=lib/forge-std/lib/ds-test/src/",
+  "forge-std/=lib/forge-std/src/",
+  "solbase/=lib/solbase/src/"
+]
+
+[rpc_endpoints]
+ethereum = "${ETHEREUM_RPC}"
+optimism = "${OPTIMISM_RPC}"
+goerli = "${GOERLI_RPC}"
+gnosis = "${GC_RPC}"
+polygon = "${POLYGON_RPC}"
+local = "http://localhost:8545"
+
+[etherscan]
+arbitrum = {key = "${ARBISCAN_KEY}", url = "https://api.arbiscan.io/api"}
+goerli = {key = "${ETHERSCAN_KEY}", url = "https://api-goerli.etherscan.io/api"}
+ethereum = {key = "${ETHERSCAN_KEY}", chain = "mainnet"}
+optimism = {key = "${OPTIMISM_ETHERSCAN_KEY}", url = "https://api-optimistic.etherscan.io/api"}
+polygon = {key = "${POLYGONSCAN_KEY}", url = "https://api.polygonscan.com/api"}
+gnosis = {key = "${GNOSISSCAN_KEY}", url = "https://api.gnosisscan.io/api"}
+
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
