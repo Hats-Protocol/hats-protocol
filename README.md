@@ -18,16 +18,15 @@
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
 [![Twitter][twitter-shield]][twitter-url]
-<!-- [![CCO License][license-shield]][license-url] -->
 
 <!-- LOGO -->
 <br />
 <div align="center">
   <a href="https://github.com/Hats-Protocol/hats-protocol">
-    <img src="https://user-images.githubusercontent.com/10171948/192988691-07b7f842-232d-4ac6-9b14-21b626775834.png" alt="Logo" width="320" height="184">
+    <img src="https://ipfs.io/ipfs/QmbQy4vsu4aAHuQwpHoHUsEURtiYKEbhv7ouumBXiierp9" alt="Hats Hat" width="300" height="300">
   </a>
 
-  <h3 align="center">Hats Protocol</h3>
+  <h2 align="center">Hats Protocol</h3>
 
   <p align="center">
     How DAOs get things done
@@ -48,7 +47,7 @@
     <li>
       <a href="#about-the-project">About The Project</a>
       <ul>
-        <li><a href="#latest-deployments">Latest Deployments</a></li>
+        <li><a href="#latest-deployments">Deployments</a></li>
       </ul>
     </li>
     <li><a href="#getting-started">Getting Started</a></li>
@@ -67,17 +66,9 @@ Hats Protocol is a protocol for DAO-native roles and credentials that support de
 
 Hats are represented on-chain by ERC1155 tokens. An address with a balance of a given Hat token "wears" that hat, granting them the responsibilities and authorities that have been assigned to the Hat by the DAO.
 
-### Latest Deployments
+### Deployments
 
-#### Beta 3
-
-- Gnosis Chain (chain id #100) &mdash; `0x245e5B56C18B18aC2d72F94C5F7bE1D52497A8aD`
-
-#### Beta 4
-
-- Goerli Testnet (chain id #4) &mdash; `0x2923469a33bd2fa2ab33c877db81d35a9d8d60c6`
-- Gnosis Chain (chain id #100) &mdash; `0x72c89eb08444bc16396dd9432b3e82d956c412ec`
-- Polygon (chain id #137) &mdash; `0xe81597289a249ae725c2d80e7848dbfa9708c22d`
+For information on Hats Protocol versions and deployments, see [Releases](https://github.com/Hats-Protocol/hats-protocol/releases).
 
 <!-- GETTING STARTED -->
 ## Getting Started
@@ -399,15 +390,12 @@ Since batch Hats transfers can be made from and to multiple wearers, batch trans
 The wearer of a Hat can "take off" their Hat via `Hats.renounceHat`. This burns the token and revokes any associated authorities and responsibilities from the now-former wearer, but does not put the wearer in bad standing.
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-<!-- LICENSE
 ## License
 
-Distributed under the CC0 License. See `LICENSE.txt` for more information.
+Distributed under the AGPLv3 License. See `LICENSE.txt` for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
--->
 
 <!-- CONTACT -->
 ## Contact
