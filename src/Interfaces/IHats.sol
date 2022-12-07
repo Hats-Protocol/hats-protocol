@@ -20,9 +20,11 @@ import "./HatsErrors.sol";
 import "./HatsEvents.sol";
 
 interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
-    function mintTopHat(address _target, string memory _imageURI)
-        external
-        returns (uint256 topHatId);
+    function mintTopHat(
+        address _target,
+        string memory _details,
+        string memory _imageURI
+    ) external returns (uint256 topHatId);
 
     // function createTopHatAndHat(
     //     string memory _details,

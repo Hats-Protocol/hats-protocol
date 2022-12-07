@@ -94,7 +94,11 @@ abstract contract TestSetup is Test, TestVariables {
 
     function createTopHat() internal {
         // create TopHat
-        topHatId = hats.mintTopHat(topHatWearer, "http://www.tophat.com/");
+        topHatId = hats.mintTopHat(
+            topHatWearer,
+            "tophat",
+            "http://www.tophat.com/"
+        );
     }
 
     /// @dev assumes a tophat has already been created

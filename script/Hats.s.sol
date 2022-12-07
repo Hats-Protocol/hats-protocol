@@ -43,8 +43,9 @@ contract DeployHatsAndMintTopHat is Script {
         Hats hats = new Hats(name, imageURI);
 
         string memory image = "";
+        string memory details = "";
 
-        uint256 tophat = hats.mintTopHat(deployer, image);
+        uint256 tophat = hats.mintTopHat(deployer, details, image);
 
         console2.log("hats: ", address(hats));
         console2.log("tophat: ", tophat);
