@@ -945,9 +945,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
                         bytes(
                             string.concat(
                                 '{"name": "',
-                                "Hats Protocol Hat",
+                                "Hat",
                                 '", "description": "',
-                                "this is a test of Hats Protocol nfts", // alternatively, could point to a URI for offchain flexibility
+                                hat.details,
                                 '", "image": "',
                                 getImageURIForHat(_hatId),
                                 '",',
