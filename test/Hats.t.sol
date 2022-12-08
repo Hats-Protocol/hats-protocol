@@ -91,7 +91,7 @@ contract CreateHatsTest is TestSetup {
 
         // assert admin's lastHatId is incremented
         (, , , , , , uint8 lastHatIdPost, , ) = hats.viewHat(topHatId);
-        (, , , , , , , bool mutable_, ) = hats.viewHat(secondHatId);
+        (, , , , , , , mutable_, ) = hats.viewHat(secondHatId);
         assertEq(lastHatId + 1, lastHatIdPost);
         assertFalse(mutable_);
     }
@@ -121,7 +121,7 @@ contract CreateHatsTest is TestSetup {
             secondHatImageURI
         );
 
-        (, , , , , , , bool mutable_, ) = hats.viewHat(secondHatId);
+        (, , , , , , , mutable_, ) = hats.viewHat(secondHatId);
         assertTrue(mutable_);
     }
 
@@ -833,6 +833,16 @@ contract TransferHatTests is TestSetup2 {
 
         // assert hatSupply is not incremented
         assertEq(hats.hatSupply(secondHatId), hatSupply);
+    }
+
+    function testCannotTransferHatToExistingWearer() public {
+        vm.startPrank(topHatWearer);
+
+        hats.mintHat(secondHatId, thirdWearer);
+
+        vm.expectRevert();
+
+        hats.transferHat(secondHatId, secondWearer, thirdWearer);
     }
 }
 
