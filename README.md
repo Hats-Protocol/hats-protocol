@@ -70,22 +70,6 @@ Hats are represented on-chain by ERC1155 tokens. An address with a balance of a 
 
 For information on Hats Protocol versions and deployments, see [Releases](https://github.com/Hats-Protocol/hats-protocol/releases).
 
-<!-- GETTING STARTED -->
-## Getting Started
-
-[TODO - add how to get your DAO a tophat, create your first hat, and mint it, and plug into a token gate]
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-<!-- USE CASES -->
-## Use Cases
-
-[TODO] Examples / screenshots
-
-_For more examples, please refer to the <a href="#hats-protocol-docs">docs</a>._
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 <!-- CONTRIBUTING -->
 ## Contributing
 
@@ -403,6 +387,8 @@ Distributed under the AGPLv3 License. See `LICENSE.txt` for more information.
 Spencer Graham - [@spengrah](https://twitter.com/spengrah)
 
 nintynick - [@nintynick_](https://twitter.com/nintynick_)
+
+David Ehrlichman - [@davehrlichman](https://twitter.com/davehrlichman)
 
 Project Website: [https://hatsprotocol.xyz/](https://hatsprotocol.xyz)
 
