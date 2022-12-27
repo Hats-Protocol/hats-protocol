@@ -844,6 +844,29 @@ contract TransferHatTests is TestSetup2 {
 
         hats.transferHat(secondHatId, secondWearer, thirdWearer);
     }
+
+    function testCannotTransferHatToRevokedWearer() public {
+        vm.startPrank(topHatWearer);
+
+        // mint the hat
+        hats.mintHat(secondHatId, thirdWearer);
+
+        // revoke the hat, but do not burn it
+        // mock calls to eligibility contract to return (eligible = true, standing = true)
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature(
+                "getWearerStatus(address,uint256)",
+                thirdWearer,
+                secondHatId
+            ),
+            abi.encode(false, true)
+        );
+        // transfer should revert
+        vm.expectRevert();
+
+        hats.transferHat(secondHatId, secondWearer, thirdWearer);
+    }
 }
 
 contract EligibilitySetHatsTests is TestSetup2 {

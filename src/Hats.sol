@@ -498,8 +498,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             revert NotHatWearer();
         }
 
-        // check if recipient is already wearing hat
-        if (isWearerOfHat(_to, _hatId)) {
+        // Check if recipient is already wearing hat; also checks storage to maintain balance == 1 invariant
+        if (_balanceOf[_to][_hatId] > 0) {
             revert AlreadyWearingHat(_to, _hatId);
         }
 
