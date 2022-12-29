@@ -18,7 +18,7 @@ pragma solidity >=0.8.13;
 import "./IHatsIdUtilities.sol";
 
 interface IHatsIdUtilities {
-    function buildHatId(uint256 _admin, uint8 _newHat)
+    function buildHatId(uint256 _admin, uint16 _newHat)
         external
         pure
         returns (uint256 id);

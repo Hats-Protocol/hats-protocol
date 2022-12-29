@@ -122,7 +122,7 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
             address eligibility,
             address toggle,
             string memory imageURI,
-            uint8 lastHatId,
+            uint16 lastHatId,
             bool mutable_,
             bool active
         );

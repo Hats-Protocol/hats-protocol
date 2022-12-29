@@ -29,29 +29,30 @@ contract HatsIdUtilities is IHatsIdUtilities {
      *
      * The top level consists of 4 bytes and references all tophats.
      *
-     * Each level below consists of 1 byte, and contains up to 255 child hats.
+     * Each level below consists of 14 bits, and contains up to 16,384 child hats.
      *
-     * A uint256 contains 4 bytes of space for tophat addresses and 28 additional bytes
-     * of space, giving room for 28 levels of delegation, with the admin at each level
-     * having space for 255 different child hats.
+     * A uint256 contains 4 bytes of space for tophat addresses and (224 / 14) = 16
+     * additional bytes of space, giving room for 28 levels of delegation, with the admin
+     * at each level having space for 16,384 different child hats.
      *
-     * A hat tree consists of a single tophat and has a max depth of 28 levels.
+     * A hat tree consists of a single tophat and has a max depth of 16 levels.
      */
 
     uint256 internal constant TOPHAT_ADDRESS_SPACE = 32; // 32 bits (4 bytes) of space for tophats, aka the "domain"
-    uint256 internal constant LOWER_LEVEL_ADDRESS_SPACE = 8; // 8 bits (1 byte) of space for each of the levels below the tophat
-    uint256 internal constant MAX_LEVELS = 28; // 28 levels below the tophat
+    uint256 internal constant LOWER_LEVEL_ADDRESS_SPACE = 14; // 14 bits of space for each of the levels below the tophat
+    uint256 internal constant MAX_LEVELS = 16; // 16 levels below the tophat
 
     /// @notice Constructs a valid hat id for a new hat underneath a given admin
     /// @dev Check hats[_admin].lastHatId for the previous hat created underneath _admin
     /// @param _admin the id of the admin for the new hat
-    /// @param _newHat the uint8 id of the new hat
+    /// @param _newHat the uint16 id of the new hat (must be < 2**14)
     /// @return id The constructed hat id
-    function buildHatId(uint256 _admin, uint8 _newHat)
+    function buildHatId(uint256 _admin, uint16 _newHat)
         public
         pure
         returns (uint256 id)
     {
+        if (_newHat > 2**14 - 1) revert(); // TODO add a custom error
         uint256 mask;
         // TODO: remove this loop
         for (uint256 i = 0; i < MAX_LEVELS; ++i) {
@@ -71,7 +72,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
 
     /// @notice Identifies the level a given hat in its hat tree
     /// @param _hatId the id of the hat in question
-    /// @return level (0 to 28)
+    /// @return level (0 to MAX_LEVELS)
     function getHatLevel(uint256 _hatId) public pure returns (uint8) {
         uint256 mask;
         uint256 i;
