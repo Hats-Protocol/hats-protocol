@@ -46,7 +46,7 @@ abstract contract TestVariables is HatsEvents, HatsErrors {
     address reteligibility;
     address rettoggle;
     string retimageURI;
-    uint8 retlastHatId;
+    uint16 retlastHatId;
     bool retmutable;
     bool retactive;
 

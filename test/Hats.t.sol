@@ -63,7 +63,7 @@ contract CreateTopHatTest is TestSetup {
 contract CreateHatsTest is TestSetup {
     function testImmutableHatCreated() public {
         // get prelim values
-        (, , , , , , uint8 lastHatId, , ) = hats.viewHat(topHatId);
+        (, , , , , , uint16 lastHatId, , ) = hats.viewHat(topHatId);
 
         vm.expectEmit(false, false, false, true);
         emit HatCreated(
@@ -90,7 +90,7 @@ contract CreateHatsTest is TestSetup {
         );
 
         // assert admin's lastHatId is incremented
-        (, , , , , , uint8 lastHatIdPost, , ) = hats.viewHat(topHatId);
+        (, , , , , , uint16 lastHatIdPost, , ) = hats.viewHat(topHatId);
         (, , , , , , , mutable_, ) = hats.viewHat(secondHatId);
         assertEq(lastHatId + 1, lastHatIdPost);
         assertFalse(mutable_);
@@ -187,18 +187,18 @@ contract BatchCreateHats is TestSetupBatch {
             imageURIsBatch
         );
 
-        (, , , , , , uint8 lastHatId, , ) = hats.viewHat(topHatId);
+        (, , , , , , uint16 lastHatId, , ) = hats.viewHat(topHatId);
 
         assertEq(lastHatId, count);
 
         (, , , , address t, , , , ) = hats.viewHat(
-            hats.buildHatId(topHatId, uint8(count))
+            hats.buildHatId(topHatId, uint16(count))
         );
         assertEq(t, _toggle);
     }
 
     function testBatchCreateHatsSkinnyFullBranch() public {
-        uint256 count = 28;
+        uint256 count = 16;
 
         adminsBatch = new uint256[](count);
         detailsBatch = new string[](count);
@@ -486,7 +486,7 @@ contract MintHatsTest is TestSetup {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(thirdWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
-        (, , , , , , uint8 lastHatId_pre, , ) = hats.viewHat(topHatId);
+        (, , , , , , uint16 lastHatId_pre, , ) = hats.viewHat(topHatId);
 
         // mint hat
         vm.prank(address(topHatWearer));
@@ -506,7 +506,7 @@ contract MintHatsTest is TestSetup {
         assertEq(hats.hatSupply(secondHatId), supply_pre + 2);
 
         // assert admin's lastHatId is *not* incremented
-        (, , , , , , uint8 lastHatId_post, , ) = hats.viewHat(topHatId);
+        (, , , , , , uint16 lastHatId_post, , ) = hats.viewHat(topHatId);
         assertEq(lastHatId_post, lastHatId_pre);
     }
 
@@ -514,7 +514,7 @@ contract MintHatsTest is TestSetup {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(thirdWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
-        (, , , , , , uint8 lastHatId_pre, , ) = hats.viewHat(topHatId);
+        (, , , , , , uint16 lastHatId_pre, , ) = hats.viewHat(topHatId);
 
         // mint hat
         vm.prank(address(topHatWearer));
@@ -543,7 +543,7 @@ contract MintHatsTest is TestSetup {
         assertEq(hats.hatSupply(secondHatId), supply_pre + 1);
 
         // assert admin's lastHatId is *not* incremented
-        (, , , , , , uint8 lastHatId_post, , ) = hats.viewHat(topHatId);
+        (, , , , , , uint16 lastHatId_post, , ) = hats.viewHat(topHatId);
         assertEq(lastHatId_post, lastHatId_pre);
     }
 
@@ -672,7 +672,7 @@ contract MintHatsTest is TestSetup {
 
         hats.batchMintHats(hatBatch, wearerBatch);
 
-        (, , , , , , uint8 lastHatId, , ) = hats.viewHat(secondHatId);
+        (, , , , , , uint16 lastHatId, , ) = hats.viewHat(secondHatId);
 
         assertEq(lastHatId, count);
     }
