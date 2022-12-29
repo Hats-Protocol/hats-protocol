@@ -6,6 +6,7 @@ import "../src/HatsIdUtilities.sol";
 
 contract HatIdUtilTests is Test {
     HatsIdUtilities utils;
+    error InvalidChildHat();
 
     function setUp() public {
         utils = new HatsIdUtilities();
@@ -31,6 +32,15 @@ contract HatIdUtilTests is Test {
             assertEq(utils.getAdminAtLevel(next, i - 1), admin);
             admin = next;
         }
+    }
+
+    function testCannotBuildInvalidChildHatId() public {
+        // start with a top hat
+        uint256 admin = 1 << 224;
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidChildHat.selector));
+
+        utils.buildHatId(admin, 2**14);
     }
 
     function testTopHatDomain() public {

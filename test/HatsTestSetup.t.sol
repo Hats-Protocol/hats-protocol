@@ -60,6 +60,8 @@ abstract contract TestVariables is HatsEvents, HatsErrors {
         uint256 id,
         uint256 amount
     );
+
+    error InvalidChildHat();
 }
 
 abstract contract TestSetup is Test, TestVariables {

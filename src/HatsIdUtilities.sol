@@ -22,6 +22,8 @@ import "./Interfaces/IHatsIdUtilities.sol";
 /// for easier use by other contracts.
 /// @author Hats Protocol
 contract HatsIdUtilities is IHatsIdUtilities {
+    error InvalidChildHat();
+
     /**
      * Hat Ids serve as addresses. A given Hat's Id represents its location in its
      * hat tree: its level, its admin, its admin's admin (etc, all the way up to the
@@ -52,7 +54,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
         pure
         returns (uint256 id)
     {
-        if (_newHat > 2**14 - 1) revert(); // TODO add a custom error
+        if (_newHat > 2**14 - 1) revert InvalidChildHat(); // TODO add a custom error
         uint256 mask;
         // TODO: remove this loop
         for (uint256 i = 0; i < MAX_LEVELS; ++i) {
