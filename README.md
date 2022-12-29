@@ -232,18 +232,21 @@ Hat ids are uint256 bitmaps that create an "address" &mdash; more like an web or
 The 32 bytes of a hat's id are structured as follows:
 
 - The first 4 bytes are reserved for the top hat id. Since top hat ids are unique across a given deployment of Hats Protocol, we can also think of them as the top level "domain" for a hat tree.
-- Each of the next 28 bytes refer to a single "Hat Level".
+- Each of the next chunks of 14 bits refers to a single "Hat Level".
 
-This means there are 29 hat levels, beginning with the top hat at level 0 and going up to level 28. A hat at level 6 will have 6 admins in its branch of the tree, and therefore its id will have non-zero values at levels 0-5 as well as its own level. Since these values correspond to its admins, all that is needed to know which hats have admin authorities over a given hat is to know that given hat's id.
+This means there are 17 total hat levels, beginning with the top hat at level 0 and going up to level 16. A hat at level 6 will have 6 admins in its branch of the tree, and therefore its id will have non-zero values at levels 0-5 as well as its own level. Since these values correspond to its admins, all that is needed to know which hats have admin authorities over a given hat is to know that given hat's id.
 
 #### Hat Tree Space
 
-A hat tree can have up to 28 levels, plus the top hat (tree root). Within those 28 levels are 224 bits of address space (remember, one level is one byte), so the maximum number of hats in a single hat tree is $2^{224} + 1 \approx ~2.696 * 10^{67}$, or well beyond the number of stars in the universe.
+A hat tree can have up to 16 levels, plus the top hat (tree root). Within those 16 levels are 224 bits of address space (remember, one level contains 14 bits of space), so the maximum number of hats in a single hat tree is $2^{224} + 1 \approx ~2.696 * 10^{67}$, or well beyond the number of stars in the universe.
 
 #### Displaying Hat Ids
 
 Unfortunately, the rich information embedded within a hat id is hard to see when the id is converted to base 10, which is how most applications and front ends display uint256 values originating from smart contracts.
 
+It is recommended for front ends to instead convert hat ids to base-14, revealing the values of the 14-bit level chunks.
+
+<!-- TABLE OF CONTENTS 
 It is recommended for front ends to instead convert hat ids to hexidecimal, revealing the values of the bytes &mdash; and therefore the hat levels &mdash; directly.
 
 For example, instead of a hat id looking like this under base 10: `27065670334958527282875471856998940443582285201907529987323758379008`
@@ -256,6 +259,7 @@ In this second version, you can clearly see that this hat is...
 - is in the first hat tree (top hat id = 1)
 - is the first hat created at level 2 within this tree
 - admin'd by the first hat created at level 2 within this tree
+-->
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
