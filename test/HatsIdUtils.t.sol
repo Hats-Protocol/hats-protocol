@@ -19,7 +19,7 @@ contract LinkedTreeHatIdUtilTests is Test {
     uint256 oldTopHatId = uint256(oldTopHat) << 224;
     uint256 id1 = utils.buildHatId(admin, 1);
     utils.linkTree(oldTopHat, id1);
-    assertEq(utils.isTopHat(oldTopHatId), false);
+    assertFalse(utils.isTopHat(oldTopHatId));
     assertEq(utils.getHatLevel(oldTopHatId), utils.getHatLevel(id1) + 1);
     assertEq(utils.getAdminAtLevel(oldTopHatId, 0), admin);
 
@@ -31,7 +31,7 @@ contract LinkedTreeHatIdUtilTests is Test {
     assertEq(utils.getHatLevel(oldTopHatId), utils.getHatLevel(id1) + 1);
     assertEq(utils.getHatLevel(admin), utils.getHatLevel(id3) + 1);
     assertEq(utils.getHatLevel(admin3Id), 0);
-    assertEq(utils.isTopHat(admin), false);
+    assertFalse(utils.isTopHat(admin));
 
     assertEq(utils.getAdminAtLevel(id1, 2), admin);
     assertEq(utils.getAdminAtLevel(oldTopHatId, 0), admin3Id);

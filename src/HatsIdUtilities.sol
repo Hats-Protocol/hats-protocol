@@ -146,7 +146,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
     /// @return uint256 The domain
     function getTophatDomain(uint256 _hatId) public view returns (uint256) {
         return
-            getTreeAdminAtLevel(_hatId, 0) >>
+            _hatId >>
             (LOWER_LEVEL_ADDRESS_SPACE * MAX_LEVELS);
     }
 }
