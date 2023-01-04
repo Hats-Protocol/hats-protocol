@@ -493,6 +493,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     ) public {
         _checkAdmin(_hatId);
 
+        // cannot transfer immutable hats, except for tophats, which can always transfer themselves
+        if (!isTopHat(_hatId)) {
+            if (!_isMutable(_hats[_hatId])) revert Immutable();
+        }
+
         // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
         if (_balanceOf[_from][_hatId] < 1) {
             revert NotHatWearer();
