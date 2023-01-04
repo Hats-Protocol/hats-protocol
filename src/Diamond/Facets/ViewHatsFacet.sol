@@ -123,4 +123,64 @@ contract ViewHatsFacet {
     function isMutable(uint256 _hatId) public view returns (bool) {
         return LibHatsDiamond._isMutable(s._hats[_hatId]);
     }
+
+    function name() public view returns (string memory) {
+        return s.name;
+    }
+
+    /// @notice Constructs a valid hat id for a new hat underneath a given admin
+    /// @dev Check hats[_admin].lastHatId for the previous hat created underneath _admin
+    /// @param _admin the id of the admin for the new hat
+    /// @param _newHat the uint8 id of the new hat
+    /// @return id The constructed hat id
+    function buildHatId(uint256 _admin, uint8 _newHat)
+        public
+        pure
+        returns (uint256 id)
+    {
+        id = LibHatsDiamond.buildHatId(_admin, _newHat);
+    }
+
+    /// @notice Identifies the level a given hat in its hat tree
+    /// @param _hatId the id of the hat in question
+    /// @return level (0 to 28)
+    function getHatLevel(uint256 _hatId) public pure returns (uint8) {
+        return LibHatsDiamond.getHatLevel(_hatId);
+    }
+
+    /// @notice Checks whether a hat is a topHat
+    /// @dev For use when passing a Hat object is not appropriate
+    /// @param _hatId The hat in question
+    /// @return bool Whether the hat is a topHat
+    function isTopHat(uint256 _hatId) public pure returns (bool) {
+        return LibHatsDiamond.isTopHat(_hatId);
+    }
+
+    /// @notice Gets the hat id of the admin at a given level of a given hat
+    /// @param _hatId the id of the hat in question
+    /// @param _level the admin level of interest
+    /// @return uint256 The hat id of the resulting admin
+    function getAdminAtLevel(uint256 _hatId, uint8 _level)
+        public
+        pure
+        returns (uint256)
+    {
+        return LibHatsDiamond.getAdminAtLevel(_hatId, _level);
+    }
+
+    /// @notice Gets the tophat domain of a given hat
+    /// @dev A domain is the identifier for a given hat tree, stored in the first 4 bytes of a hat's id
+    /// @param _hatId the id of the hat in question
+    /// @return uint256 The domain
+    function getTophatDomain(uint256 _hatId) public pure returns (uint256) {
+        return LibHatsDiamond.getTophatDomain(_hatId);
+    }
+
+    function getImageURIForHat(uint256 _hatId)
+        public
+        view
+        returns (string memory)
+    {
+        return LibHatsDiamond._getImageURIForHat(_hatId);
+    }
 }

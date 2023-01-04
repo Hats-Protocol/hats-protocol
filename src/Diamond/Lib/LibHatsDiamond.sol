@@ -17,6 +17,7 @@ pragma solidity >=0.8.13;
 
 import {LibHatsStorage} from "../Lib/LibHatsStorage.sol";
 import {HatsErrors} from "../../Interfaces/HatsErrors.sol";
+import "forge-std/Test.sol"; // remove after testing
 
 // import "../../HatsIdUtilities.sol";
 
@@ -43,6 +44,7 @@ library LibHatsDiamond {
 
         // increment Hat supply counter
         ++s.hatSupply[uint256(id)];
+        console2.log("_mint", s.hatSupply[id]);
 
         emit LibHatsStorage.TransferSingle(msg.sender, address(0), to, id, 1);
     }
@@ -333,7 +335,7 @@ library LibHatsDiamond {
     /// @param _newHat the uint8 id of the new hat
     /// @return id The constructed hat id
     function buildHatId(uint256 _admin, uint8 _newHat)
-        public
+        internal
         pure
         returns (uint256 id)
     {
@@ -357,7 +359,7 @@ library LibHatsDiamond {
     /// @notice Identifies the level a given hat in its hat tree
     /// @param _hatId the id of the hat in question
     /// @return level (0 to 28)
-    function getHatLevel(uint256 _hatId) public pure returns (uint8) {
+    function getHatLevel(uint256 _hatId) internal pure returns (uint8) {
         uint256 mask;
         uint256 i;
         // TODO: get rid of this for loop and possibly use the YUL switch/case
@@ -378,7 +380,7 @@ library LibHatsDiamond {
     /// @dev For use when passing a Hat object is not appropriate
     /// @param _hatId The hat in question
     /// @return bool Whether the hat is a topHat
-    function isTopHat(uint256 _hatId) public pure returns (bool) {
+    function isTopHat(uint256 _hatId) internal pure returns (bool) {
         return _hatId > 0 && uint224(_hatId) == 0;
     }
 
@@ -387,7 +389,7 @@ library LibHatsDiamond {
     /// @param _level the admin level of interest
     /// @return uint256 The hat id of the resulting admin
     function getAdminAtLevel(uint256 _hatId, uint8 _level)
-        public
+        internal
         pure
         returns (uint256)
     {
@@ -401,7 +403,7 @@ library LibHatsDiamond {
     /// @dev A domain is the identifier for a given hat tree, stored in the first 4 bytes of a hat's id
     /// @param _hatId the id of the hat in question
     /// @return uint256 The domain
-    function getTophatDomain(uint256 _hatId) public pure returns (uint256) {
+    function getTophatDomain(uint256 _hatId) internal pure returns (uint256) {
         return
             getAdminAtLevel(_hatId, 0) >>
             (LOWER_LEVEL_ADDRESS_SPACE * MAX_LEVELS);
@@ -473,11 +475,7 @@ library LibHatsDiamond {
     //////////////////////////////////////////////////////////////*/
 
     // Internal function version of diamondCut
-    function diamondCut(
-        FacetCut[] memory _diamondCut,
-        address _init,
-        bytes memory _calldata
-    ) internal {
+    function diamondCut(FacetCut[] memory _diamondCut) internal {
         for (
             uint256 facetIndex;
             facetIndex < _diamondCut.length;

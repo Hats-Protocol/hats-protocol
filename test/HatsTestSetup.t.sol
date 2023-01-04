@@ -5,9 +5,16 @@ import "forge-std/Test.sol";
 import "../src/Hats.sol";
 import "../src/Interfaces/HatsEvents.sol";
 import "../src/Interfaces/HatsErrors.sol";
+import "../src/Diamond/Facets/ERC1155Facet.sol";
+import "../src/Diamond/Facets/HatsCoreFacet.sol";
+import "../src/Diamond/Facets/MutableHatsFacet.sol";
+import "../src/Diamond/Facets/ViewHatsFacet.sol";
+import "../src/Diamond/Lib/LibHatsDiamond.sol";
+import "../src/Diamond/HatsDiamond.sol";
 
 abstract contract TestVariables is HatsEvents, HatsErrors {
-    Hats hats;
+    HatsDiamond hatsDiamond;
+    address hats;
 
     address internal topHatWearer;
     address internal secondWearer;
@@ -60,16 +67,124 @@ abstract contract TestVariables is HatsEvents, HatsErrors {
         uint256 id,
         uint256 amount
     );
+
+    bytes4[] selectors0;
+    bytes4[] selectors1;
+    bytes4[] selectors2;
+    bytes4[] selectors3;
 }
 
 abstract contract TestSetup is Test, TestVariables {
     function setUp() public virtual {
         setUpVariables();
         // instantiate Hats contract
-        hats = new Hats(name, _baseImageURI);
+        hats = deployHatsDiamond();
 
         // create TopHat
-        createTopHat();
+        topHatId = createTopHat();
+    }
+
+    function deployHatsDiamond() internal returns (address hats_) {
+        // deploy facets and track addresses
+        ERC1155Facet erc1155Facet = new ERC1155Facet();
+        HatsCoreFacet hatsCoreFacet = new HatsCoreFacet();
+        MutableHatsFacet mutableHatsFacet = new MutableHatsFacet();
+        ViewHatsFacet viewHatsFacet = new ViewHatsFacet();
+
+        // set up diamond cut object
+
+        // ERC1155 facet cut setup
+        selectors0 = new bytes4[](6);
+
+        selectors0 = [
+            ERC1155Facet.balanceOfBatch.selector,
+            ERC1155Facet.balanceOf.selector,
+            ERC1155Facet.safeBatchTransferFrom.selector,
+            ERC1155Facet.safeTransferFrom.selector,
+            ERC1155Facet.setApprovalForAll.selector,
+            ERC1155Facet.uri.selector
+        ];
+
+        LibHatsDiamond.FacetCut memory erc1155Cut = LibHatsDiamond.FacetCut(
+            address(erc1155Facet),
+            LibHatsDiamond.FacetCutAction.Add,
+            selectors0
+        );
+
+        selectors1 = new bytes4[](11);
+
+        selectors1 = [
+            HatsCoreFacet.checkHatStatus.selector,
+            HatsCoreFacet.checkHatWearerStatus.selector,
+            HatsCoreFacet.createHat.selector,
+            HatsCoreFacet.getNextId.selector,
+            HatsCoreFacet.mintHat.selector,
+            HatsCoreFacet.mintTopHat.selector,
+            HatsCoreFacet.renounceHat.selector,
+            HatsCoreFacet.setHatStatus.selector,
+            HatsCoreFacet.setHatWearerStatus.selector,
+            HatsCoreFacet.transferHat.selector,
+            HatsCoreFacet.hatSupply.selector
+        ];
+
+        LibHatsDiamond.FacetCut memory hatsCoreCut = LibHatsDiamond.FacetCut(
+            address(hatsCoreFacet),
+            LibHatsDiamond.FacetCutAction.Add,
+            selectors1
+        );
+
+        selectors2 = new bytes4[](6);
+        selectors2 = [
+            MutableHatsFacet.changeHatDetails.selector,
+            MutableHatsFacet.changeHatEligibility.selector,
+            MutableHatsFacet.changeHatImageURI.selector,
+            MutableHatsFacet.changeHatMaxSupply.selector,
+            MutableHatsFacet.changeHatToggle.selector,
+            MutableHatsFacet.makeHatImmutable.selector
+        ];
+
+        LibHatsDiamond.FacetCut memory mutableHatsCut = LibHatsDiamond.FacetCut(
+            address(mutableHatsFacet),
+            LibHatsDiamond.FacetCutAction.Add,
+            selectors2
+        );
+
+        selectors3 = new bytes4[](14);
+        selectors3 = [
+            ViewHatsFacet.isActive.selector,
+            ViewHatsFacet.isAdminOfHat.selector,
+            ViewHatsFacet.isEligible.selector,
+            ViewHatsFacet.isInGoodStanding.selector,
+            ViewHatsFacet.isMutable.selector,
+            ViewHatsFacet.isWearerOfHat.selector,
+            ViewHatsFacet.viewHat.selector,
+            ViewHatsFacet.name.selector,
+            ViewHatsFacet.isTopHat.selector,
+            ViewHatsFacet.buildHatId.selector,
+            ViewHatsFacet.getHatLevel.selector,
+            ViewHatsFacet.getAdminAtLevel.selector,
+            ViewHatsFacet.getTophatDomain.selector,
+            ViewHatsFacet.getImageURIForHat.selector
+        ];
+
+        LibHatsDiamond.FacetCut memory viewHatsCut = LibHatsDiamond.FacetCut(
+            address(viewHatsFacet),
+            LibHatsDiamond.FacetCutAction.Add,
+            selectors3
+        );
+
+        // put them all together
+        LibHatsDiamond.FacetCut[] memory cuts = new LibHatsDiamond.FacetCut[](
+            4
+        );
+        cuts[0] = erc1155Cut;
+        cuts[1] = hatsCoreCut;
+        cuts[2] = mutableHatsCut;
+        cuts[3] = viewHatsCut;
+
+        // deploy diamond
+        hatsDiamond = new HatsDiamond(name, _baseImageURI, cuts);
+        hats_ = address(hatsDiamond);
     }
 
     function setUpVariables() internal {
@@ -95,9 +210,11 @@ abstract contract TestSetup is Test, TestVariables {
         name = "Hats Test Contract";
     }
 
-    function createTopHat() internal {
+    function createTopHat() internal returns (uint256 id) {
+        // console2.log("A");
+        // emit log_string(vm.toString(HatsCoreFacet.mintTopHat.selector));
         // create TopHat
-        topHatId = hats.mintTopHat(
+        id = HatsCoreFacet(hats).mintTopHat(
             topHatWearer,
             "tophat",
             "http://www.tophat.com/"
@@ -128,7 +245,7 @@ abstract contract TestSetup is Test, TestVariables {
             // create ith hat from the admin
             vm.prank(adminWearer);
 
-            id = hats.createHat(
+            id = HatsCoreFacet(hats).createHat(
                 admin,
                 string.concat("hat ", vm.toString(i + 2)),
                 _maxSupply,
@@ -142,7 +259,7 @@ abstract contract TestSetup is Test, TestVariables {
             // mint ith hat from the admin, to the ith wearer
             vm.prank(adminWearer);
             wearer = address(uint160(i));
-            hats.mintHat(id, wearer);
+            HatsCoreFacet(hats).mintHat(id, wearer);
 
             wearers[i] = wearer;
         }
@@ -157,7 +274,7 @@ abstract contract TestSetup2 is TestSetup {
 
         // create second Hat
         vm.prank(topHatWearer);
-        secondHatId = hats.createHat(
+        secondHatId = HatsCoreFacet(hats).createHat(
             topHatId,
             "second hat",
             2, // maxSupply
@@ -169,7 +286,7 @@ abstract contract TestSetup2 is TestSetup {
 
         // mint second hat
         vm.prank(address(topHatWearer));
-        hats.mintHat(secondHatId, secondWearer);
+        HatsCoreFacet(hats).mintHat(secondHatId, secondWearer);
     }
 }
 

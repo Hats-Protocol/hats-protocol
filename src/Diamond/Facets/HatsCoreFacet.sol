@@ -18,6 +18,7 @@ pragma solidity >=0.8.13;
 import "../Lib/LibHatsStorage.sol";
 import {HatsErrors} from "../../Interfaces/HatsErrors.sol";
 import {LibHatsDiamond} from "../Lib/LibHatsDiamond.sol";
+import "forge-std/Test.sol"; //remove after testing
 
 contract HatsCoreFacet {
     LibHatsStorage.Storage internal s;
@@ -38,8 +39,11 @@ contract HatsCoreFacet {
         string memory _imageURI
     ) public returns (uint256 topHatId) {
         // create hat
+        // console2.log("D");
+        // console2.log("lastTopHatId", s.lastTopHatId);
 
         topHatId = uint256(++s.lastTopHatId) << 224;
+        // console2.log("lastTopHatId", s.lastTopHatId);
 
         LibHatsDiamond._createHat(
             topHatId,
@@ -313,5 +317,9 @@ contract HatsCoreFacet {
         ++s._balanceOf[_to][_hatId];
 
         emit LibHatsStorage.TransferSingle(msg.sender, _from, _to, _hatId, 1);
+    }
+
+    function hatSupply(uint256 _hatId) public view returns (uint32) {
+        return s.hatSupply[_hatId];
     }
 }
