@@ -481,9 +481,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (_standing == badStandings[_hatId][_wearer]) {
             badStandings[_hatId][_wearer] = !_standing;
             updated = true;
-        }
 
-        // emit WearerStatus(_hatId, _wearer, _eligible, _standing);
+            emit WearerStandingChanged(_hatId, _wearer, _standing);
+        }
     }
 
     function transferHat(
