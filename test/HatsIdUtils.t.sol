@@ -6,18 +6,20 @@ import "../src/HatsIdUtilities.sol";
 
 contract HatIdUtilTests is Test {
     HatsIdUtilities utils;
-    error InvalidChildHat();
+    uint256 tophatBits = 32;
+    uint256 levelBits = 16;
+    uint256 levels = 14;
 
     function setUp() public {
         utils = new HatsIdUtilities();
     }
 
     function testgetHatLevel() public {
-        for (uint256 i = 1; 2**i < type(uint224).max; i += 14) {
-            // each 14 bits corresponds with a level
-            assertEq(utils.getHatLevel(2**i), 16 - (i / 14));
+        for (uint256 i = 1; 2**i < type(uint224).max; i += levelBits) {
+            // each `levelBits` bits corresponds with a level
+            assertEq(utils.getHatLevel(2**i), levels - (i / levelBits));
             if (i > 1) {
-                assertEq(utils.getHatLevel(2**i + (2**14)), 15);
+                assertEq(utils.getHatLevel(2**i + (2**levelBits)), levels - 1);
             }
         }
     }
@@ -26,21 +28,12 @@ contract HatIdUtilTests is Test {
         // start with a top hat
         uint256 admin = 1 << 224;
         uint256 next;
-        for (uint8 i = 1; i < 17; i++) {
+        for (uint8 i = 1; i < (levels - 1); i++) {
             next = utils.buildHatId(admin, 1);
             assertEq(utils.getHatLevel(next), i);
             assertEq(utils.getAdminAtLevel(next, i - 1), admin);
             admin = next;
         }
-    }
-
-    function testCannotBuildInvalidChildHatId() public {
-        // start with a top hat
-        uint256 admin = 1 << 224;
-
-        vm.expectRevert(abi.encodeWithSelector(InvalidChildHat.selector));
-
-        utils.buildHatId(admin, 2**14);
     }
 
     function testTopHatDomain() public {
