@@ -32,5 +32,14 @@ jobs:
         with:
           version: nightly
 
+      - name: Check contract sizes
+        run: forge build --sizes
+
       - name: Run tests
         run: forge test -vvv
+
+      - name: Run snapshot
+        run: forge snapshot
+
+      - name: Generate coverage report
+        run: forge coverage --report lcov

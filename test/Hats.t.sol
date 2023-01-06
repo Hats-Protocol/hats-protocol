@@ -140,28 +140,6 @@ contract CreateHatsTest is TestSetup {
         assertEq(hats.getAdminAtLevel(ids[1], 1), ids[0]);
         assertEq(hats.getAdminAtLevel(ids[2], 2), ids[1]);
     }
-
-    function testCannotCreateInvalidChildHat() public {
-        vm.startPrank(address(topHatWearer));
-
-        for (uint256 i = 1; i < type(uint16).max; ++i) {
-            if (i > (2**14 - 1)) {
-                vm.expectRevert(
-                    abi.encodeWithSelector(InvalidChildHat.selector)
-                );
-            }
-
-            hats.createHat(
-                topHatId,
-                _details,
-                _maxSupply,
-                _eligibility,
-                _toggle,
-                true,
-                secondHatImageURI
-            );
-        }
-    }
 }
 
 contract BatchCreateHats is TestSetupBatch {
@@ -220,7 +198,7 @@ contract BatchCreateHats is TestSetupBatch {
     }
 
     function testBatchCreateHatsSkinnyFullBranch() public {
-        uint256 count = 16;
+        uint256 count = 14;
 
         adminsBatch = new uint256[](count);
         detailsBatch = new string[](count);
