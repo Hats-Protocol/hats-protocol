@@ -800,7 +800,15 @@ contract ViewHatTests is TestSetup2 {
     }
 }
 
-contract TransferHatTests is TestSetup2 {
+contract TransferHatTests is TestSetupMutable {
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(address(topHatWearer));
+
+        hats.mintHat(secondHatId, secondWearer);
+    }
+
     function testCannotTransferHatFromNonAdmin() public {
         // expect NotAdmin error
         vm.expectRevert(
@@ -816,11 +824,11 @@ contract TransferHatTests is TestSetup2 {
         hats.transferHat(secondHatId, secondWearer, thirdWearer);
     }
 
-    function testTransferHat() public {
+    function testTransferMutableHat() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
-        // 4-2. transfer from admin
         vm.prank(address(topHatWearer));
+
         hats.transferHat(secondHatId, secondWearer, thirdWearer);
 
         // assert secondWearer is no longer wearing
@@ -840,7 +848,13 @@ contract TransferHatTests is TestSetup2 {
 
         hats.mintHat(secondHatId, thirdWearer);
 
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                HatsErrors.AlreadyWearingHat.selector,
+                thirdWearer,
+                secondHatId
+            )
+        );
 
         hats.transferHat(secondHatId, secondWearer, thirdWearer);
     }
@@ -862,8 +876,16 @@ contract TransferHatTests is TestSetup2 {
             ),
             abi.encode(false, true)
         );
+
+        assertFalse(hats.isWearerOfHat(thirdWearer, secondHatId));
         // transfer should revert
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                HatsErrors.AlreadyWearingHat.selector,
+                thirdWearer,
+                secondHatId
+            )
+        );
 
         hats.transferHat(secondHatId, secondWearer, thirdWearer);
     }
@@ -1250,23 +1272,7 @@ contract ToggleGetHatsTest is TestSetup2 {
     }
 }
 
-contract MutabilityTests is TestSetup {
-    function setUp() public override {
-        super.setUp();
-
-        // create a mutable Hat
-        vm.prank(topHatWearer);
-        secondHatId = hats.createHat(
-            topHatId,
-            "mutable hat",
-            2, // maxSupply
-            _eligibility,
-            _toggle,
-            true,
-            secondHatImageURI
-        );
-    }
-
+contract MutabilityTests is TestSetupMutable {
     function testAdminCanMakeMutableHatImmutable() public {
         (, , , , , , , mutable_, ) = hats.viewHat(secondHatId);
         assertTrue(mutable_);
@@ -1467,6 +1473,27 @@ contract MutabilityTests is TestSetup {
         );
 
         hats.changeHatMaxSupply(secondHatId, decreased);
+    }
+
+    function testAdminCannotTransferImmutableHat() public {
+        vm.startPrank(topHatWearer);
+        thirdHatId = hats.createHat(
+            topHatId,
+            "immutable hat",
+            3, // maxSupply
+            _eligibility,
+            _toggle,
+            false,
+            secondHatImageURI
+        );
+
+        (, , , , , , , mutable_, ) = hats.viewHat(thirdHatId);
+        assertFalse(mutable_);
+
+        hats.mintHat(thirdHatId, thirdWearer);
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
+        hats.transferHat(thirdHatId, thirdWearer, secondWearer);
     }
 }
 

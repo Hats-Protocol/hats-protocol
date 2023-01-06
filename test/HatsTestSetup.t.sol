@@ -175,6 +175,25 @@ abstract contract TestSetup2 is TestSetup {
     }
 }
 
+abstract contract TestSetupMutable is TestSetup {
+    function setUp() public virtual override {
+        // expand on TestSetup
+        super.setUp();
+
+        // create a mutable Hat
+        vm.prank(topHatWearer);
+        secondHatId = hats.createHat(
+            topHatId,
+            "mutable hat",
+            2, // maxSupply
+            _eligibility,
+            _toggle,
+            true,
+            secondHatImageURI
+        );
+    }
+}
+
 abstract contract TestSetupBatch is TestSetup {
     function setUp() public override {
         // expand on TestSetup
