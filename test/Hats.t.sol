@@ -990,6 +990,23 @@ contract EligibilitySetHatsTests is TestSetup2 {
         // assert hatSupply is not incremented
         assertEq(hats.hatSupply(secondHatId), hatSupply);
     }
+
+    function testSetWearerBackInGoodStanding() public {
+        // set to bad standing
+        vm.startPrank(address(_eligibility));
+
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, false);
+
+        hats.setHatWearerStatus(secondHatId, secondWearer, false, false);
+
+        // set back to good standing
+
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, true);
+
+        hats.setHatWearerStatus(secondHatId, secondWearer, false, true);
+    }
 }
 
 contract EligibilityCheckHatsTests is TestSetup2 {
@@ -1112,6 +1129,42 @@ contract EligibilityCheckHatsTests is TestSetup2 {
 
         // assert hatSupply is decremented
         assertEq(hats.hatSupply(secondHatId), --hatSupply);
+    }
+
+    function testCheckWearerBackInGoodStanding() public {
+        // set to bad standing
+        // mock call to eligibility contract to return (eligible = true, standing = false)
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature(
+                "getWearerStatus(address,uint256)",
+                secondWearer,
+                secondHatId
+            ),
+            abi.encode(true, false)
+        );
+
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, false);
+
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
+
+        // set back to good standing
+        // mock call to eligibility contract to return (eligible = true, standing = true)
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature(
+                "getWearerStatus(address,uint256)",
+                secondWearer,
+                secondHatId
+            ),
+            abi.encode(true, true)
+        );
+
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, true);
+
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
     }
 }
 
