@@ -896,10 +896,6 @@ contract EligibilitySetHatsTests is TestSetup2 {
         // confirm second hat is worn by second Wearer
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
 
-        // expectEmit WearerStatus - should be wearing, in good standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, true, true);
-
         // 5-6. do not revoke hat
         vm.prank(address(_eligibility));
         hats.setHatWearerStatus(secondHatId, secondWearer, true, true);
@@ -909,10 +905,6 @@ contract EligibilitySetHatsTests is TestSetup2 {
 
     function testRevokeHatFromIneligibleWearerInGoodStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
-
-        // expectEmit WearerStatus - should not be wearing, in good standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, false, true);
 
         // 5-8a. revoke hat
         vm.prank(address(_eligibility));
@@ -925,9 +917,9 @@ contract EligibilitySetHatsTests is TestSetup2 {
     }
 
     function testRevokeHatFromIneligibleWearerInBadStanding() public {
-        // expectEmit WearerStatus - should not be wearing, in bad standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, false, false);
+        // expectEmit WearerStandingChanged
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, false);
 
         // 5-8b. revoke hat with bad standing
         vm.prank(address(_eligibility));
@@ -937,9 +929,9 @@ contract EligibilitySetHatsTests is TestSetup2 {
     }
 
     function testRevokeHatFromEligibleWearerInBadStanding() public {
-        // expectEmit WearerStatus - should not be wearing, in bad standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, true, false);
+        // expectEmit WearerStandingChanged
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, false);
 
         // 5-8b. revoke hat with bad standing
         vm.prank(address(_eligibility));
@@ -1000,7 +992,7 @@ contract EligibilitySetHatsTests is TestSetup2 {
     }
 }
 
-contract EligibilityGetHatsTests is TestSetup2 {
+contract EligibilityCheckHatsTests is TestSetup2 {
     function testCannotGetHatWearerStandingNoFunctionInEligibilityContract()
         public
     {
@@ -1018,10 +1010,6 @@ contract EligibilityGetHatsTests is TestSetup2 {
 
         // confirm second hat is worn by second Wearer
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
-
-        // expectEmit WearerStatus - should be wearing, in good standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, true, true);
 
         // mock calls to eligibility contract to return (eligible = true, standing = true)
         vm.mockCall(
@@ -1048,10 +1036,6 @@ contract EligibilityGetHatsTests is TestSetup2 {
     {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
-        // expectEmit WearerStatus - should not be wearing, in good standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, false, true);
-
         // mock calls to eligibility contract to return (eligible = false, standing = true)
         vm.mockCall(
             address(_eligibility),
@@ -1077,9 +1061,9 @@ contract EligibilityGetHatsTests is TestSetup2 {
     {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
-        // expectEmit WearerStatus - should not be wearing, in bad standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, false, false);
+        // expectEmit WearerStandingChanged
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, false);
 
         // mock calls to eligibility contract to return (eligible = false, standing = false)
         vm.mockCall(
@@ -1106,9 +1090,9 @@ contract EligibilityGetHatsTests is TestSetup2 {
     {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
-        // expectEmit WearerStatus - should not be wearing, in bad standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, true, false);
+        // expectEmit WearerStandingChanged
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, false);
 
         // mock calls to eligibility contract to return (eligible = true, standing = false)
         vm.mockCall(
