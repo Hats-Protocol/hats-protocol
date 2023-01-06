@@ -2,7 +2,7 @@
 src = 'src'
 out = 'out'
 libs = ['lib']
-optimizer_runs = 1000000
+optimizer_runs = 10_000
 gas_reports = ["*"]
 auto_detect_solc = false
 solc = "0.8.17"
