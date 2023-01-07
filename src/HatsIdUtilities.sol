@@ -47,7 +47,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
     uint256 internal constant TOPHAT_ADDRESS_SPACE = 32; // 32 bits (4 bytes) of space for tophats, aka the "domain"
     uint256 internal constant LOWER_LEVEL_ADDRESS_SPACE = 16; // 16 bits of space for each of the levels below the tophat
     uint256 internal constant MAX_LEVELS = // 14 levels below the tophat
-        (256 - TOPHAT_ADDRESS_SPACE) / LOWER_LEVEL_ADDRESS_SPACE; 
+        (256 - TOPHAT_ADDRESS_SPACE) / LOWER_LEVEL_ADDRESS_SPACE;
 
     /// @notice Constructs a valid hat id for a new hat underneath a given admin
     /// @dev Check hats[_admin].lastHatId for the previous hat created underneath _admin
@@ -78,7 +78,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
 
     /// @notice Identifies the level a given hat in its hat tree
     /// @param _hatId the id of the hat in question
-    /// @return level (0 to MAX_LEVELS)
+    /// @return level (0 to type(uint8).max)
     function getHatLevel(uint256 _hatId) public view returns (uint8) {
         uint256 mask;
         uint256 i;
@@ -107,10 +107,12 @@ contract HatsIdUtilities is IHatsIdUtilities {
     /// @return bool Whether the hat is a topHat
     function isTopHat(uint256 _hatId) public view returns (bool) {
       uint32 topHatId = uint32(_hatId >> (256 - TOPHAT_ADDRESS_SPACE));
-        return _hatId > 0 && uint224(_hatId) == 0 && linkedTreeAdmins[topHatId] == 0;
+      return _hatId > 0 && uint224(_hatId) == 0 && linkedTreeAdmins[topHatId] == 0;
     }
 
     /// @notice Gets the hat id of the admin at a given level of a given hat
+    /// @dev This function traverses trees by following the linkedTreeAdmin
+    ///       pointer to a hat located in a different tree
     /// @param _hatId the id of the hat in question
     /// @param _level the admin level of interest
     /// @return uint256 The hat id of the resulting admin
@@ -129,6 +131,11 @@ contract HatsIdUtilities is IHatsIdUtilities {
         return getAdminAtLevel(linkedTreeAdmin, _level);
     }
 
+    /// @notice Gets the hat id of the admin at a given level of a given hat
+    ///         local to the tree containing the hat.
+    /// @param _hatId the id of the hat in question
+    /// @param _level the admin level of interest
+    /// @return uint256 The hat id of the resulting admin
     function getTreeAdminAtLevel(uint256 _hatId, uint8 _level)
         public
         pure
@@ -144,7 +151,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
     /// @dev A domain is the identifier for a given hat tree, stored in the first 4 bytes of a hat's id
     /// @param _hatId the id of the hat in question
     /// @return uint256 The domain
-    function getTophatDomain(uint256 _hatId) public view returns (uint256) {
+    function getTophatDomain(uint256 _hatId) public pure returns (uint256) {
         return
             _hatId >>
             (LOWER_LEVEL_ADDRESS_SPACE * MAX_LEVELS);
