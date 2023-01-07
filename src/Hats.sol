@@ -638,12 +638,12 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     function linkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) external {
-        // TODO: verify no circular linkage
+        require(noCircularLinkage(_topHatId, _newAdminHat), 'Circular Linkage');
         // TODO: hardcode
         uint256 fullTopHatId = uint256(_topHatId) << (256 - TOPHAT_ADDRESS_SPACE);
         require(isWearerOfHat(msg.sender, fullTopHatId));
         // TODO ensure hat is active? Or the totalSupply is at least nonzero?:
-        // This check could be run in the frontend instead
+        // Maybe this check could be run in the frontend instead
         linkedTreeAdmins[_topHatId] = _newAdminHat;
     }
 

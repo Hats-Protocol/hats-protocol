@@ -150,10 +150,25 @@ contract HatsIdUtilities is IHatsIdUtilities {
     /// @notice Gets the tophat domain of a given hat
     /// @dev A domain is the identifier for a given hat tree, stored in the first 4 bytes of a hat's id
     /// @param _hatId the id of the hat in question
-    /// @return uint256 The domain
-    function getTophatDomain(uint256 _hatId) public pure returns (uint256) {
+    /// @return uint32 The domain
+    function getTophatDomain(uint256 _hatId) public pure returns (uint32) {
         return
-            _hatId >>
-            (LOWER_LEVEL_ADDRESS_SPACE * MAX_LEVELS);
+            uint32(_hatId >>
+            (LOWER_LEVEL_ADDRESS_SPACE * MAX_LEVELS));
+    }
+
+    /// @notice Checks For any circular linkage of trees
+    /// @param _topHatDomain the 32 bit domain of the tree to be linked
+    /// @param _linkedAdmin the hatId of the potential tree admin
+    /// @return bool circular link has been found
+    function noCircularLinkage(
+      uint32 _topHatDomain,
+      uint256 _linkedAdmin
+    ) public view returns (bool) {
+       if (_linkedAdmin == 0) return true;
+       uint32 adminDomain = getTophatDomain(_linkedAdmin);
+       if (_topHatDomain == adminDomain) return false;
+       uint256 parentAdmin = linkedTreeAdmins[adminDomain];
+      return noCircularLinkage(_topHatDomain, parentAdmin);
     }
 }

@@ -1533,8 +1533,16 @@ contract LinkHatsTests is TestSetup2 {
         );
     }
 
+    function testPreventingCircularLinking() public {
+      vm.prank(topHatWearer);
+      vm.expectRevert(bytes('Circular Linkage'));
+      hats.linkTopHatToTree(uint32(topHatId >> 224), secondHatId);
+    }
+
     function testTreeLinkingAndUnlinking() public {
       uint32 secondTopHatDomain = uint32(secondTopHatId >> 224);
+      vm.expectRevert();
+      hats.linkTopHatToTree(secondTopHatDomain, secondHatId);
       vm.prank(thirdWearer);
       hats.linkTopHatToTree(secondTopHatDomain, secondHatId);
       assertFalse(hats.isTopHat(secondTopHatId));

@@ -30,5 +30,5 @@ interface IHatsIdUtilities {
         view
         returns (uint256);
 
-    function getTophatDomain(uint256 _hatId) external view returns (uint256);
+    function getTophatDomain(uint256 _hatId) external view returns (uint32);
 }
