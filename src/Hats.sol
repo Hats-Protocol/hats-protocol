@@ -638,19 +638,20 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     function linkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) external {
-      // TODO: verify no circular linkage
-      // TODO: hardcode
-      uint256 fullTopHatId = uint256(_topHatId) << (256 - TOPHAT_ADDRESS_SPACE);
-      require(isWearerOfHat(msg.sender, fullTopHatId));
-      // TODO ensure hat is active?
-      linkedTreeAdmins[_topHatId] = _newAdminHat;
+        // TODO: verify no circular linkage
+        // TODO: hardcode
+        uint256 fullTopHatId = uint256(_topHatId) << (256 - TOPHAT_ADDRESS_SPACE);
+        require(isWearerOfHat(msg.sender, fullTopHatId));
+        // TODO ensure hat is active? Or the totalSupply is at least nonzero?:
+        // This check could be run in the frontend instead
+        linkedTreeAdmins[_topHatId] = _newAdminHat;
     }
 
     function unlinkTopHatFromTree(uint32 _topHatId) external {
-      uint256 adminHat = linkedTreeAdmins[_topHatId];
-      uint256 fullTopHatId = uint256(_topHatId) << (256 - TOPHAT_ADDRESS_SPACE);
-      require(isAdminOfHat(msg.sender, fullTopHatId));
-      delete linkedTreeAdmins[_topHatId];
+        uint256 adminHat = linkedTreeAdmins[_topHatId];
+        uint256 fullTopHatId = uint256(_topHatId) << (256 - TOPHAT_ADDRESS_SPACE);
+        require(isAdminOfHat(msg.sender, fullTopHatId));
+        delete linkedTreeAdmins[_topHatId];
     }
 
     /*//////////////////////////////////////////////////////////////

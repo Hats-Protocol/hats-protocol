@@ -1519,3 +1519,31 @@ contract OverridesHatTests is TestSetup2 {
         console2.log("encoded URI", jsonUri);
     }
 }
+
+contract LinkHatsTests is TestSetup2 {
+    uint256 internal secondTopHatId;
+
+    function setUp() public override {
+        super.setUp();
+
+        secondTopHatId = hats.mintTopHat(
+          thirdWearer,
+          "for linking",
+          "http://www.tophat.com/"
+        );
+    }
+
+    function testTreeLinkingAndUnlinking() public {
+      uint32 secondTopHatDomain = uint32(secondTopHatId >> 224);
+      vm.prank(thirdWearer);
+      hats.linkTopHatToTree(secondTopHatDomain, secondHatId);
+      assertFalse(hats.isTopHat(secondTopHatId));
+      assertEq(hats.getHatLevel(secondTopHatId), 2);
+      vm.expectRevert();
+      hats.unlinkTopHatFromTree(secondTopHatDomain);
+
+      vm.prank(secondWearer);
+      hats.unlinkTopHatFromTree(secondTopHatDomain);
+      assertEq(hats.isTopHat(secondTopHatId), true);
+    }
+}
