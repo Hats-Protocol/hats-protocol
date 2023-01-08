@@ -1537,10 +1537,18 @@ contract LinkHatsTests is TestSetup2 {
       vm.prank(topHatWearer);
       vm.expectRevert(bytes('Circular Linkage'));
       hats.linkTopHatToTree(uint32(topHatId >> 224), secondHatId);
+
+      // test a recursive call
+      vm.prank(thirdWearer);
+      hats.linkTopHatToTree(uint32(secondTopHatId >> 224), secondHatId);
+
+      vm.prank(topHatWearer);
+      vm.expectRevert(bytes('Circular Linkage'));
+      hats.linkTopHatToTree(uint32(topHatId >> 224), secondTopHatId);
     }
 
     function testTreeLinkingAndUnlinking() public {
-      uint32 secondTopHatDomain = uint32(secondTopHatId >> 224);
+      uint32 secondTopHatDomain = hats.getTophatDomain(secondTopHatId);
       vm.expectRevert();
       hats.linkTopHatToTree(secondTopHatDomain, secondHatId);
       vm.prank(thirdWearer);

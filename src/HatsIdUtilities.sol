@@ -106,8 +106,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
     /// @param _hatId The hat in question
     /// @return bool Whether the hat is a topHat
     function isTopHat(uint256 _hatId) public view returns (bool) {
-      uint32 topHatId = uint32(_hatId >> (256 - TOPHAT_ADDRESS_SPACE));
-      return _hatId > 0 && uint224(_hatId) == 0 && linkedTreeAdmins[topHatId] == 0;
+      return _hatId > 0 && uint224(_hatId) == 0 && linkedTreeAdmins[getTophatDomain(_hatId)] == 0;
     }
 
     /// @notice Gets the hat id of the admin at a given level of a given hat
@@ -121,7 +120,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
         view
         returns (uint256)
     {
-        uint256 linkedTreeAdmin = linkedTreeAdmins[uint32(_hatId >> (256 - TOPHAT_ADDRESS_SPACE))];
+        uint256 linkedTreeAdmin = linkedTreeAdmins[getTophatDomain(_hatId)];
         if (linkedTreeAdmin == 0) return getTreeAdminAtLevel(_hatId, _level);
 
         uint8 localTopHatLevel = getHatLevel(getTreeAdminAtLevel(_hatId, 0));
