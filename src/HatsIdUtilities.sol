@@ -22,6 +22,7 @@ import "./Interfaces/IHatsIdUtilities.sol";
 /// for easier use by other contracts.
 /// @author Hats Protocol
 contract HatsIdUtilities is IHatsIdUtilities {
+
     /**
      * Hat Ids serve as addresses. A given Hat's Id represents its location in its
      * hat tree: its level, its admin, its admin's admin (etc, all the way up to the
@@ -29,25 +30,26 @@ contract HatsIdUtilities is IHatsIdUtilities {
      *
      * The top level consists of 4 bytes and references all tophats.
      *
-     * Each level below consists of 1 byte, and contains up to 255 child hats.
+     * Each level below consists of 16 bits, and contains up to 65,536 child hats.
      *
-     * A uint256 contains 4 bytes of space for tophat addresses and 28 additional bytes
-     * of space, giving room for 28 levels of delegation, with the admin at each level
-     * having space for 255 different child hats.
+     * A uint256 contains 4 bytes of space for tophat addresses, giving room for ((256 -
+     * 32) / 16) = 14 levels of delegation, with the admin at each level having space for
+     * 65,536 different child hats.
      *
-     * A hat tree consists of a single tophat and has a max depth of 28 levels.
+     * A hat tree consists of a single tophat and has a max depth of 14 levels.
      */
 
     uint256 internal constant TOPHAT_ADDRESS_SPACE = 32; // 32 bits (4 bytes) of space for tophats, aka the "domain"
-    uint256 internal constant LOWER_LEVEL_ADDRESS_SPACE = 8; // 8 bits (1 byte) of space for each of the levels below the tophat
-    uint256 internal constant MAX_LEVELS = 28; // 28 levels below the tophat
+    uint256 internal constant LOWER_LEVEL_ADDRESS_SPACE = 16; // 16 bits of space for each of the levels below the tophat
+    uint256 internal constant MAX_LEVELS = // 14 levels below the tophat
+        (256 - TOPHAT_ADDRESS_SPACE) / LOWER_LEVEL_ADDRESS_SPACE; 
 
     /// @notice Constructs a valid hat id for a new hat underneath a given admin
     /// @dev Check hats[_admin].lastHatId for the previous hat created underneath _admin
     /// @param _admin the id of the admin for the new hat
-    /// @param _newHat the uint8 id of the new hat
+    /// @param _newHat the uint16 id of the new hat
     /// @return id The constructed hat id
-    function buildHatId(uint256 _admin, uint8 _newHat)
+    function buildHatId(uint256 _admin, uint16 _newHat)
         public
         pure
         returns (uint256 id)
@@ -71,7 +73,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
 
     /// @notice Identifies the level a given hat in its hat tree
     /// @param _hatId the id of the hat in question
-    /// @return level (0 to 28)
+    /// @return level (0 to MAX_LEVELS)
     function getHatLevel(uint256 _hatId) public pure returns (uint8) {
         uint256 mask;
         uint256 i;

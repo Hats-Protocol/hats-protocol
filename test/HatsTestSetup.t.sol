@@ -46,7 +46,7 @@ abstract contract TestVariables is HatsEvents, HatsErrors {
     address reteligibility;
     address rettoggle;
     string retimageURI;
-    uint8 retlastHatId;
+    uint16 retlastHatId;
     bool retmutable;
     bool retactive;
 
@@ -60,6 +60,8 @@ abstract contract TestVariables is HatsEvents, HatsErrors {
         uint256 id,
         uint256 amount
     );
+
+    error InvalidChildHat();
 }
 
 abstract contract TestSetup is Test, TestVariables {
@@ -170,6 +172,25 @@ abstract contract TestSetup2 is TestSetup {
         // mint second hat
         vm.prank(address(topHatWearer));
         hats.mintHat(secondHatId, secondWearer);
+    }
+}
+
+abstract contract TestSetupMutable is TestSetup {
+    function setUp() public virtual override {
+        // expand on TestSetup
+        super.setUp();
+
+        // create a mutable Hat
+        vm.prank(topHatWearer);
+        secondHatId = hats.createHat(
+            topHatId,
+            "mutable hat",
+            2, // maxSupply
+            _eligibility,
+            _toggle,
+            true,
+            secondHatImageURI
+        );
     }
 }
 

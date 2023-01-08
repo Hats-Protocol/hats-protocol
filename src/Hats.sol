@@ -36,11 +36,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     struct Hat {
         // 1st storage slot
         address eligibility; // ─┐ can revoke Hat based on ruling | 20
-        uint32 maxSupply; //  │ the max number of identical hats that can exist | 4
-        uint8 lastHatId; // ─┘ indexes how many different hats an admin is holding | 1
+        uint32 maxSupply; //     │ the max number of identical hats that can exist | 4
+        uint16 lastHatId; //    ─┘ indexes how many different hats an admin is holding | 1
         // 2nd slot
         address toggle; // ─┐ controls when Hat is active | 20
-        uint96 config; // ─┘ active status & other settings (see schema below) | 12
+        uint96 config; //  ─┘ active status & other settings (see schema below) | 12
         // 3rd+ slot (optional)
         string details;
         string imageURI;
@@ -237,7 +237,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     function getNextId(uint256 _admin) public view returns (uint256) {
-        uint8 nextHatId = _hats[_admin].lastHatId + 1;
+        uint16 nextHatId = _hats[_admin].lastHatId + 1;
         return buildHatId(_admin, nextHatId);
     }
 
@@ -493,6 +493,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     ) public {
         _checkAdmin(_hatId);
 
+        // cannot transfer immutable hats, except for tophats, which can always transfer themselves
+        if (!isTopHat(_hatId)) {
+            if (!_isMutable(_hats[_hatId])) revert Immutable();
+        }
+
         // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
         if (_balanceOf[_from][_hatId] < 1) {
             revert NotHatWearer();
@@ -657,7 +662,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             address eligibility,
             address toggle,
             string memory imageURI,
-            uint8 lastHatId,
+            uint16 lastHatId,
             bool mutable_,
             bool active
         )
