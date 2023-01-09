@@ -637,6 +637,10 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         emit HatMaxSupplyChanged(_hatId, _newMaxSupply);
     }
 
+    /// @notice Nest a Tree structure under a parent tree
+    /// @dev The tree root can have at most one link at a given time.
+    /// @param _topHatId The domain of the tophat to link
+    /// @param _newAdminHat The hat that will administer the linked tree
     function linkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) external {
         if (!noCircularLinkage(_topHatId, _newAdminHat)) revert CircularLinkage();
         if (linkedTreeAdmins[_topHatId] > 0) revert DomainLinked();
@@ -646,6 +650,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         linkedTreeAdmins[_topHatId] = _newAdminHat;
     }
 
+    /// @notice Unlink a Tree from the parent tree
+    /// @dev This can only be called by an admin of the tree root
+    /// @param _topHatId The domain of the tophat to unlink
     function unlinkTopHatFromTree(uint32 _topHatId) external {
         uint256 adminHat = linkedTreeAdmins[_topHatId];
         uint256 fullTopHatId = uint256(_topHatId) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
