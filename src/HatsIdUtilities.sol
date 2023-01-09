@@ -46,8 +46,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
 
     uint256 internal constant TOPHAT_ADDRESS_SPACE = 32; // 32 bits (4 bytes) of space for tophats, aka the "domain"
     uint256 internal constant LOWER_LEVEL_ADDRESS_SPACE = 16; // 16 bits of space for each of the levels below the tophat
-    uint256 internal constant MAX_LEVELS = // 14 levels below the tophat
-        (256 - TOPHAT_ADDRESS_SPACE) / LOWER_LEVEL_ADDRESS_SPACE;
+    uint256 internal constant MAX_LEVELS = 14; // (256 - TOPHAT_ADDRESS_SPACE) / LOWER_LEVEL_ADDRESS_SPACE;
 
     /// @notice Constructs a valid hat id for a new hat underneath a given admin
     /// @dev Check hats[_admin].lastHatId for the previous hat created underneath _admin
