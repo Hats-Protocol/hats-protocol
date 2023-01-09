@@ -1535,7 +1535,7 @@ contract LinkHatsTests is TestSetup2 {
 
     function testPreventingCircularLinking() public {
       vm.prank(topHatWearer);
-      vm.expectRevert(bytes('Circular Linkage'));
+      vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
       hats.linkTopHatToTree(uint32(topHatId >> 224), secondHatId);
 
       // test a recursive call
@@ -1543,22 +1543,20 @@ contract LinkHatsTests is TestSetup2 {
       hats.linkTopHatToTree(uint32(secondTopHatId >> 224), secondHatId);
 
       vm.prank(topHatWearer);
-      vm.expectRevert(bytes('Circular Linkage'));
+      vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
       hats.linkTopHatToTree(uint32(topHatId >> 224), secondTopHatId);
     }
 
     function testTreeLinkingAndUnlinking() public {
       uint32 secondTopHatDomain = hats.getTophatDomain(secondTopHatId);
-      vm.expectRevert(
-        bytes("Caller Not Wearer")
-      );
+      vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatWearer.selector));
       hats.linkTopHatToTree(secondTopHatDomain, secondHatId);
       vm.prank(thirdWearer);
       hats.linkTopHatToTree(secondTopHatDomain, secondHatId);
       assertFalse(hats.isTopHat(secondTopHatId));
       assertEq(hats.getHatLevel(secondTopHatId), 2);
 
-      vm.expectRevert(bytes("Domain Already Linked"));
+      vm.expectRevert(abi.encodeWithSelector(HatsErrors.DomainLinked.selector));
       vm.prank(thirdWearer);
       hats.linkTopHatToTree(secondTopHatDomain, topHatId);
 
