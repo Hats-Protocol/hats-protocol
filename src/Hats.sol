@@ -641,14 +641,16 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         require(noCircularLinkage(_topHatId, _newAdminHat), 'Circular Linkage');
         require(linkedTreeAdmins[_topHatId] == 0, "Domain Already Linked");
         uint256 fullTopHatId = uint256(_topHatId) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
-        require(isWearerOfHat(msg.sender, fullTopHatId));
+        require(isWearerOfHat(msg.sender, fullTopHatId), "Caller Not Wearer");
         linkedTreeAdmins[_topHatId] = _newAdminHat;
     }
 
     function unlinkTopHatFromTree(uint32 _topHatId) external {
         uint256 adminHat = linkedTreeAdmins[_topHatId];
         uint256 fullTopHatId = uint256(_topHatId) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
-        require(isAdminOfHat(msg.sender, fullTopHatId));
+        if(!isAdminOfHat(msg.sender, fullTopHatId))
+          revert  NotAdmin(msg.sender, _topHatId);
+
         delete linkedTreeAdmins[_topHatId];
     }
 

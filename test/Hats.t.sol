@@ -1549,13 +1549,22 @@ contract LinkHatsTests is TestSetup2 {
 
     function testTreeLinkingAndUnlinking() public {
       uint32 secondTopHatDomain = hats.getTophatDomain(secondTopHatId);
-      vm.expectRevert();
+      vm.expectRevert(
+        bytes("Caller Not Wearer")
+      );
       hats.linkTopHatToTree(secondTopHatDomain, secondHatId);
       vm.prank(thirdWearer);
       hats.linkTopHatToTree(secondTopHatDomain, secondHatId);
       assertFalse(hats.isTopHat(secondTopHatId));
       assertEq(hats.getHatLevel(secondTopHatId), 2);
-      vm.expectRevert();
+
+      vm.expectRevert(
+            abi.encodeWithSelector(
+                HatsErrors.NotAdmin.selector,
+                address(this),
+                secondTopHatDomain
+            )
+      );
       hats.unlinkTopHatFromTree(secondTopHatDomain);
 
       vm.prank(secondWearer);
