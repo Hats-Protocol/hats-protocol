@@ -1558,6 +1558,10 @@ contract LinkHatsTests is TestSetup2 {
       assertFalse(hats.isTopHat(secondTopHatId));
       assertEq(hats.getHatLevel(secondTopHatId), 2);
 
+      vm.expectRevert(bytes("Domain Already Linked"));
+      vm.prank(thirdWearer);
+      hats.linkTopHatToTree(secondTopHatDomain, topHatId);
+
       vm.expectRevert(
             abi.encodeWithSelector(
                 HatsErrors.NotAdmin.selector,
