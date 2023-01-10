@@ -48,4 +48,6 @@ interface HatsEvents {
     event HatMaxSupplyChanged(uint256 hatId, uint32 newMaxSupply);
 
     event HatImageURIChanged(uint256 hatId, string newImageURI);
+
+    event TopHatLinked(uint32 domain, uint256 newAdmin);
 }

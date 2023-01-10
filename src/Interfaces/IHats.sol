@@ -89,6 +89,10 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
         address _to
     ) external;
 
+    function linkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) external;
+
+    function unlinkTopHatFromTree(uint32 _topHatId) external;
+
     /*//////////////////////////////////////////////////////////////
                               HATS ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/

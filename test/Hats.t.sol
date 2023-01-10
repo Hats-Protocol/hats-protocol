@@ -1552,6 +1552,8 @@ contract LinkHatsTests is TestSetup2 {
       vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatWearer.selector));
       hats.linkTopHatToTree(secondTopHatDomain, secondHatId);
       vm.prank(thirdWearer);
+      vm.expectEmit(true, true, true,true);
+      emit TopHatLinked(secondTopHatDomain, secondHatId);
       hats.linkTopHatToTree(secondTopHatDomain, secondHatId);
       assertFalse(hats.isTopHat(secondTopHatId));
       assertEq(hats.getHatLevel(secondTopHatId), 2);
@@ -1570,6 +1572,8 @@ contract LinkHatsTests is TestSetup2 {
       hats.unlinkTopHatFromTree(secondTopHatDomain);
 
       vm.prank(secondWearer);
+      vm.expectEmit(true, true, true,true);
+      emit TopHatLinked(secondTopHatDomain, 0);
       hats.unlinkTopHatFromTree(secondTopHatDomain);
       assertEq(hats.isTopHat(secondTopHatId), true);
     }

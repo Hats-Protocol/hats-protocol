@@ -648,6 +648,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256 fullTopHatId = uint256(_topHatId) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
         if (!isWearerOfHat(msg.sender, fullTopHatId)) revert NotHatWearer();
         linkedTreeAdmins[_topHatId] = _newAdminHat;
+        emit TopHatLinked(_topHatId, _newAdminHat);
     }
 
     /// @notice Unlink a Tree from the parent tree
@@ -660,6 +661,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
           revert  NotAdmin(msg.sender, _topHatId);
 
         delete linkedTreeAdmins[_topHatId];
+        emit TopHatLinked(_topHatId, 0);
     }
 
     /*//////////////////////////////////////////////////////////////
