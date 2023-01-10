@@ -3,6 +3,41 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../src/HatsIdUtilities.sol";
+import "./LinkableHatsIdUtilities.sol";
+
+contract LinkedTreeHatIdUtilTests is Test {
+    LinkableHatsIdUtilities utils;
+
+    error InvalidChildHat();
+
+    function setUp() public {
+        utils = new LinkableHatsIdUtilities();
+    }
+
+    function testLinkedHats() public {
+        uint256 admin = 1 << 224;
+        uint32 oldTopHat = 2;
+        uint256 oldTopHatId = uint256(oldTopHat) << 224;
+        uint256 id1 = utils.buildHatId(admin, 1);
+        utils.linkTree(oldTopHat, id1);
+        assertFalse(utils.isTopHat(oldTopHatId));
+        assertEq(utils.getHatLevel(oldTopHatId), utils.getHatLevel(id1) + 1);
+        assertEq(utils.getAdminAtLevel(oldTopHatId, 0), admin);
+
+        uint32 admin3 = 3;
+        uint256 admin3Id = uint256(admin3) << 224;
+        uint256 id3 = utils.buildHatId(admin3Id, 3);
+        utils.linkTree(1, id3);
+        assertEq(utils.getHatLevel(id1), 3);
+        assertEq(utils.getHatLevel(oldTopHatId), utils.getHatLevel(id1) + 1);
+        assertEq(utils.getHatLevel(admin), utils.getHatLevel(id3) + 1);
+        assertEq(utils.getHatLevel(admin3Id), 0);
+        assertFalse(utils.isTopHat(admin));
+
+        assertEq(utils.getAdminAtLevel(id1, 2), admin);
+        assertEq(utils.getAdminAtLevel(oldTopHatId, 0), admin3Id);
+    }
+}
 
 contract HatIdUtilTests is Test {
     HatsIdUtilities utils;

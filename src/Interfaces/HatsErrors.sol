@@ -33,4 +33,6 @@ interface HatsErrors {
     error MaxLevelsReached();
     error Immutable();
     error NewMaxSupplyTooLow();
+    error CircularLinkage();
+    error DomainLinked();
 }

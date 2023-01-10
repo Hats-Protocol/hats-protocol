@@ -1519,3 +1519,62 @@ contract OverridesHatTests is TestSetup2 {
         console2.log("encoded URI", jsonUri);
     }
 }
+
+contract LinkHatsTests is TestSetup2 {
+    uint256 internal secondTopHatId;
+
+    function setUp() public override {
+        super.setUp();
+
+        secondTopHatId = hats.mintTopHat(
+          thirdWearer,
+          "for linking",
+          "http://www.tophat.com/"
+        );
+    }
+
+    function testPreventingCircularLinking() public {
+      vm.prank(topHatWearer);
+      vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
+      hats.linkTopHatToTree(uint32(topHatId >> 224), secondHatId);
+
+      // test a recursive call
+      vm.prank(thirdWearer);
+      hats.linkTopHatToTree(uint32(secondTopHatId >> 224), secondHatId);
+
+      vm.prank(topHatWearer);
+      vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
+      hats.linkTopHatToTree(uint32(topHatId >> 224), secondTopHatId);
+    }
+
+    function testTreeLinkingAndUnlinking() public {
+      uint32 secondTopHatDomain = hats.getTophatDomain(secondTopHatId);
+      vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatWearer.selector));
+      hats.linkTopHatToTree(secondTopHatDomain, secondHatId);
+      vm.prank(thirdWearer);
+      vm.expectEmit(true, true, true,true);
+      emit TopHatLinked(secondTopHatDomain, secondHatId);
+      hats.linkTopHatToTree(secondTopHatDomain, secondHatId);
+      assertFalse(hats.isTopHat(secondTopHatId));
+      assertEq(hats.getHatLevel(secondTopHatId), 2);
+
+      vm.expectRevert(abi.encodeWithSelector(HatsErrors.DomainLinked.selector));
+      vm.prank(thirdWearer);
+      hats.linkTopHatToTree(secondTopHatDomain, topHatId);
+
+      vm.expectRevert(
+            abi.encodeWithSelector(
+                HatsErrors.NotAdmin.selector,
+                address(this),
+                secondTopHatDomain
+            )
+      );
+      hats.unlinkTopHatFromTree(secondTopHatDomain);
+
+      vm.prank(secondWearer);
+      vm.expectEmit(true, true, true,true);
+      emit TopHatLinked(secondTopHatDomain, 0);
+      hats.unlinkTopHatFromTree(secondTopHatDomain);
+      assertEq(hats.isTopHat(secondTopHatId), true);
+    }
+}
