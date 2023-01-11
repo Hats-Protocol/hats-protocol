@@ -27,16 +27,6 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
         string memory _imageURI
     ) external returns (uint256 topHatId);
 
-    // function createTopHatAndHat(
-    //     string memory _details,
-    //     uint32 _maxSupply,
-    //     address _eligibility,
-    //     address _toggle,
-    //     bool _mutable,
-    //     string memory _topHatImageURI,
-    //     string memory _firstHatImageURI
-    // ) external returns (uint256 topHatId, uint256 firstHatId);
-
     function createHat(
         uint256 _admin,
         string memory _details,
@@ -141,8 +131,6 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
         external
         view
         returns (bool);
-
-    // function isActive(uint256 _hatId) external view returns (bool);
 
     function isInGoodStanding(address _wearer, uint256 _hatId)
         external
