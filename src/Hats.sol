@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 // Copyright (C) 2022 Hats Protocol
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,7 +16,7 @@
 
 pragma solidity >=0.8.13;
 
-import {ERC1155} from "ERC1155/ERC1155.sol";
+import {ERC1155} from "lib/ERC1155/ERC1155.sol";
 // import "forge-std/Test.sol"; //remove after testing
 import "./Interfaces/IHats.sol";
 import "./HatsIdUtilities.sol";
@@ -521,7 +522,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
                               HATS ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _checkAdmin(uint256 _hatId) internal {
+    function _checkAdmin(uint256 _hatId) internal view {
         if (!isAdminOfHat(msg.sender, _hatId)) {
             revert NotAdmin(msg.sender, _hatId);
         }
@@ -657,7 +658,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev This can only be called by an admin of the tree root
     /// @param _topHatId The domain of the tophat to unlink
     function unlinkTopHatFromTree(uint32 _topHatId) external {
-        uint256 adminHat = linkedTreeAdmins[_topHatId];
         uint256 fullTopHatId = uint256(_topHatId) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
         if(!isAdminOfHat(msg.sender, fullTopHatId))
           revert  NotAdmin(msg.sender, _topHatId);
@@ -780,7 +780,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     //     return _isActive(_hats[_hatId], _hatId);
     // }
 
-    function _getHatStatus(Hat memory _hat) internal view returns (bool) {
+    function _getHatStatus(Hat memory _hat) internal pure returns (bool) {
         return (_hat.config >> 95 != 0);
     }
 
@@ -792,7 +792,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
     }
 
-    function _isMutable(Hat memory _hat) internal view returns (bool) {
+    function _isMutable(Hat memory _hat) internal pure returns (bool) {
         return (_hat.config & uint96(1 << 94) != 0);
     }
 
@@ -1031,12 +1031,12 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param to The wearer of the Hat and the recipient of the newly minted token
     /// @param id The id of the Hat to mint, cast to uint256
     /// @param amount Must always be 1, since it's not possible wear >1 Hat
-    /// @param data Can be empty since we skip the 1155TokenReceiver hook
+    /// @param - `data` can be empty since we skip the 1155TokenReceiver hook
     function _mint(
         address to,
         uint256 id,
         uint256 amount,
-        bytes memory data
+        bytes memory
     ) internal override {
         _balanceOf[to][id] += amount;
 
@@ -1064,7 +1064,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         emit TransferSingle(msg.sender, from, address(0), id, amount);
     }
 
-    function setApprovalForAll(address operator, bool approved)
+    function setApprovalForAll(address, bool)
         public
         pure
         override
@@ -1075,11 +1075,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @notice Safe transfers are not necessary for Hats since transfers are not handled by the wearer
     /// @dev Use `Hats.TransferHat()` instead
     function safeTransferFrom(
-        address from,
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes calldata data
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes calldata
     ) public pure override {
         revert();
     }
@@ -1087,11 +1087,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @notice Safe transfers are not necessary for Hats since transfers are not handled by the wearer
     /// @dev Use `Hats.BatchTransferHats()` instead
     function safeBatchTransferFrom(
-        address from,
-        address to,
-        uint256[] calldata ids,
-        uint256[] calldata amounts,
-        bytes calldata data
+        address,
+        address,
+        uint256[] calldata,
+        uint256[] calldata,
+        bytes calldata
     ) public pure override {
         revert();
     }

@@ -14,7 +14,7 @@ contract DeployHats is Script {
         address deployer = vm.rememberKey(privKey);
         vm.startBroadcast(deployer);
 
-        Hats hats = new Hats(name, imageURI);
+        new Hats(name, imageURI);
 
         vm.stopBroadcast();
     }
