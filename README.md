@@ -62,29 +62,13 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-Hats Protocol is a protocol for DAO-native roles and credentials that support delegation of authorities.
+Hats Protocol is a protocol for DAO-native roles and credentials that supports revocable delegation of authority and responsibility.
 
-Hats are represented on-chain by ERC1155 tokens. An address with a balance of a given Hat token "wears" that hat, granting them the responsibilities and authorities that have been assigned to the Hat by the DAO.
+Hats are represented on-chain by non-transferable ERC1155 tokens. An address with a balance of a given Hat token "wears" that hat, granting them the responsibilities and authorities that have been assigned to the Hat by the DAO.
 
 ### Deployments
 
 For information on Hats Protocol versions and deployments, see [Releases](https://github.com/Hats-Protocol/hats-protocol/releases).
-
-<!-- GETTING STARTED -->
-## Getting Started
-
-[TODO - add how to get your DAO a tophat, create your first hat, and mint it, and plug into a token gate]
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-<!-- USE CASES -->
-## Use Cases
-
-[TODO] Examples / screenshots
-
-_For more examples, please refer to the <a href="#hats-protocol-docs">docs</a>._
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -198,7 +182,7 @@ Any address can wear a Hat, including:
 
 The admin of every Hat is another Hat. This means that the authority to perform admin functions for a given Hat is assigned to the wearer of its admin Hat.
 
-The scope of authority for a Hat's admin is to determine who can wear it. This is reflected in the ability create the Hat and to mint or transfer the Hat's token.
+The scope of authority for a Hat's admin is to determine who can wear it. This is reflected in the ability create the Hat and to mint or (for mutable Hats) transfer the Hat's token.
 
 #### Hatter Contracts
 
@@ -232,34 +216,33 @@ Hat ids are uint256 bitmaps that create an "address" &mdash; more like an web or
 The 32 bytes of a hat's id are structured as follows:
 
 - The first 4 bytes are reserved for the top hat id. Since top hat ids are unique across a given deployment of Hats Protocol, we can also think of them as the top level "domain" for a hat tree.
-- Each of the next chunks of 14 bits refers to a single "Hat Level".
+- Each of the next chunks of 16 bits refers to a single "Hat Level".
 
-This means there are 17 total hat levels, beginning with the top hat at level 0 and going up to level 16. A hat at level 6 will have 6 admins in its branch of the tree, and therefore its id will have non-zero values at levels 0-5 as well as its own level. Since these values correspond to its admins, all that is needed to know which hats have admin authorities over a given hat is to know that given hat's id.
+This means there are 15 total hat levels, beginning with the top hat at level 0 and going up to level 14. A hat at level 6 will have 6 admins in its branch of the tree, and therefore its id will have non-zero values at levels 0-5 as well as its own level. Since these values correspond to its admins, all that is needed to know which hats have admin authorities over a given hat is to know that given hat's id.
 
 #### Hat Tree Space
 
-A hat tree can have up to 16 levels, plus the top hat (tree root). Within those 16 levels are 224 bits of address space (remember, one level contains 14 bits of space), so the maximum number of hats in a single hat tree is $2^{224} + 1 \approx ~2.696 * 10^{67}$, or well beyond the number of stars in the universe.
+A hat tree can have up to 14 levels, plus the top hat (tree root). Within those 14 levels are 224 bits of address space (remember, one level contains 16 bits of space), so the maximum number of hats in a single hat tree is $2^{224} + 1 \approx ~2.696 * 10^{67}$, or well beyond the number of stars in the universe.
 
 #### Displaying Hat Ids
 
-Unfortunately, the rich information embedded within a hat id is hard to see when the id is converted to base 10, which is how most applications and front ends display uint256 values originating from smart contracts.
 
-It is recommended for front ends to instead convert hat ids to base-14, revealing the values of the 14-bit level chunks.
-
-<!-- TABLE OF CONTENTS 
 It is recommended for front ends to instead convert hat ids to hexidecimal, revealing the values of the bytes &mdash; and therefore the hat levels &mdash; directly.
 
-For example, instead of a hat id looking like this under base 10: `27065670334958527282875471856998940443582285201907529987323758379008`
+For example, instead of a hat id looking like this under base 10: `26960769438260605603848134863118277618512635038780455604427388092416`
 
-...under hexidecimal it would look like this: `0x0000000101010000000000000000000000000000000000000000000000000000`
+...under hexidecimal it would look like this: `0x0000000100020003000000000000000000000000000000000000000000000000`
 
-In this second version, you can clearly see that this hat is...
+In this second version, you can see that this hat is...
 
 - a level 2 hat
 - is in the first hat tree (top hat id = 1)
-- is the first hat created at level 2 within this tree
-- admin'd by the first hat created at level 2 within this tree
--->
+- is the third hat created at level 2 within this tree
+- admin'd by the second hat created at level 1 within this tree
+
+We can also prettify this even further by separating hat levels with periods, a la IP addresses:
+
+`0x00000001.0002.0003.0000.0000.0000.0000.0000.0000.0000.0000.0000.0000.0000.0000`
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
@@ -319,6 +302,8 @@ Changes are allowed to the following Hat properties:
 - `mutable` - this is a one-way change
 - `imageURI`
 
+Additionally, mutable hats can be transferred by their admins to a different wearer. Immutable hats cannot be transferred.
+
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
 ### Hat Image URIs
@@ -375,19 +360,20 @@ As a result, there is no need for safe transfers (transfers which check whether 
 
 For these reasons, in Hats Protocol, the standard ERC1155 transfer functions &mdash; `safeTransferFrom` and `safeBatchTransferFrom` are disabled and will always revert. Similarly, token approvals are not required and `setApprovalForAll` will always revert.
 
-As replacements, Hats can be transfered by admins via `Hats.transferHat`, which emits the ERC1155 standard event `TransferSingle`.
+As a replacement, Hats can be transfered by admins via `Hats.transferHat`, which emits the ERC1155 standard event `TransferSingle`.
 
-<!--
-TODO add back in after implementing batchTransferHats
-#### Batch Transfers
+With the exception of tophats — which can always transfer themselves — only mutable Hats can be transferred.
 
-As with minting, admins can also transfer Hats in a batch, via `Hats.batchTransferHats`.
+### Hat Tree Grafting
 
-Since batch Hats transfers can be made from and to multiple wearers, batch transfers emit multiple `TransferSingle` events rather than a `TransferBatch` event.
+Not all Hats trees will unfurl from top down or inside out. Sometimes, new branches will form independently from the main tree, or multiple trees will form before a main tree even exists.
 
-<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+In these cases, Hat trees can be grafted onto other trees. This is done by the wearer of one tree's tophat linking their tophat to a hat in another tree, via `Hats.linkTopHatToTree`. This has two main effects:
 
--->
+1. The linked tophat loses its tophat status (i.e., `Hats.isTopHat` will return `false`) and turns into what we call a "tree root", and
+2. The hat to which it is linked becomes its new admin; it is no longer its own admin
+
+Linked Hat trees can also be unlinked by the tree root from its linked admin, via `Hats.unlinkTopHatFromTree`. This causes the tree root to regain its status as a top hat and to once again become its own admin.
 
 ### Renouncing a Hat
 
