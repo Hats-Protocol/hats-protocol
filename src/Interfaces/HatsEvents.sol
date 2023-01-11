@@ -28,12 +28,11 @@ interface HatsEvents {
 
     // event HatRenounced(uint256 hatId, address wearer);
 
-    // event WearerStatus(
-    //     uint256 hatId,
-    //     address wearer,
-    //     bool eligible,
-    //     bool wearerStanding
-    // );
+    event WearerStandingChanged(
+        uint256 hatId,
+        address wearer,
+        bool wearerStanding
+    );
 
     event HatStatusChanged(uint256 hatId, bool newStatus);
 

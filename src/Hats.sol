@@ -466,10 +466,12 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         bool _eligible,
         bool _standing
     ) internal returns (bool updated) {
-        // always ineligible if in bad standing
-        if (!_eligible || !_standing) {
-            // revoke the Hat by burning it
-            _burn(_wearer, _hatId, 1);
+        // revoke/burn the hat if _wearer has a positive balance
+        if (_balanceOf[_wearer][_hatId] > 0) {
+            // always ineligible if in bad standing
+            if (!_eligible || !_standing) {
+                _burn(_wearer, _hatId, 1);
+            }
         }
 
         // record standing for use by other contracts
@@ -481,9 +483,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (_standing == badStandings[_hatId][_wearer]) {
             badStandings[_hatId][_wearer] = !_standing;
             updated = true;
-        }
 
-        // emit WearerStatus(_hatId, _wearer, _eligible, _standing);
+            emit WearerStandingChanged(_hatId, _wearer, _standing);
+        }
     }
 
     function transferHat(
