@@ -226,7 +226,6 @@ A hat tree can have up to 14 levels, plus the top hat (tree root). Within those 
 
 #### Displaying Hat Ids
 
-
 It is recommended for front ends to instead convert hat ids to hexidecimal, revealing the values of the bytes &mdash; and therefore the hat levels &mdash; directly.
 
 For example, instead of a hat id looking like this under base 10: `26960769438260605603848134863118277618512635038780455604427388092416`
