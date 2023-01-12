@@ -97,6 +97,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @notice Creates and mints a Hat that is its own admin, i.e. a "topHat"
     /// @dev A topHat has no eligibility and no toggle
     /// @param _target The address to which the newly created topHat is minted
+    /// @param _details A description of the Hat [optional]
     /// @param _imageURI The image uri for this top hat and the fallback for its
     ///                  downstream hats [optional]
     /// @return topHatId The id of the newly created topHat
@@ -135,7 +136,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @return newHatId The id of the newly created Hat
     function createHat(
         uint256 _admin,
-        string memory _details, // encode as bytes32 ??
+        string memory _details,
         uint32 _maxSupply,
         address _eligibility,
         address _toggle,
@@ -174,6 +175,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _eligibilityModules Array of eligibility module addresses for each hat to
     /// create
     /// @param _toggleModules Array of toggle module addresses for each hat to create
+    /// @param _mutables Array of mutable flags for each hat to create
     /// @param _imageURIs Array of imageURIs for each hat to create
     /// @return bool True if all createHat calls succeeded
     function batchCreateHats(
@@ -215,6 +217,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /// @notice Gets the id of the next child hat of the hat `_admin`
     /// @dev Does not incrememnt lastHatId
+    /// @param _admin The id of the hat to serve as the admin for the next child hat
     /// @return The new hat id
     function getNextId(uint256 _admin) public view returns (uint256) {
         uint16 nextHatId = _hats[_admin].lastHatId + 1;
@@ -268,8 +271,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @notice Toggles a Hat's status from active to deactive, or vice versa
     /// @dev The msg.sender must be set as the hat's toggle
     /// @param _hatId The id of the Hat for which to adjust status
+    /// @param _newStatus The new status to set
     /// @return bool Whether the status was toggled
-    function setHatStatus(uint256 _hatId, bool newStatus)
+    function setHatStatus(uint256 _hatId, bool _newStatus)
         external
         returns (bool)
     {
@@ -279,7 +283,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             revert NotHatsToggle();
         }
 
-        return _processHatStatus(_hatId, newStatus);
+        return _processHatStatus(_hatId, _newStatus);
     }
 
     /// @notice Checks a hat's toggle module and processes the returned status
@@ -394,7 +398,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @return hat The contents of the newly created hat
     function _createHat(
         uint256 _id,
-        string memory _details, // encode as bytes32 ??
+        string memory _details,
         uint32 _maxSupply,
         address _eligibility,
         address _toggle,
