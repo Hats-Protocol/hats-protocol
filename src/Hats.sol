@@ -163,6 +163,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         );
 
         // increment _admin.lastHatId
+        // use the overflow check to constrain to correct number of hats per level
         ++_hats[_admin].lastHatId;
     }
 
@@ -198,7 +199,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (!sameLengths) revert BatchArrayLengthMismatch();
 
         // loop through and create each hat
-        for (uint256 i = 0; i < length; ++i) {
+        for (uint256 i = 0; i < length;) {
             createHat(
                 _admins[i],
                 _details[i],
@@ -208,6 +209,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
                 _mutables[i],
                 _imageURIs[i]
             );
+
+            unchecked {++i;}
         }
 
         return true;
@@ -258,8 +261,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256 length = _hatIds.length;
         if (length != _wearers.length) revert BatchArrayLengthMismatch();
 
-        for (uint256 i = 0; i < length; ++i) {
+        for (uint256 i = 0; i < length; ) {
             mintHat(_hatIds[i], _wearers[i]);
+            unchecked {++i;}
         }
 
         return true;
@@ -504,8 +508,14 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
 
         //Adjust balances
-        --_balanceOf[_from][_hatId];
-        ++_balanceOf[_to][_hatId];
+        
+        unchecked {
+            // should not underflow given NotHatWearer check above
+            --_balanceOf[_from][_hatId];
+            // should not overflow given AlreadyWearingHat check above
+            ++_balanceOf[_to][_hatId];
+        }
+        
 
         emit TransferSingle(msg.sender, _from, _to, _hatId, 1);
     }
@@ -711,7 +721,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         view
         returns (bool)
     {
-        return (balanceOf(_user, _hatId) >= 1);
+        return (balanceOf(_user, _hatId) > 0);
     }
 
     /// @notice Checks whether a given address serves as the admin of a given Hat
@@ -734,8 +744,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             if (isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel))) {
                 return true;
             }
-
-            adminHatLevel--;
+            // should not underflow given stopping condition > 0
+            unchecked {--adminHatLevel;}
         }
 
         return isWearerOfHat(_user, getAdminAtLevel(_hatId, 0));
@@ -881,7 +891,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256 id;
 
         // already checked at `level` above, so we start the loop at `level - 1`
-        for (uint256 i = level - 1; i > 0; --i) {
+        for (uint256 i = level - 1; i > 0; ) {
             id = getAdminAtLevel(_hatId, uint8(i));
             hat = _hats[id];
             imageURI = hat.imageURI;
@@ -889,6 +899,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             if (bytes(imageURI).length > 0) {
                 return imageURI;
             }
+            // should not underflow given stopping condition is > 0
+            unchecked {--i;}
         }
 
         // if none of _hatId's admins has an imageURI of its own, we again fall back to the global image uri
@@ -1006,16 +1018,21 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256 amount,
         bytes memory
     ) internal override {
-        _balanceOf[to][id] += amount;
+        unchecked {
+            // should not overflow since `mintHat` enforces max balance of 1
+            _balanceOf[to][id] += amount;
 
-        // increment Hat supply counter
-        ++hatSupply[uint256(id)];
+            // increment Hat supply counter
+            // should not overflow given AllHatsWorn check in `mintHat`
+            ++hatSupply[uint256(id)];
+        }
 
         emit TransferSingle(msg.sender, address(0), to, id, amount);
     }
 
     /// @notice Burns a wearer's (`from`'s) Hat token
-    /// @dev Overrides ERC1155._burn: adds Hats-specific state change
+    /// @dev Overrides ERC1155._burn: adds Hats-specific state change. Should only be 
+    ////     called after checking `from` balance > 0.
     /// @param from The wearer from which to burn the Hat token
     /// @param id The id of the Hat to burn, cast to uint256
     /// @param amount Must always be 1, since it's not possible wear >1 Hat
@@ -1024,10 +1041,13 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256 id,
         uint256 amount
     ) internal override {
-        _balanceOf[from][id] -= amount;
+        // neither should underflow since `_burn` is not called on non-positive balance
+        unchecked {
+            _balanceOf[from][id] -= amount;
 
-        // decrement Hat supply counter
-        --hatSupply[uint256(id)];
+            // decrement Hat supply counter
+            --hatSupply[uint256(id)];
+        }
 
         emit TransferSingle(msg.sender, from, address(0), id, amount);
     }
