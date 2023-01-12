@@ -1,4 +1,5 @@
-// Copyright (C) 2022 Hats Protocol
+// SPDX-License-Identifier: AGPL-3.0
+// Copyright (C) 2023 Haberdasher Labs
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -15,7 +16,7 @@
 
 pragma solidity >=0.8.13;
 
-import {ERC1155} from "ERC1155/ERC1155.sol";
+import {ERC1155} from "lib/ERC1155/ERC1155.sol";
 // import "forge-std/Test.sol"; //remove after testing
 import "./Interfaces/IHats.sol";
 import "./HatsIdUtilities.sol";
@@ -25,9 +26,9 @@ import "solbase/utils/Base64.sol";
 import "solbase/utils/LibString.sol";
 
 /// @title Hats Protocol
-/// @notice Hats are DAO-native revocable roles that are represented as semi-fungable tokens for composability
-/// @dev This is a multitenant contract that can manage all Hats for a given chain
-/// @author Hats Protocol
+/// @notice Hats are DAO-native, revocable, and programmable roles that are represented as non-transferable ERC-1155 tokens for composability
+/// @dev This is a multitenant contract that can manage all hats for a given chain
+/// @author Haberdasher Labs
 contract Hats is IHats, ERC1155, HatsIdUtilities {
     /*//////////////////////////////////////////////////////////////
                               HATS DATA MODELS
@@ -56,24 +57,34 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
                               HATS STORAGE
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice The name of the contract, typically including the version
     string public name;
 
-    uint32 public lastTopHatId; // initialized at 0
+    /// @notice The first 4 bytes of the id of the last tophat created.
+    uint32 public lastTopHatId; // first tophat id starts at 1
 
+    /// @notice The fallback image URI for hat tokens with no `imageURI` specified in their branch
     string public baseImageURI;
 
-    // see HatsIdUtilities.sol for more info on how Hat Ids work
+    /// @dev Internal mapping of hats to hat ids. See HatsIdUtilities.sol for more info on how hat ids work
     mapping(uint256 => Hat) internal _hats; // key: hatId => value: Hat struct
 
-    mapping(uint256 => uint32) public hatSupply; // key: hatId => value: supply
+    /// @notice Current supply of each hat
+    /// @dev hatId => supply
+    mapping(uint256 => uint32) public hatSupply;
 
-    // for external contracts to check if Hat was revoked because the wearer is in bad standing
-    mapping(uint256 => mapping(address => bool)) public badStandings; // key: hatId => value: (key: wearer => value: badStanding?)
+    /// @notice Mapping of wearers in bad standing for certain hats
+    /// @dev Used by external contracts to trigger penalties for wearers in bad standing
+    ///      hatId => wearer => !standing
+    mapping(uint256 => mapping(address => bool)) public badStandings;
 
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice All arguments are immutable; they can only be set once during construction
+    /// @param _name The name of this contract, typically including the version
+    /// @param _baseImageURI The fallback image URI
     constructor(string memory _name, string memory _baseImageURI) {
         name = _name;
         baseImageURI = _baseImageURI;
@@ -110,40 +121,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         _mint(_target, topHatId, 1, "");
     }
-
-    // /// @notice Mints a topHat to the msg.sender and creates another Hat admin'd by the topHat
-    // /// @param _details A description of the hat
-    // /// @param _maxSupply The total instances of the Hat that can be worn at once
-    // /// @param _eligibility The address that can report on the Hat wearer's standing
-    // /// @param _toggle The address that can deactivate the hat [optional]
-    // /// @param _mutable Whether the hat's properties are changeable after creation
-    // /// @param _topHatImageURI The image uri for this top hat and the fallback for its
-    // ///                        downstream hats [optional]
-    // /// @param _firstHatImageURI The image uri for the first hat and the fallback for its
-    // ///                        downstream hats [optional]
-    // /// @return topHatId The id of the newly created topHat
-    // /// @return firstHatId The id of the other newly created hat
-    // function createTopHatAndHat(
-    //     string memory _details, // encode as bytes32 ??
-    //     uint32 _maxSupply,
-    //     address _eligibility,
-    //     address _toggle,
-    //     bool _mutable,
-    //     string memory _topHatImageURI,
-    //     string memory _firstHatImageURI
-    // ) public returns (uint256 topHatId, uint256 firstHatId) {
-    //     topHatId = mintTopHat(msg.sender, _topHatImageURI);
-
-    //     firstHatId = createHat(
-    //         topHatId,
-    //         _details,
-    //         _maxSupply,
-    //         _eligibility,
-    //         _toggle,
-    //         _mutable,
-    //         _firstHatImageURI
-    //     );
-    // }
 
     /// @notice Creates a new hat. The msg.sender must wear the `_admin` hat.
     /// @dev Initializes a new Hat struct, but does not mint any tokens.
@@ -236,6 +213,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         return true;
     }
 
+    /// @notice Gets the id of the next child hat of the hat `_admin`
+    /// @dev Does not incrememnt lastHatId
+    /// @return The new hat id
     function getNextId(uint256 _admin) public view returns (uint256) {
         uint16 nextHatId = _hats[_admin].lastHatId + 1;
         return buildHatId(_admin, nextHatId);
@@ -266,6 +246,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         return true;
     }
 
+    /// @notice Mints new hats in batch. The msg.sender must be an admin of each hat.
+    /// @dev This is a convenience function that loops through the arrays and calls `mintHat`.
+    /// @param _hatIds Array of ids of hats to mint
+    /// @param _wearers Array of addresses to which the hats will be minted
+    /// @return bool True if all mintHat calls succeeded
     function batchMintHats(uint256[] memory _hatIds, address[] memory _wearers)
         public
         returns (bool)
@@ -297,8 +282,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         return _processHatStatus(_hatId, newStatus);
     }
 
-    /// @notice Checks a hat's toggle and, if new, toggle's the hat's status
-    /// @dev // TODO
+    /// @notice Checks a hat's toggle module and processes the returned status
+    /// @dev May change the hat's status in storage
     /// @param _hatId The id of the Hat whose toggle we are checking
     /// @return bool Whether there was a new status
     function checkHatStatus(uint256 _hatId) external returns (bool) {
@@ -390,8 +375,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
         // remove the hat
         _burn(msg.sender, _hatId, 1);
-
-        // emit HatRenounced(_hatId, msg.sender);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -437,7 +420,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         );
     }
 
-    // TODO write comment
+    /// @notice Internal function to process hat status
+    /// @dev Updates a hat's status if different from current
+    /// @param _hatId The id of the Hat in quest
+    /// @param _newStatus The status to potentially change to
+    /// @return updated - Whether the status was updated
     function _processHatStatus(uint256 _hatId, bool _newStatus)
         internal
         returns (bool updated)
@@ -460,6 +447,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _eligible Whether _wearer is eligible for the Hat (if false, this function
     /// will revoke their Hat)
     /// @param _standing Whether _wearer is in good standing (to be recorded in storage)
+    /// @return updated Whether the wearer standing was updated
     function _processHatWearerStatus(
         uint256 _hatId,
         address _wearer,
@@ -488,6 +476,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
     }
 
+    /// @notice Transfers a hat from one wearer to another
+    /// @dev The hat must be mutable, and the transfer must be initiated by an admin
+    /// @param _hatId The hat in question
+    /// @param _from The current wearer
+    /// @param _to The new wearer
     function transferHat(
         uint256 _hatId,
         address _from,
@@ -521,7 +514,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
                               HATS ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function _checkAdmin(uint256 _hatId) internal {
+    /// @notice Checks whether msg.sender is an admin of a hat, and reverts if not
+    function _checkAdmin(uint256 _hatId) internal view {
         if (!isAdminOfHat(msg.sender, _hatId)) {
             revert NotAdmin(msg.sender, _hatId);
         }
@@ -657,7 +651,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev This can only be called by an admin of the tree root
     /// @param _topHatId The domain of the tophat to unlink
     function unlinkTopHatFromTree(uint32 _topHatId) external {
-        uint256 adminHat = linkedTreeAdmins[_topHatId];
         uint256 fullTopHatId = uint256(_topHatId) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
         if(!isAdminOfHat(msg.sender, fullTopHatId))
           revert  NotAdmin(msg.sender, _topHatId);
@@ -772,15 +765,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
     }
 
-    // /// @notice Checks the active status of a hat
-    // /// @dev Use `_isActive` for internal calls that can take a Hat as a param
-    // /// @param _hatId The id of the hat
-    // /// @return bool The active status of the hat
-    // function isActive(uint256 _hatId) public view returns (bool) {
-    //     return _isActive(_hats[_hatId], _hatId);
-    // }
-
-    function _getHatStatus(Hat memory _hat) internal view returns (bool) {
+    function _getHatStatus(Hat memory _hat) internal pure returns (bool) {
         return (_hat.config >> 95 != 0);
     }
 
@@ -792,13 +777,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
     }
 
-    function _isMutable(Hat memory _hat) internal view returns (bool) {
+    function _isMutable(Hat memory _hat) internal pure returns (bool) {
         return (_hat.config & uint96(1 << 94) != 0);
     }
-
-    // function isMutable(uint256 _hatId) public view returns (bool) {
-    //     return _isMutable(_hats[_hatId]);
-    // }
 
     /// @notice Checks whether a wearer of a Hat is in good standing
     /// @dev Public function for use when pa    ssing a Hat object is not possible or preferable
@@ -888,11 +869,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         // if _hatId has an imageURI, we return it
         if (bytes(imageURI).length > 0) {
             return imageURI;
-
-            /// TODO bring back the following in a way that actually works
-            // since there's only one hat with this imageURI at this level, by convention
-            // we refer to it with `id = 0`
-            // return string.concat(imageURI, "0");
         }
 
         // otherwise, we check its branch of admins
@@ -912,19 +888,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
             if (bytes(imageURI).length > 0) {
                 return imageURI;
-
-                /// TODO bring back the following in a way that actually works
-                // since there are multiple hats with this imageURI at _hatId's level,
-                // we need to use _hatId to disambiguate
-                // return string.concat(imageURI, LibString.toString(_hatId));
             }
         }
 
         // if none of _hatId's admins has an imageURI of its own, we again fall back to the global image uri
         return baseImageURI;
-
-        /// TODO bring back the following in a way that actually works
-        // return string.concat(baseImageURI, LibString.toString(_hatId));
     }
 
     /// @notice Constructs the URI for a Hat, using data from the Hat struct
@@ -1031,12 +999,12 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param to The wearer of the Hat and the recipient of the newly minted token
     /// @param id The id of the Hat to mint, cast to uint256
     /// @param amount Must always be 1, since it's not possible wear >1 Hat
-    /// @param data Can be empty since we skip the 1155TokenReceiver hook
+    /// @param - `data` can be empty since we skip the 1155TokenReceiver hook
     function _mint(
         address to,
         uint256 id,
         uint256 amount,
-        bytes memory data
+        bytes memory
     ) internal override {
         _balanceOf[to][id] += amount;
 
@@ -1064,7 +1032,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         emit TransferSingle(msg.sender, from, address(0), id, amount);
     }
 
-    function setApprovalForAll(address operator, bool approved)
+    function setApprovalForAll(address, bool)
         public
         pure
         override
@@ -1075,11 +1043,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @notice Safe transfers are not necessary for Hats since transfers are not handled by the wearer
     /// @dev Use `Hats.TransferHat()` instead
     function safeTransferFrom(
-        address from,
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes calldata data
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes calldata
     ) public pure override {
         revert();
     }
@@ -1087,11 +1055,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @notice Safe transfers are not necessary for Hats since transfers are not handled by the wearer
     /// @dev Use `Hats.BatchTransferHats()` instead
     function safeBatchTransferFrom(
-        address from,
-        address to,
-        uint256[] calldata ids,
-        uint256[] calldata amounts,
-        bytes calldata data
+        address,
+        address,
+        uint256[] calldata,
+        uint256[] calldata,
+        bytes calldata
     ) public pure override {
         revert();
     }

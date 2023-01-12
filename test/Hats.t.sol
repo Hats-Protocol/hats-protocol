@@ -129,7 +129,7 @@ contract CreateHatsTest is TestSetup {
         // mint TopHat
         // topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
 
-        (uint256[] memory ids, address[] memory wearers) = createHatsBranch(
+        (uint256[] memory ids,) = createHatsBranch(
             3,
             topHatId,
             topHatWearer,

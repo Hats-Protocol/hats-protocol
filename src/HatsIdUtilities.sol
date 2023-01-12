@@ -1,4 +1,5 @@
-// Copyright (C) 2022 Hats Protocol
+// SPDX-License-Identifier: AGPL-3.0
+// Copyright (C) 2023 Haberdasher Labs
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -23,6 +24,10 @@ import "./Interfaces/IHatsIdUtilities.sol";
 /// @author Hats Protocol
 contract HatsIdUtilities is IHatsIdUtilities {
 
+    /// @notice Mapping of linked tophats to admin hats in other trees, used for grafting one hats tree onto another
+    /// @dev Trees can only be linked to another tree via their tophat
+    mapping(uint32 => uint256) public linkedTreeAdmins; // topHatDomain => hatId
+
     /**
      * Hat Ids serve as addresses. A given Hat's Id represents its location in its
      * hat tree: its level, its admin, its admin's admin (etc, all the way up to the
@@ -39,14 +44,15 @@ contract HatsIdUtilities is IHatsIdUtilities {
      * A hat tree consists of a single tophat and has a max depth of 14 levels.
      */
 
-    // for grafting one hats tree into another
-    // Trees can only be linked to another tree at the tophat level
-    mapping(uint32 => uint256) public linkedTreeAdmins; // topHatDomain => hatId
+    /// @dev Number of bits of address space for tophat ids, ie the tophat domain
+    uint256 internal constant TOPHAT_ADDRESS_SPACE = 32;
 
+    /// @dev Number of bits of address space for each level below the tophat
+    uint256 internal constant LOWER_LEVEL_ADDRESS_SPACE = 16;
 
-    uint256 internal constant TOPHAT_ADDRESS_SPACE = 32; // 32 bits (4 bytes) of space for tophats, aka the "domain"
-    uint256 internal constant LOWER_LEVEL_ADDRESS_SPACE = 16; // 16 bits of space for each of the levels below the tophat
-    uint256 internal constant MAX_LEVELS = 14; // (256 - TOPHAT_ADDRESS_SPACE) / LOWER_LEVEL_ADDRESS_SPACE;
+    /// @dev Maximum number of levels below the tophat, ie max tree depth
+    ///      (256 - TOPHAT_ADDRESS_SPACE) / LOWER_LEVEL_ADDRESS_SPACE;
+    uint256 internal constant MAX_LEVELS = 14;
 
     /// @notice Constructs a valid hat id for a new hat underneath a given admin
     /// @dev Check hats[_admin].lastHatId for the previous hat created underneath _admin

@@ -1,4 +1,5 @@
-// Copyright (C) 2022 Hats Protocol
+// SPDX-License-Identifier: AGPL-3.0
+// Copyright (C) 2023 Haberdasher Labs
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -25,16 +26,6 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
         string memory _details,
         string memory _imageURI
     ) external returns (uint256 topHatId);
-
-    // function createTopHatAndHat(
-    //     string memory _details,
-    //     uint32 _maxSupply,
-    //     address _eligibility,
-    //     address _toggle,
-    //     bool _mutable,
-    //     string memory _topHatImageURI,
-    //     string memory _firstHatImageURI
-    // ) external returns (uint256 topHatId, uint256 firstHatId);
 
     function createHat(
         uint256 _admin,
@@ -140,8 +131,6 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
         external
         view
         returns (bool);
-
-    // function isActive(uint256 _hatId) external view returns (bool);
 
     function isInGoodStanding(address _wearer, uint256 _hatId)
         external
