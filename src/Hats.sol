@@ -250,7 +250,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev This is a convenience function that loops through the arrays and calls `mintHat`.
     /// @param _hatIds Array of ids of hats to mint
     /// @param _wearers Array of addresses to which the hats will be minted
-    /// @return bool True if all minteHat calls succeeded
+    /// @return bool True if all mintHat calls succeeded
     function batchMintHats(uint256[] memory _hatIds, address[] memory _wearers)
         public
         returns (bool)

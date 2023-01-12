@@ -26,7 +26,7 @@ interface HatsErrors {
     /// @notice Emitted when attempting to mint `hatId` but `hatId`'s maxSupply has been reached
     error AllHatsWorn(uint256 hatId);
 
-    /// @notice Emitted when 
+    /// @notice Emitted when attempting to create a hat with a level 14 hat as its admin
     error MaxLevelsReached();
 
     /// @notice Emitted when attempting to mint `hatId` to a `wearer` who is already wearing the hat
