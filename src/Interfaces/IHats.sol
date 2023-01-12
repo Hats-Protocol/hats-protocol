@@ -142,6 +142,8 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
         view
         returns (bool);
 
+    function hatSupply(uint256 _hatId) external view returns (uint32 supply);
+
     function getImageURIForHat(uint256 _hatId)
         external
         view

@@ -38,6 +38,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         // 1st storage slot
         address eligibility; // ─┐ can revoke Hat based on ruling | 20
         uint32 maxSupply; //     │ the max number of identical hats that can exist | 4
+        uint32 supply; //        │ the number of this hat that currently exists | 4
         uint16 lastHatId; //    ─┘ indexes how many different hats an admin is holding | 1
         // 2nd slot
         address toggle; // ─┐ controls when Hat is active | 20
@@ -68,10 +69,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /// @dev Internal mapping of hats to hat ids. See HatsIdUtilities.sol for more info on how hat ids work
     mapping(uint256 => Hat) internal _hats; // key: hatId => value: Hat struct
-
-    /// @notice Current supply of each hat
-    /// @dev hatId => supply
-    mapping(uint256 => uint32) public hatSupply;
 
     /// @notice Mapping of wearers in bad standing for certain hats
     /// @dev Used by external contracts to trigger penalties for wearers in bad standing
@@ -236,7 +233,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         // only the wearer of a hat's admin Hat can mint it
         _checkAdmin(_hatId);
 
-        if (hatSupply[_hatId] >= hat.maxSupply) {
+        if (hat.supply >= hat.maxSupply) {
             revert AllHatsWorn(_hatId);
         }
 
@@ -634,7 +631,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             revert Immutable();
         }
 
-        if (_newMaxSupply < hatSupply[_hatId]) {
+        if (_newMaxSupply < hat.supply) {
             revert NewMaxSupplyTooLow();
         }
 
@@ -702,7 +699,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         Hat memory hat = _hats[_hatId];
         details = hat.details;
         maxSupply = hat.maxSupply;
-        supply = hatSupply[_hatId];
+        supply = hat.supply;
         eligibility = hat.eligibility;
         toggle = hat.toggle;
         imageURI = getImageURIForHat(_hatId);
@@ -861,6 +858,14 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         return _isEligible(_wearer, _hats[_hatId], _hatId);
     }
 
+    /// @notice Gets the current supply of a Hat
+    /// @dev Only tracks explicit burns and mints, not dynamic revocations
+    /// @param _hatId The id of the Hat
+    /// @return supply The current supply of the Hat
+    function hatSupply(uint256 _hatId) external view returns (uint32 supply) {
+        supply = _hats[_hatId].supply;
+    }
+
     /// @notice Gets the imageURI for a given hat
     /// @dev If this hat does not have an imageURI set, recursively get the imageURI from
     ///      its admin
@@ -940,7 +945,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             '"status": "',
             (_isActive(hat, _hatId) ? "active" : "inactive"),
             '", "current supply": "',
-            LibString.toString(hatSupply[_hatId]),
+            LibString.toString(hat.supply),
             '", "supply cap": "',
             LibString.toString(hat.maxSupply),
             '", "admin (id)": "',
@@ -1024,7 +1029,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
             // increment Hat supply counter
             // should not overflow given AllHatsWorn check in `mintHat`
-            ++hatSupply[uint256(id)];
+            ++_hats[id].supply;
         }
 
         emit TransferSingle(msg.sender, address(0), to, id, amount);
@@ -1046,7 +1051,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             _balanceOf[from][id] -= amount;
 
             // decrement Hat supply counter
-            --hatSupply[uint256(id)];
+            --_hats[id].supply;
         }
 
         emit TransferSingle(msg.sender, from, address(0), id, amount);
