@@ -116,7 +116,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             _imageURI
         );
 
-        _mint(_target, topHatId, 1, "");
+        _mintHat(_target, topHatId);
     }
 
     /// @notice Creates a new hat. The msg.sender must wear the `_admin` hat.
@@ -241,7 +241,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             revert AlreadyWearingHat(_wearer, _hatId);
         }
 
-        _mint(_wearer, uint256(_hatId), 1, "");
+        _mintHat(_wearer, _hatId);
 
         return true;
     }
@@ -375,7 +375,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             revert NotHatWearer();
         }
         // remove the hat
-        _burn(msg.sender, _hatId, 1);
+        _burnHat(msg.sender, _hatId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -459,7 +459,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (_balanceOf[_wearer][_hatId] > 0) {
             // always ineligible if in bad standing
             if (!_eligible || !_standing) {
-                _burn(_wearer, _hatId, 1);
+                _burnHat(_wearer, _hatId);
             }
         }
 
@@ -1011,50 +1011,43 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
     }
 
-    /// @notice Mints a Hat token to `to`
-    /// @dev Overrides ERC1155._mint: skips the typical 1155TokenReceiver hook since Hat wearers don't control their own Hat, and adds Hats-specific state changes
-    /// @param to The wearer of the Hat and the recipient of the newly minted token
-    /// @param id The id of the Hat to mint, cast to uint256
-    /// @param amount Must always be 1, since it's not possible wear >1 Hat
-    /// @param - `data` can be empty since we skip the 1155TokenReceiver hook
-    function _mint(
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes memory
-    ) internal override {
+    /// @notice Internal call to mint a Hat token to a wearer
+    /// @dev Unsafe if called when `_wearer` has a non-zero balance of `_hatId`
+    /// @param _wearer The wearer of the Hat and the recipient of the newly minted token
+    /// @param _hatId The id of the Hat to mint
+    function _mintHat(
+        address _wearer,
+        uint256 _hatId
+    ) internal {
         unchecked {
             // should not overflow since `mintHat` enforces max balance of 1
-            _balanceOf[to][id] += amount;
+            _balanceOf[_wearer][_hatId] = 1;
 
             // increment Hat supply counter
             // should not overflow given AllHatsWorn check in `mintHat`
-            ++_hats[id].supply;
+            ++_hats[_hatId].supply;
         }
 
-        emit TransferSingle(msg.sender, address(0), to, id, amount);
+        emit TransferSingle(msg.sender, address(0), _wearer, _hatId, 1);
     }
 
-    /// @notice Burns a wearer's (`from`'s) Hat token
-    /// @dev Overrides ERC1155._burn: adds Hats-specific state change. Should only be 
-    ////     called after checking `from` balance > 0.
-    /// @param from The wearer from which to burn the Hat token
-    /// @param id The id of the Hat to burn, cast to uint256
-    /// @param amount Must always be 1, since it's not possible wear >1 Hat
-    function _burn(
-        address from,
-        uint256 id,
-        uint256 amount
-    ) internal override {
-        // neither should underflow since `_burn` is not called on non-positive balance
+    /// @notice Internal call to burn a wearer's Hat token
+    /// @dev Unsafe if called when `_wearer` doesn't have a zero balance of `_hatId`
+    /// @param _wearer The wearer from which to burn the Hat token
+    /// @param _hatId The id of the Hat to burn
+    function _burnHat(
+        address _wearer,
+        uint256 _hatId
+    ) internal {
+        // neither should underflow since `_burnHat` is never called on non-positive balance
         unchecked {
-            _balanceOf[from][id] -= amount;
+            _balanceOf[_wearer][_hatId] = 0;
 
             // decrement Hat supply counter
-            --_hats[id].supply;
+            --_hats[_hatId].supply;
         }
 
-        emit TransferSingle(msg.sender, from, address(0), id, amount);
+        emit TransferSingle(msg.sender, _wearer, address(0), _hatId, 1);
     }
 
     function setApprovalForAll(address, bool)
@@ -1078,7 +1071,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Safe transfers are not necessary for Hats since transfers are not handled by the wearer
-    /// @dev Use `Hats.BatchTransferHats()` instead
     function safeBatchTransferFrom(
         address,
         address,
@@ -1098,6 +1090,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         override(ERC1155, IHats)
         returns (string memory)
     {
-        return _constructURI(uint256(id));
+        return _constructURI(id);
     }
 }
