@@ -640,16 +640,36 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         emit HatMaxSupplyChanged(_hatId, _newMaxSupply);
     }
 
-    /// @notice Nest a Tree structure under a parent tree
+    /// @notice Submits a request to link a Hat Tree under a parent tree. Requests can be submitted by either...
+    ///     a) the wearer of a tophat, previous to any linkage, or
+    ///     b) the admin(s) of the an already-linked tophat (aka tree root), where such a
+    ///        request is to move the tree root to a different part of the paren tree.
     /// @dev The tree root can have at most one link at a given time.
     /// @param _topHatId The domain of the tophat to link
     /// @param _newAdminHat The hat that will administer the linked tree
-    function linkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) external {
-        if (!noCircularLinkage(_topHatId, _newAdminHat)) revert CircularLinkage();
-        if (linkedTreeAdmins[_topHatId] > 0) revert DomainLinked();
-
+    function requestLinkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) external {
         uint256 fullTopHatId = uint256(_topHatId) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
-        if (!isWearerOfHat(msg.sender, fullTopHatId)) revert NotHatWearer();
+        
+        // the wearer of an unlinked tophat is also the admin of same
+        _checkAdmin(fullTopHatId);
+
+        linkedTreeRequests[_topHatId] = _newAdminHat;
+        emit TopHatLinkRequested(_topHatId, _newAdminHat);
+    }
+
+    /// @notice Approve a request to link a Tree under a parent tree
+    /// @dev Requests can only be approved by an admin of the `_newAdminHat`
+    /// @param _topHatId The domain of the tophat to link
+    /// @param _newAdminHat The hat that will administer the linked tree
+    function approveLinkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) external {
+        _checkAdmin(_newAdminHat);
+
+        // Linkages must be initiated by a request
+        if (_newAdminHat != linkedTreeRequests[_topHatId]) revert LinkageNotRequested();
+
+        if (linkedTreeAdmins[_topHatId] > 0) revert DomainLinked();
+        if (!noCircularLinkage(_topHatId, _newAdminHat)) revert CircularLinkage();
+
         linkedTreeAdmins[_topHatId] = _newAdminHat;
         emit TopHatLinked(_topHatId, _newAdminHat);
     }
@@ -659,8 +679,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _topHatId The domain of the tophat to unlink
     function unlinkTopHatFromTree(uint32 _topHatId) external {
         uint256 fullTopHatId = uint256(_topHatId) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
-        if(!isAdminOfHat(msg.sender, fullTopHatId))
-          revert  NotAdmin(msg.sender, _topHatId);
+        _checkAdmin(fullTopHatId);
 
         delete linkedTreeAdmins[_topHatId];
         emit TopHatLinked(_topHatId, 0);

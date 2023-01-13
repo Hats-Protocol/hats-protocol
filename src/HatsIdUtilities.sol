@@ -24,10 +24,14 @@ import "./Interfaces/IHatsIdUtilities.sol";
 /// @author Hats Protocol
 contract HatsIdUtilities is IHatsIdUtilities {
 
-    /// @notice Mapping of linked tophats to admin hats in other trees, used for grafting one hats tree onto another
+    /// @notice Mapping of tophats requesting to link to admin hats in other trees
+    /// @dev Linkage only occurs if request is approved by the new admin
+    mapping(uint32 => uint256) public linkedTreeRequests; // topHatDomain => requested new admin
+
+    /// @notice Mapping of approved & linked tophats to admin hats in other trees, used for grafting one hats tree onto another
     /// @dev Trees can only be linked to another tree via their tophat
     mapping(uint32 => uint256) public linkedTreeAdmins; // topHatDomain => hatId
-
+    
     /**
      * Hat Ids serve as addresses. A given Hat's Id represents its location in its
      * hat tree: its level, its admin, its admin's admin (etc, all the way up to the

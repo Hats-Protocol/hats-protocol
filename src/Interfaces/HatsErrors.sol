@@ -55,4 +55,7 @@ interface HatsErrors {
 
     /// @notice Emitted when attempting to link a tophat that has already been linked with another tree
     error DomainLinked();
+
+    /// @notice Emitted when attempting to link a tophat without a request
+    error LinkageNotRequested();
 }

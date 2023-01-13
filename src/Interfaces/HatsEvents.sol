@@ -81,8 +81,13 @@ interface HatsEvents {
     /// @param newImageURI The updated image URI
     event HatImageURIChanged(uint256 hatId, string newImageURI);
 
+    /// @notice Emitted when a tophat linkage is requested by its admin
+    /// @param domain The domain of the tree tophat to link
+    /// @param newAdmin The tophat's would-be admin in the parent tree
+    event TopHatLinkRequested(uint32 domain, uint256 newAdmin);
+
     /// @notice Emitted when a tophat is linked to a another tree
     /// @param domain The domain of the newly-linked tophat
-    /// @param newAdmin The tophat's admin in the new tree
+    /// @param newAdmin The tophat's new admin in the parent tree
     event TopHatLinked(uint32 domain, uint256 newAdmin);
 }

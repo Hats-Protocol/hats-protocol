@@ -1559,6 +1559,8 @@ contract OverridesHatTests is TestSetup2 {
 
 contract LinkHatsTests is TestSetup2 {
     uint256 internal secondTopHatId;
+    uint32 topHatDomain;
+    uint32 secondTopHatDomain;
 
     function setUp() public override {
         super.setUp();
@@ -1568,42 +1570,134 @@ contract LinkHatsTests is TestSetup2 {
           "for linking",
           "http://www.tophat.com/"
         );
+
+        topHatDomain = hats.getTophatDomain(topHatId);
+        secondTopHatDomain = hats.getTophatDomain(secondTopHatId);
+    }
+
+    function testRequestLinking() public {
+        vm.prank(thirdWearer);
+
+        vm.expectEmit(true, true, true,true);
+        emit TopHatLinkRequested(secondTopHatDomain, secondHatId);
+
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        assertEq(secondHatId, hats.linkedTreeRequests(secondTopHatDomain));
+    }
+
+    function testApproveLinkRequest() public {
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        // approve
+        vm.prank(topHatWearer);
+
+        vm.expectEmit(true, true, true,true);
+        emit TopHatLinked(secondTopHatDomain, secondHatId);
+
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        assertFalse(hats.isTopHat(secondTopHatId));
+        assertEq(hats.getHatLevel(secondTopHatId), 2);
+        assertTrue(hats.isAdminOfHat(secondWearer, secondTopHatId));
+    }
+
+    function testCannotApproveUnrequestedLink() public {
+        vm.prank(topHatWearer);
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.LinkageNotRequested.selector));
+
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+    }
+
+    function testAdminCanRequestLinkedTopHatReLink() public {
+        // first link
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        vm.expectEmit(true, true, true,true);
+        emit TopHatLinked(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        assertFalse(hats.isTopHat(secondTopHatId));
+        assertEq(hats.getHatLevel(secondTopHatId), 2);
+        
+        // attempt second link from admin
+        vm.prank(topHatWearer);  
+        hats.requestLinkTopHatToTree(secondTopHatDomain, topHatId);
+        vm.prank(topHatWearer);
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.DomainLinked.selector));
+        hats.approveLinkTopHatToTree(secondTopHatDomain, topHatId);
+    }
+    // TODO
+    function testLinkedTopHatWearerCannotRequestNewLink() public {
+        // first link
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        vm.expectEmit(true, true, true,true);
+        emit TopHatLinked(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        assertFalse(hats.isTopHat(secondTopHatId));
+        assertEq(hats.getHatLevel(secondTopHatId), 2);
+        
+        // attempt second link from wearer
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                HatsErrors.NotAdmin.selector,
+                thirdWearer,
+                secondTopHatId
+            )
+        );
+        vm.prank(thirdWearer);  
+        hats.requestLinkTopHatToTree(secondTopHatDomain, topHatId);
     }
 
     function testPreventingCircularLinking() public {
-      vm.prank(topHatWearer);
-      vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
-      hats.linkTopHatToTree(uint32(topHatId >> 224), secondHatId);
+        // request
+        vm.prank(topHatWearer);
+        hats.requestLinkTopHatToTree(topHatDomain, secondHatId);
+        
+        // try approving
+        vm.prank(topHatWearer);
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
+        hats.approveLinkTopHatToTree(topHatDomain, secondHatId);
 
-      // test a recursive call
-      vm.prank(thirdWearer);
-      hats.linkTopHatToTree(uint32(secondTopHatId >> 224), secondHatId);
+        // test a recursive call
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
 
-      vm.prank(topHatWearer);
-      vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
-      hats.linkTopHatToTree(uint32(topHatId >> 224), secondTopHatId);
+        vm.prank(topHatWearer);
+        hats.requestLinkTopHatToTree(topHatDomain, secondTopHatId);
+        vm.prank(topHatWearer);
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
+        hats.approveLinkTopHatToTree(topHatDomain, secondTopHatId);
     }
 
     function testTreeLinkingAndUnlinking() public {
-      uint32 secondTopHatDomain = hats.getTophatDomain(secondTopHatId);
-      vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatWearer.selector));
-      hats.linkTopHatToTree(secondTopHatDomain, secondHatId);
+      vm.expectRevert(abi.encodeWithSelector(
+                HatsErrors.NotAdmin.selector,
+                address(this),
+                secondTopHatId));
+      hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+      
       vm.prank(thirdWearer);
+      hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+      vm.prank(topHatWearer);
       vm.expectEmit(true, true, true,true);
       emit TopHatLinked(secondTopHatDomain, secondHatId);
-      hats.linkTopHatToTree(secondTopHatDomain, secondHatId);
+      hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
       assertFalse(hats.isTopHat(secondTopHatId));
       assertEq(hats.getHatLevel(secondTopHatId), 2);
-
-      vm.expectRevert(abi.encodeWithSelector(HatsErrors.DomainLinked.selector));
-      vm.prank(thirdWearer);
-      hats.linkTopHatToTree(secondTopHatDomain, topHatId);
 
       vm.expectRevert(
             abi.encodeWithSelector(
                 HatsErrors.NotAdmin.selector,
                 address(this),
-                secondTopHatDomain
+                secondTopHatId
             )
       );
       hats.unlinkTopHatFromTree(secondTopHatDomain);

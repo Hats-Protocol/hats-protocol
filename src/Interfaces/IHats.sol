@@ -80,7 +80,9 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
         address _to
     ) external;
 
-    function linkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) external;
+    function requestLinkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) external;
+    
+    function approveLinkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) external;
 
     function unlinkTopHatFromTree(uint32 _topHatId) external;
 
