@@ -66,18 +66,27 @@ contract HatsIdUtilities is IHatsIdUtilities {
     {
         uint256 mask;
         // TODO: remove this loop
-        for (uint256 i = 0; i < MAX_LEVELS; ++i) {
-            mask = uint256(
-                type(uint256).max >>
-                    (TOPHAT_ADDRESS_SPACE + (LOWER_LEVEL_ADDRESS_SPACE * i))
-            );
+        for (uint256 i = 0; i < MAX_LEVELS; ) {
+            unchecked {
+                mask = uint256(
+                    type(uint256).max >>
+                        // should not overflow given known constants
+                        (TOPHAT_ADDRESS_SPACE + (LOWER_LEVEL_ADDRESS_SPACE * i))
+                );
+            }
             if (_admin & mask == 0) {
-                id =
-                    _admin |
-                    (uint256(_newHat) <<
-                        (LOWER_LEVEL_ADDRESS_SPACE * (MAX_LEVELS - 1 - i)));
+                unchecked {
+                    id =
+                        _admin |
+                        (uint256(_newHat) <<
+                            // should not overflow given known constants
+                            (LOWER_LEVEL_ADDRESS_SPACE * (MAX_LEVELS - 1 - i)));
+                }
                 return id;
             }
+
+            // should not overflow based on < MAX_LEVELS stopping condition
+            unchecked {++i;}
         }
     }
 
@@ -89,13 +98,16 @@ contract HatsIdUtilities is IHatsIdUtilities {
         uint256 i;
         // TODO: get rid of this for loop and possibly use the YUL switch/case
         // syntax. Otherwise, return to the original syntax
-        for (i = 0; i < MAX_LEVELS; ++i) {
+        for (i = 0; i < MAX_LEVELS; ) {
             mask = uint256(
                 type(uint256).max >>
                     (TOPHAT_ADDRESS_SPACE + (LOWER_LEVEL_ADDRESS_SPACE * i))
             );
 
             if (_hatId & mask == 0) break;
+
+            // should not overflow based on < MAX_LEVELS stopping condition
+            unchecked {++i;}
         }
         uint256 treeAdmin = linkedTreeAdmins[uint32(_hatId >> (256 - TOPHAT_ADDRESS_SPACE))];
 
