@@ -1757,6 +1757,32 @@ contract LinkHatsTests is TestSetup2 {
         hats.approveLinkTopHatToTree(topHatDomain, secondTopHatId);
     }
 
+    function testRelinkingCannotCreateCircularLink() public {
+        // first link, under secondHat
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        // second link, under first link
+        uint256 thirdTopHatId = hats.mintTopHat(
+          fourthWearer,
+          "for linking",
+          "http://www.tophat.com/"
+        );
+        uint32 thirdTopHatDomain = hats.getTophatDomain(thirdTopHatId);
+
+        vm.prank(fourthWearer);
+        hats.requestLinkTopHatToTree(thirdTopHatDomain, secondTopHatId);
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(thirdTopHatDomain, secondTopHatId);
+        
+        // try relink second tophat under third tophat
+        vm.prank(topHatWearer); 
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
+        hats.relinkTopHatWithinTree(secondTopHatDomain, thirdTopHatId);
+    }
+
     function testTreeLinkingAndUnlinking() public {
       vm.expectRevert(abi.encodeWithSelector(
                 HatsErrors.NotAdmin.selector,

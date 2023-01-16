@@ -671,8 +671,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         // Linkages must be initiated by a request
         if (_newAdminHat != linkedTreeRequests[_topHatId]) revert LinkageNotRequested();
 
-        // if (linkedTreeAdmins[_topHatId] > 0) revert DomainLinked();
-        if (!noCircularLinkage(_topHatId, _newAdminHat)) revert CircularLinkage();
+        
 
         // remove the request -- ensures all linkages are initialized by unique requests, 
         // except for relinks (see `relinkTopHatWithinTree`)
@@ -710,10 +709,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Internal function to link a Tree under a parent Tree
-    /// @dev Linking `_topHatId` replaces any existing links
+    /// @dev Linking `_topHatId` replaces any existing links; reverts if it would create a circular linkage
     /// @param _topHatId The domain of the tophat to link
     /// @param _newAdminHat The new admin for the linked tree
     function _linkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) internal {
+        if (!noCircularLinkage(_topHatId, _newAdminHat)) revert CircularLinkage();
         linkedTreeAdmins[_topHatId] = _newAdminHat;
         emit TopHatLinked(_topHatId, _newAdminHat);
     }
