@@ -177,6 +177,15 @@ contract HatsIdUtilities is IHatsIdUtilities {
             (LOWER_LEVEL_ADDRESS_SPACE * MAX_LEVELS));
     }
 
+    /// @notice Gets the domain of the highest parent tophat's -- ie the "tippy tophat's"
+    /// @param _topHatDomain the 32 bit domain of a (likely linked) tophat
+    /// @return The tippy tophat domain
+    function getTippyTophatDomain(uint32 _topHatDomain) public view returns (uint32) {
+        uint256 linkedAdmin = linkedTreeAdmins[_topHatDomain];
+        if (linkedAdmin == 0) return _topHatDomain;
+        return getTippyTophatDomain(getTophatDomain(linkedAdmin));
+    }
+
     /// @notice Checks For any circular linkage of trees
     /// @param _topHatDomain the 32 bit domain of the tree to be linked
     /// @param _linkedAdmin the hatId of the potential tree admin
@@ -191,4 +200,21 @@ contract HatsIdUtilities is IHatsIdUtilities {
        uint256 parentAdmin = linkedTreeAdmins[adminDomain];
       return noCircularLinkage(_topHatDomain, parentAdmin);
     }
+
+    /// @notice Checks that a tophat domain and its potential linked admin are from the same tree, ie have the same tippy tophat domain
+    /// @param _topHatDomain The 32 bit domain of the tophat to be linked
+    /// @param _newAdminHat The new admin for the linked tree
+    function sameTippyTophatDomain(uint32 _topHatDomain, uint256 _newAdminHat) 
+        public view returns (bool) 
+    {
+        // get highest parent domains for current and new tree root admins
+        uint32 currentTippyTophatDomain = getTippyTophatDomain(_topHatDomain);
+        uint32 newAdminDomain = getTophatDomain(_newAdminHat);
+        uint32 newHTippyTophatDomain = getTippyTophatDomain(newAdminDomain);
+
+        // check that both domains are equal
+        return (currentTippyTophatDomain == newHTippyTophatDomain);
+    }
+
+
 }

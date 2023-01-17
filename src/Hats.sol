@@ -645,7 +645,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     ///     a) the wearer of a tophat, previous to any linkage, or
     ///     b) the admin(s) of an already-linked tophat (aka tree root), where such a
     ///        request is to move the tree root to another admin within the same parent
-    ///        tree or a new tree
+    ///        tree
     /// @dev A tophat can have at most 1 request at a time. Submitting a new request will 
     ///      replace the existing request.
     /// @param _topHatId The domain of the tophat to link
@@ -671,8 +671,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         // Linkages must be initiated by a request
         if (_newAdminHat != linkedTreeRequests[_topHatId]) revert LinkageNotRequested();
-
-        
 
         // remove the request -- ensures all linkages are initialized by unique requests, 
         // except for relinks (see `relinkTopHatWithinTree`)
@@ -709,14 +707,22 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         _linkTopHatToTree(_topHatId, _newAdminHat);
     }
 
-    /// @notice Internal function to link a Tree under a parent Tree
-    /// @dev Linking `_topHatId` replaces any existing links; reverts if it would create a circular linkage
-    /// @param _topHatId The domain of the tophat to link
+    /// @notice Internal function to link a Tree under a parent Tree, with protection against circular linkages and relinking to a separate Tree
+    /// @dev Linking `_topHatDomain` replaces any existing links
+    /// @param _topHatDomain The domain of the tophat to link
     /// @param _newAdminHat The new admin for the linked tree
-    function _linkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) internal {
-        if (!noCircularLinkage(_topHatId, _newAdminHat)) revert CircularLinkage();
-        linkedTreeAdmins[_topHatId] = _newAdminHat;
-        emit TopHatLinked(_topHatId, _newAdminHat);
+    function _linkTopHatToTree(uint32 _topHatDomain, uint256 _newAdminHat) internal {
+        if (!noCircularLinkage(_topHatDomain, _newAdminHat)) revert CircularLinkage();
+        
+        // disallow relinking to separate tree
+        if (linkedTreeAdmins[_topHatDomain] > 0) {
+            if (!sameTippyTophatDomain(_topHatDomain, _newAdminHat)) {
+                revert CrossTreeLinkage();
+            }
+        }
+
+        linkedTreeAdmins[_topHatDomain] = _newAdminHat;
+        emit TopHatLinked(_topHatDomain, _newAdminHat);
     }
 
     /*//////////////////////////////////////////////////////////////
