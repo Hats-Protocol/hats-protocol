@@ -31,5 +31,20 @@ interface IHatsIdUtilities {
         view
         returns (uint256);
 
+    function getTreeAdminAtLevel(uint256 _hatId, uint8 _level)
+        external
+        pure
+        returns (uint256);
+
     function getTophatDomain(uint256 _hatId) external view returns (uint32);
+
+    function getTippyTophatDomain(uint32 _topHatDomain) external view returns (uint32);
+
+    function noCircularLinkage(
+      uint32 _topHatDomain,
+      uint256 _linkedAdmin
+    ) external view returns (bool);
+
+    function sameTippyTophatDomain(uint32 _topHatDomain, uint256 _newAdminHat) 
+        external view returns (bool);
 }
