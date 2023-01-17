@@ -528,6 +528,13 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
     }
 
+    /// @notice checks whether the msg.sender is either an admin or wearer or a hat, and reverts the appropriate error if not
+    function _checkAdminOrWearer(uint256 _hatId) internal view {
+        if (!isAdminOfHat(msg.sender, _hatId) && !isWearerOfHat(msg.sender, _hatId)) {
+            revert NotAdminOrWearer();
+        }
+    }
+
     /// @notice Set a mutable hat to immutable
     /// @dev Sets the second bit of hat.config to 0
     /// @param _hatId The id of the Hat to make immutable
@@ -666,8 +673,13 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _topHatDomain The 32 bit domain of the tophat to link
     /// @param _newAdminHat The hat that will administer the linked tree
     function approveLinkTopHatToTree(uint32 _topHatDomain, uint256 _newAdminHat) external {
-        // check the admin of `_newAdminHat`'s theoretical child hat, since either wearer or admin of `_newAdminHat` can approve
-        _checkAdmin(buildHatId(_newAdminHat, 1));
+        // for everything but the last hat level, check the admin of `_newAdminHat`'s theoretical child hat, since either wearer or admin of `_newAdminHat` can approve    
+        if (getHatLevel(_newAdminHat) < MAX_LEVELS) {
+            _checkAdmin(buildHatId(_newAdminHat, 1)); 
+        } else {
+            // the above buildHatId trick doesn't work for the last hat level, so we need to explicitly check both admin and wearer in this case
+            _checkAdminOrWearer(_newAdminHat);
+        }
 
         // Linkages must be initiated by a request
         if (_newAdminHat != linkedTreeRequests[_topHatDomain]) revert LinkageNotRequested();
@@ -701,7 +713,14 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         // msg.sender being capable of both requesting and approving allows us to skip the request step
         _checkAdmin(fullTopHatId); // "requester" must be admin
-        _checkAdmin(buildHatId(_newAdminHat, 1)); // "approver" can be wearer or admin
+
+        // "approver" can be wearer or admin
+        if (getHatLevel(_newAdminHat) < MAX_LEVELS) {
+            _checkAdmin(buildHatId(_newAdminHat, 1)); 
+        } else {
+            // the above buildHatId trick doesn't work for the last hat level, so we need to explicitly check both admin and wearer in this case
+            _checkAdminOrWearer(_newAdminHat);
+        }
 
         // execute the new link, replacing the old link
         _linkTopHatToTree(_topHatDomain, _newAdminHat);
@@ -1152,3 +1171,4 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         return _constructURI(id);
     }
 }
+ 
