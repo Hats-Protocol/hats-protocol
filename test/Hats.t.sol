@@ -1535,23 +1535,21 @@ contract MutabilityTests is TestSetupMutable {
 }
 
 contract OverridesHatTests is TestSetup2 {
-    function testFailSetApprovalForAll() public {
+    function testFailSetApprovalForAll() public view {
         hats.setApprovalForAll(topHatWearer, true);
     }
 
-    function testFailSafeTransferFrom() public {
+    function testFailSafeTransferFrom() public view {
         bytes memory b = bytes("");
         hats.safeTransferFrom(secondWearer, thirdWearer, secondHatId, 1, b);
     }
 
-    // TODO: test for a specific URI output
-    function testCreateUri() public {
+    function testCreateUri() public view {
         string memory jsonUri = hats.uri(secondHatId);
         console2.log("encoded URI", jsonUri);
     }
 
-    // TODO: test for a specific URI output
-    function testCreateUriForTopHat() public {
+    function testCreateUriForTopHat() public view{
         string memory jsonUri = hats.uri(topHatId);
         console2.log("encoded URI", jsonUri);
     }
