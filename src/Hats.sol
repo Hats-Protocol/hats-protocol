@@ -666,7 +666,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _topHatId The domain of the tophat to link
     /// @param _newAdminHat The hat that will administer the linked tree
     function approveLinkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) external {
-        _checkAdmin(_newAdminHat);
+        // check the admin of `_newAdminHat`'s theoretical child hat, since either wearer or admin of `_newAdminHat` can approve
+        _checkAdmin(buildHatId(_newAdminHat, 1));
 
         // Linkages must be initiated by a request
         if (_newAdminHat != linkedTreeRequests[_topHatId]) revert LinkageNotRequested();
@@ -694,15 +695,15 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     
     /// @notice Move a tree root to a different position within the same parent tree, 
     ///         without a request
-    /// @dev Caller must be an admin of both the tree root and the `newAdminHat`
+    /// @dev Caller must be both an admin tree root and admin or wearer of `_newAdminHat`
     /// @param _topHatId The domain of the tophat to relink
     /// @param _newAdminHat The new admin for the linked tree
     function relinkTopHatWithinTree(uint32 _topHatId, uint256 _newAdminHat) external {
         uint256 fullTopHatId = uint256(_topHatId) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
 
         // msg.sender being capable of both requesting and approving allows us to skip the request step
-        _checkAdmin(fullTopHatId); // "requester"
-        _checkAdmin(_newAdminHat); // "approver"
+        _checkAdmin(fullTopHatId); // "requester" must be admin
+        _checkAdmin(buildHatId(_newAdminHat, 1)); // "approver" can be wearer or admin
 
         // execute the new link, replacing the old link
         _linkTopHatToTree(_topHatId, _newAdminHat);

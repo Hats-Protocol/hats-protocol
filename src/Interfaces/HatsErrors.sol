@@ -18,6 +18,7 @@ pragma solidity >=0.8.13;
 
 interface HatsErrors {
     /// @notice Emitted when `user` is attempting to perform an action on `hatId` but is not wearing one of `hatId`'s admin hats
+    /// @dev Can be equivalent to `NotHatWearer(buildHatId(hatId))`, such as when emitted by `approveLinkTopHatToTree` or `relinkTopHatToTree`
     error NotAdmin(address user, uint256 hatId);
 
     /// @notice Emitted when attempting to perform an action as or for an account that is not a wearer of a given hat
@@ -52,6 +53,9 @@ interface HatsErrors {
 
     /// @notice Emitted when attempting to link a tophat to a new admin for which the tophat serves as an admin
     error CircularLinkage();
+
+    /// @notice Emitted when attempting to link or relink a tophat to a separate tree
+    error CrossTreeLinkage();
 
     /// @notice Emitted when attempting to link a tophat without a request
     error LinkageNotRequested();
