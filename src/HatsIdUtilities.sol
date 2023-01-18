@@ -24,10 +24,14 @@ import "./Interfaces/IHatsIdUtilities.sol";
 /// @author Hats Protocol
 contract HatsIdUtilities is IHatsIdUtilities {
 
-    /// @notice Mapping of linked tophats to admin hats in other trees, used for grafting one hats tree onto another
+    /// @notice Mapping of tophats requesting to link to admin hats in other trees
+    /// @dev Linkage only occurs if request is approved by the new admin
+    mapping(uint32 => uint256) public linkedTreeRequests; // topHatDomain => requested new admin
+
+    /// @notice Mapping of approved & linked tophats to admin hats in other trees, used for grafting one hats tree onto another
     /// @dev Trees can only be linked to another tree via their tophat
     mapping(uint32 => uint256) public linkedTreeAdmins; // topHatDomain => hatId
-
+    
     /**
      * Hat Ids serve as addresses. A given Hat's Id represents its location in its
      * hat tree: its level, its admin, its admin's admin (etc, all the way up to the
@@ -173,6 +177,15 @@ contract HatsIdUtilities is IHatsIdUtilities {
             (LOWER_LEVEL_ADDRESS_SPACE * MAX_LEVELS));
     }
 
+    /// @notice Gets the domain of the highest parent tophat's -- ie the "tippy tophat's"
+    /// @param _topHatDomain the 32 bit domain of a (likely linked) tophat
+    /// @return The tippy tophat domain
+    function getTippyTophatDomain(uint32 _topHatDomain) public view returns (uint32) {
+        uint256 linkedAdmin = linkedTreeAdmins[_topHatDomain];
+        if (linkedAdmin == 0) return _topHatDomain;
+        return getTippyTophatDomain(getTophatDomain(linkedAdmin));
+    }
+
     /// @notice Checks For any circular linkage of trees
     /// @param _topHatDomain the 32 bit domain of the tree to be linked
     /// @param _linkedAdmin the hatId of the potential tree admin
@@ -187,4 +200,21 @@ contract HatsIdUtilities is IHatsIdUtilities {
        uint256 parentAdmin = linkedTreeAdmins[adminDomain];
       return noCircularLinkage(_topHatDomain, parentAdmin);
     }
+
+    /// @notice Checks that a tophat domain and its potential linked admin are from the same tree, ie have the same tippy tophat domain
+    /// @param _topHatDomain The 32 bit domain of the tophat to be linked
+    /// @param _newAdminHat The new admin for the linked tree
+    function sameTippyTophatDomain(uint32 _topHatDomain, uint256 _newAdminHat) 
+        public view returns (bool) 
+    {
+        // get highest parent domains for current and new tree root admins
+        uint32 currentTippyTophatDomain = getTippyTophatDomain(_topHatDomain);
+        uint32 newAdminDomain = getTophatDomain(_newAdminHat);
+        uint32 newHTippyTophatDomain = getTippyTophatDomain(newAdminDomain);
+
+        // check that both domains are equal
+        return (currentTippyTophatDomain == newHTippyTophatDomain);
+    }
+
+
 }
