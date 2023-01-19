@@ -21,7 +21,7 @@ import "./Interfaces/IHatsIdUtilities.sol";
 /// @title Hats Id Utilities
 /// @dev Functions for working with Hat Ids from Hats Protocol. Factored out of Hats.sol
 /// for easier use by other contracts.
-/// @author Hats Protocol
+/// @author Haberdasher Labs
 contract HatsIdUtilities is IHatsIdUtilities {
 
     /// @notice Mapping of tophats requesting to link to admin hats in other trees

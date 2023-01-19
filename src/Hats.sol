@@ -20,8 +20,8 @@ import {ERC1155} from "lib/ERC1155/ERC1155.sol";
 // import "forge-std/Test.sol"; //remove after testing
 import "./Interfaces/IHats.sol";
 import "./HatsIdUtilities.sol";
-import "./HatsToggle/IHatsToggle.sol";
-import "./HatsEligibility/IHatsEligibility.sol";
+import "./Interfaces/IHatsToggle.sol";
+import "./Interfaces/IHatsEligibility.sol";
 import "solbase/utils/Base64.sol";
 import "solbase/utils/LibString.sol";
 
