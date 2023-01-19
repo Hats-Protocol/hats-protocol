@@ -34,25 +34,34 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
                               HATS DATA MODELS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice A hHt object containing the hat's properties
+    /// @dev The members are packed to minimize storage costs
+    /// @custom:member eligibility Module that rules on wearer eligibiliy and standing
+    /// @custom:member maxSupply The max number of hats with this id that can exist
+    /// @custom:member supply The number of this hat that currently exist
+    /// @custom:member lastHatId Indexes how many different child hats an admin has
+    /// @custom:member toggle Module that sets the hat's status
+    /** @custom:member config Holds status and other settings, with this bitwise schema:
+     *
+     *  0th bit  | `active` status; can be altered by toggle
+     *  1        | `mutable` setting
+     *  2 - 95   | unassigned
+     */
+    /// @custom:member details Holds arbitrary metadata about the hat
+    /// @custom:member imageURI A uri pointing to an image for the hat
     struct Hat {
         // 1st storage slot
-        address eligibility; // ─┐ can revoke Hat based on ruling | 20
-        uint32 maxSupply; //     │ the max number of identical hats that can exist | 4
-        uint32 supply; //        │ the number of this hat that currently exists | 4
-        uint16 lastHatId; //    ─┘ indexes how many different hats an admin is holding | 1
+        address eligibility; // ─┐ 20
+        uint32 maxSupply; //     │ 4
+        uint32 supply; //        │ 4
+        uint16 lastHatId; //    ─┘ 2
         // 2nd slot
-        address toggle; // ─┐ controls when Hat is active | 20
-        uint96 config; //  ─┘ active status & other settings (see schema below) | 12
+        address toggle; //      ─┐ 20
+        uint96 config; //       ─┘ 12
         // 3rd+ slot (optional)
         string details;
         string imageURI;
     }
-
-    /* Hat.config schema (by bit)
-     *  0th bit  | `active` status; can be altered by toggle, via setHatStatus()
-     *  1        | `mutable` option
-     *  2 - 95   | unassigned
-     */
 
     /*//////////////////////////////////////////////////////////////
                               HATS STORAGE
@@ -481,6 +490,37 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
     }
 
+    /// @notice Internal function to set a hat's status in storage
+    /// @dev Flips the 0th bit of hat.config
+    /// @param _hat The hat object
+    /// @param _status The status to set for the hat
+    function _setHatStatus(Hat storage _hat, bool _status) internal {
+        if (_status) {
+            _hat.config |= uint96(1 << 95);
+        } else {
+            _hat.config &= ~uint96(1 << 95);
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              HATS ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Checks whether msg.sender is an admin of a hat, and reverts if not
+    function _checkAdmin(uint256 _hatId) internal view {
+        if (!isAdminOfHat(msg.sender, _hatId)) {
+            revert NotAdmin(msg.sender, _hatId);
+        }
+    }
+
+    /// @notice checks whether the msg.sender is either an admin or wearer or a hat, and reverts the appropriate error if not
+    function _checkAdminOrWearer(uint256 _hatId) internal view {
+        if (!isAdminOfHat(msg.sender, _hatId) && !isWearerOfHat(msg.sender, _hatId)) {
+            revert NotAdminOrWearer();
+        }
+    }
+
+
     /// @notice Transfers a hat from one wearer to another
     /// @dev The hat must be mutable, and the transfer must be initiated by an admin
     /// @param _hatId The hat in question
@@ -519,24 +559,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         
 
         emit TransferSingle(msg.sender, _from, _to, _hatId, 1);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                              HATS ADMIN FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Checks whether msg.sender is an admin of a hat, and reverts if not
-    function _checkAdmin(uint256 _hatId) internal view {
-        if (!isAdminOfHat(msg.sender, _hatId)) {
-            revert NotAdmin(msg.sender, _hatId);
-        }
-    }
-
-    /// @notice checks whether the msg.sender is either an admin or wearer or a hat, and reverts the appropriate error if not
-    function _checkAdminOrWearer(uint256 _hatId) internal view {
-        if (!isAdminOfHat(msg.sender, _hatId) && !isWearerOfHat(msg.sender, _hatId)) {
-            revert NotAdminOrWearer();
-        }
     }
 
     /// @notice Set a mutable hat to immutable
@@ -854,18 +876,18 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
     }
 
+    /// @notice Internal function to retrieve a hat's status from storage
+    /// @dev reads the 0th bit of the hat's config
+    /// @param _hat The hat object
+    /// @return Whether the hat is active
     function _getHatStatus(Hat memory _hat) internal pure returns (bool) {
         return (_hat.config >> 95 != 0);
     }
 
-    function _setHatStatus(Hat storage _hat, bool _status) internal {
-        if (_status) {
-            _hat.config |= uint96(1 << 95);
-        } else {
-            _hat.config &= ~uint96(1 << 95);
-        }
-    }
-
+    /// @notice Internal function to retrieve a hat's mutability setting
+    /// @dev reads the 1st bit of the hat's config
+    /// @param _hat The hat object
+    /// @return Whether the hat is mutable
     function _isMutable(Hat memory _hat) internal pure returns (bool) {
         return (_hat.config & uint96(1 << 94) != 0);
     }
@@ -1075,21 +1097,22 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Gets the Hat token balance of a user for a given Hat
-    /// @param wearer The address whose balance is being checked
-    /// @param hatId The id of the Hat
-    /// @return balance The `_user`'s balance of the Hat tokens. Will typically not be greater than 1.
-    function balanceOf(address wearer, uint256 hatId)
+    /// @dev Balance is dynamic based on the hat's status and wearer's eligibility, so off-chain balance data indexed from events may not be in sync
+    /// @param _wearer The address whose balance is being checked
+    /// @param _hatId The id of the Hat
+    /// @return balance The `wearer`'s balance of the Hat tokens. Can never be > 1.
+    function balanceOf(address _wearer, uint256 _hatId)
         public
         view
         override(ERC1155, IHats)
         returns (uint256 balance)
     {
-        Hat memory hat = _hats[hatId];
+        Hat memory hat = _hats[_hatId];
 
         balance = 0;
 
-        if (_isActive(hat, hatId) && _isEligible(wearer, hat, hatId)) {
-            balance = super.balanceOf(wearer, hatId);
+        if (_isActive(hat, _hatId) && _isEligible(_wearer, hat, _hatId)) {
+            balance = super.balanceOf(_wearer, _hatId);
         }
     }
 
@@ -1132,6 +1155,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         emit TransferSingle(msg.sender, _wearer, address(0), _hatId, 1);
     }
 
+    /// @notice Approvals are not necessary for Hats since transfers are not handled by the wearer
+    /// @dev Admins should use `transferHat()` to transfer
     function setApprovalForAll(address, bool)
         public
         pure
@@ -1141,7 +1166,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Safe transfers are not necessary for Hats since transfers are not handled by the wearer
-    /// @dev Use `Hats.TransferHat()` instead
+    /// @dev Admins should use `transferHat()` to transfer
     function safeTransferFrom(
         address,
         address,
