@@ -22,8 +22,7 @@ jobs:
       uses: actions/configure-pages@v2
 
     - name: Build mdBook
-      run: |
-        forge doc --build
+      run: forge doc --build
         # cd docs
         # git worktree add gh-pages
         # git config user.name "Deploy from CI"
