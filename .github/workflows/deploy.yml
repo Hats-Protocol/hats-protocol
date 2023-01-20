@@ -8,6 +8,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout
     - uses: actions/checkout@v3
       with:
         submodules: recursive
@@ -16,6 +17,9 @@ jobs:
       uses: foundry-rs/foundry-toolchain@v1
       with:
         version: nightly
+
+    - name: Setup Pages
+        uses: actions/configure-pages@v2
 
     - name: Build mdBook
       run: |
@@ -32,10 +36,11 @@ jobs:
         # git add .
         # git commit -m "Deploy $GITHUB_SHA to gh-pages"
         # git push --force --set-upstream origin gh-pages
+
     - name: Upload Artifact
       uses: actions/upload-pages-artifact@v1
       with:
-        path: .docs/book
+        path: ./docs/book
         name: github-pages
         retention-days: 1
     # - name: Deploy to Github Pages
