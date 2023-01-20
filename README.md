@@ -389,5 +389,5 @@ Project Link: [https://github.com/Hats-Protocol/hats-protocol/](https://github.c
 [stars-url]: https://github.com/Hats-Protocol/hats-protocol/stargazers
 [issues-shield]: https://img.shields.io/github/issues/Hats-Protocol/hats-protocol.svg?style=flat
 [issues-url]: https://github.com/Hats-Protocol/hats-protocol/issues
-[twitter-shield]: https://img.shields.io/twitter/follow/hatsprotocol
+[twitter-shield]: https://img.shields.io/twitter/url?label=%40HatsProtocol&style=social&url=https%3A%2F%2Ftwitter.com%2FHatsProtocol
 [twitter-url]: https://twitter.com/hatsprotocol

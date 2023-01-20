@@ -70,7 +70,7 @@ In summary, before submitting a PR, please complete each of the following items.
 5. Ensure all existing and new tests are passing &mdash; run `forge test` (ci)
 6. Document all new Solidity code with NatSpec, and generate updated docs &mdash; run `forge doc`
 7. Update the [README](./README.md) with any new or changed functionality
-8. Ensure all markdown is formatted correctly (ci)
+8. Ensure all markdown is formatted correctly &mdash; run `forge fmt` **(ci)**
 
 ## Contact Information
 

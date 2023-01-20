@@ -17,7 +17,6 @@
 pragma solidity >=0.8.13;
 
 interface HatsEvents {
-
     /// @notice Emitted when a new hat is created
     /// @param id The id for the new hat
     /// @param details A description of the Hat
@@ -41,12 +40,8 @@ interface HatsEvents {
     /// @param hatId The id of the wearer's hat
     /// @param wearer The wearer's address
     /// @param wearerStanding Whether the wearer is in good standing for the hat
-    event WearerStandingChanged(
-        uint256 hatId,
-        address wearer,
-        bool wearerStanding
-    );
-    
+    event WearerStandingChanged(uint256 hatId, address wearer, bool wearerStanding);
+
     /// @notice Emitted when a hat's status is updated
     /// @param hatId The id of the hat
     /// @param newStatus Whether the hat is active
