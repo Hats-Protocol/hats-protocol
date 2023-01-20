@@ -19,7 +19,7 @@ jobs:
         version: nightly
 
     - name: Setup Pages
-        uses: actions/configure-pages@v2
+      uses: actions/configure-pages@v2
 
     - name: Build mdBook
       run: |
