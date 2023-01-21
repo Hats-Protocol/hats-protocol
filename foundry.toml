@@ -12,6 +12,16 @@ remappings = [
   "solbase/=lib/solbase/src/"
 ]
 
+[fmt]
+bracket_spacing = true
+int_types = "long"
+line_length = 120
+multiline_func_header = "attributes_first"
+number_underscore = "thousands"
+quote_style = "double"
+tab_width = 4
+wrap_comments = false
+
 [rpc_endpoints]
 ethereum = "${ETHEREUM_RPC}"
 optimism = "${OPTIMISM_RPC}"

@@ -45,7 +45,7 @@ Hats Protocol follows certain conventions, including:
 All code changes should be accompanied by updates to documentation:
 
 - Document all new functions (external and internal), data models, and state variables with [Solidity NatSpec](https://docs.soliditylang.org/en/v0.8.17/natspec-format.html)
-- The above will be produced in an mdbook via Foundry's [forge doc](https://github.com/foundry-rs/foundry/tree/master/doc) module
+- The above will be produced in an mdBook via Foundry's [forge doc](https://github.com/foundry-rs/foundry/tree/master/doc) module
 - Update the [README](./README.md) and/or developer docs as needed
 
 We also welcome contributions to the project's documentation itself!
@@ -61,13 +61,13 @@ We require that all new code changes are thoroughly tested to ensure that the pr
 
 ## Pull Request Readiness Checklist
 
-In summary, before submitting a PR, please complete each of the following items. Items that are explicitly checked in our [CI workflow](./.github/workflows/ci.yml) are flagged with `(ci)`.
+In summary, before submitting a PR, please complete each of the following items. Items that are explicitly checked in our [CI workflow](./.github/workflows/ci.yml) are flagged with "**(ci)**".
 
 1. Thorough unit tests are written for all new code
 2. Update the [test coverage tracker](./lcov.info) &mdash; run `forge coverage --report lcov`
 3. Update the [gas snapshot tracker](./.gas-snapshot) &mdash; run `forge snapshot`
-4. Ensure contract sizes are small enough to deploy &mdash; run `forge build --sizes` (ci)
-5. Ensure all existing and new tests are passing &mdash; run `forge test` (ci)
+4. Ensure contract sizes are small enough to deploy &mdash; run `forge build --sizes` **(ci)**
+5. Ensure all existing and new tests are passing &mdash; run `forge test` **(ci)**
 6. Document all new Solidity code with NatSpec, and generate updated docs &mdash; run `forge doc`
 7. Update the [README](./README.md) with any new or changed functionality
 8. Ensure all markdown is formatted correctly &mdash; run `forge fmt` **(ci)**
