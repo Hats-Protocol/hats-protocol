@@ -5,6 +5,7 @@ on:
       - test/docs
 
 jobs:
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -13,13 +14,13 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Install Foundry
-      uses: foundry-rs/foundry-toolchain@v1
-      with:
-        version: nightly
+    # - name: Install Foundry
+    #   uses: foundry-rs/foundry-toolchain@v1
+    #   with:
+    #     version: nightly
 
-    # - name: Setup Pages
-    #   uses: actions/configure-pages@v2
+    - name: Setup Pages
+      uses: actions/configure-pages@v2
 
     # - name: Build mdBook
     #   run: forge doc --build
