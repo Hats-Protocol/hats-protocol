@@ -13,16 +13,16 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Install Foundry
-      uses: foundry-rs/foundry-toolchain@v1
-      with:
-        version: nightly
+    # - name: Install Foundry
+    #   uses: foundry-rs/foundry-toolchain@v1
+    #   with:
+    #     version: nightly
 
-    - name: Setup Pages
-      uses: actions/configure-pages@v2
+    # - name: Setup Pages
+    #   uses: actions/configure-pages@v2
 
-    - name: Build mdBook
-      run: forge doc --build
+    # - name: Build mdBook
+    #   run: forge doc --build
         # cd docs
         # git worktree add gh-pages
         # git config user.name "Deploy from CI"
@@ -36,12 +36,14 @@ jobs:
         # git commit -m "Deploy $GITHUB_SHA to gh-pages"
         # git push --force --set-upstream origin gh-pages
 
-    - name: Upload Artifact
-      uses: actions/upload-pages-artifact@v1
-      with:
-        path: ./docs/book
-        name: github-pages
-        retention-days: 1
+    # - name: Upload Artifact
+    #   uses: actions/upload-pages-artifact@v1
+    #   with:
+    #     path: ./docs/book
+    #     name: github-pages
+    #     retention-days: 1
+
+
     # - name: Deploy to Github Pages
     #   uses:
     #   with:
