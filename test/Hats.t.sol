@@ -1167,6 +1167,50 @@ contract MutabilityTests is TestSetupMutable {
         vm.stopPrank();
     }
 
+    function testTopHatCanChangeOwnDetails() public {
+        string memory new_ = "should work";
+
+        vm.expectEmit(false, false, false, true);
+        emit HatDetailsChanged(topHatId, new_);
+
+        vm.prank(topHatWearer);
+        hats.changeHatDetails(topHatId, new_);
+
+        (string memory changed,,,,,,,,) = hats.viewHat(topHatId);
+        assertEq(changed, new_);
+    }
+
+    function testTopHatCanChangeOwnImageURI() public {
+        string memory new_ = "should work";
+
+        vm.expectEmit(false, false, false, true);
+        emit HatImageURIChanged(topHatId, new_);
+
+        vm.prank(topHatWearer);
+        hats.changeHatImageURI(topHatId, new_);
+
+        (,,,,, string memory changed,,,) = hats.viewHat(topHatId);
+        assertEq(changed, new_);
+    }
+
+    function testTopHatCannotChangeOtherProperties() public {
+        vm.startPrank(topHatWearer);
+
+        (,,,,,,, mutable_,) = hats.viewHat(topHatId);
+        assertFalse(mutable_);
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
+        hats.changeHatEligibility(topHatId, address(this));
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
+        hats.changeHatToggle(topHatId, address(this));
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
+        hats.changeHatMaxSupply(topHatId, uint32(100));
+
+        vm.stopPrank();
+    }
+
     function testAdminCanChangeMutableHatDetails() public {
         string memory new_ = "should work";
 
