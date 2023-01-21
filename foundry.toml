@@ -22,6 +22,9 @@ quote_style = "double"
 tab_width = 4
 wrap_comments = false
 
+[book]
+book = "./book.toml"
+
 [rpc_endpoints]
 ethereum = "${ETHEREUM_RPC}"
 optimism = "${OPTIMISM_RPC}"
