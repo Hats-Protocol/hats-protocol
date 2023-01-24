@@ -1,8 +1,7 @@
 cache/
 out/
 .vscode/
-broadcast/*/31337
-broadcast/*/*/dry-run
+broadcast/
 .env
 uri.json
 docs/
