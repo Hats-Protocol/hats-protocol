@@ -160,7 +160,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
         return uint32(_hatId >> (LOWER_LEVEL_ADDRESS_SPACE * MAX_LEVELS));
     }
 
-    /// @notice Gets the domain of the highest parent tophat's -- ie the "tippy tophat's"
+    /// @notice Gets the domain of the highest parent tophat — the "tippy tophat"
     /// @param _topHatDomain the 32 bit domain of a (likely linked) tophat
     /// @return The tippy tophat domain
     function getTippyTophatDomain(uint32 _topHatDomain) public view returns (uint32) {

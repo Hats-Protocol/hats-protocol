@@ -34,7 +34,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
                               HATS DATA MODELS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice A hHt object containing the hat's properties
+    /// @notice A Hat object containing the hat's properties
     /// @dev The members are packed to minimize storage costs
     /// @custom:member eligibility Module that rules on wearer eligibiliy and standing
     /// @custom:member maxSupply The max number of hats with this id that can exist
@@ -456,7 +456,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Internal function to set a hat's status in storage
-    /// @dev Flips the 0th bit of hat.config
+    /// @dev Flips the 0th bit of _hat.config via bitwise operation
     /// @param _hat The hat object
     /// @param _status The status to set for the hat
     function _setHatStatus(Hat storage _hat, bool _status) internal {
