@@ -1211,6 +1211,16 @@ contract MutabilityTests is TestSetupMutable {
         vm.stopPrank();
     }
 
+    function testNonTopHatCannotChangeTopHatProperties() public {
+        vm.startPrank(secondWearer);
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, secondWearer, topHatId));
+        hats.changeHatImageURI(topHatId, "should fail");
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, secondWearer, topHatId));
+        hats.changeHatDetails(topHatId, "should also fail");
+    }
+
     function testAdminCanChangeMutableHatDetails() public {
         string memory new_ = "should work";
 
