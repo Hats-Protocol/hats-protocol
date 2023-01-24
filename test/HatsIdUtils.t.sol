@@ -50,11 +50,11 @@ contract HatIdUtilTests is Test {
     }
 
     function testgetHatLevel() public {
-        for (uint256 i = 1; 2**i < type(uint224).max; i += levelBits) {
+        for (uint256 i = 1; 2 ** i < type(uint224).max; i += levelBits) {
             // each `levelBits` bits corresponds with a level
-            assertEq(utils.getHatLevel(2**i), levels - (i / levelBits));
+            assertEq(utils.getHatLevel(2 ** i), levels - (i / levelBits));
             if (i > 1) {
-                assertEq(utils.getHatLevel(2**i + (2**levelBits)), levels - 1);
+                assertEq(utils.getHatLevel(2 ** i + (2 ** levelBits)), levels - 1);
             }
         }
     }

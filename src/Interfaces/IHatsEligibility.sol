@@ -23,8 +23,5 @@ interface IHatsEligibility {
     /// @param _hatId The id of the hat in question
     /// @return eligible Whether the _wearer is eligible to wear the hat
     /// @return standing Whether the _wearer is in goog standing
-    function getWearerStatus(address _wearer, uint256 _hatId)
-        external
-        view
-        returns (bool eligible, bool standing);
+    function getWearerStatus(address _wearer, uint256 _hatId) external view returns (bool eligible, bool standing);
 }

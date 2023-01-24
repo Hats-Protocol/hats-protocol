@@ -22,11 +22,11 @@ interface HatsErrors {
     error NotAdmin(address user, uint256 hatId);
 
     /// @notice Emitted when attempting to perform an action as or for an account that is not a wearer of a given hat
-    error NotHatWearer();   
+    error NotHatWearer();
 
     /// @notice Emitted when attempting to perform an action that requires being either an admin or wearer of a given hat
     error NotAdminOrWearer();
-    
+
     /// @notice Emitted when attempting to mint `hatId` but `hatId`'s maxSupply has been reached
     error AllHatsWorn(uint256 hatId);
 
@@ -35,7 +35,7 @@ interface HatsErrors {
 
     /// @notice Emitted when attempting to mint `hatId` to a `wearer` who is already wearing the hat
     error AlreadyWearingHat(address wearer, uint256 hatId);
-    
+
     /// @notice Emitted when attempting to mint a non-existant hat
     error HatDoesNotExist(uint256 hatId);
 

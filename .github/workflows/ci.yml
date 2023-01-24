@@ -32,6 +32,9 @@ jobs:
         with:
           version: nightly
 
+      - name: Check formatting
+        run: forge fmt --check
+
       - name: Check contract sizes
         run: forge build --sizes --skip script
 

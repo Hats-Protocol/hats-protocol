@@ -1,0 +1,19 @@
+[book]
+src = 'src'
+title = ''
+description = 'Documentation for Hats Protocol smart contracts'
+language = 'en'
+
+[build]
+build-dir = 'book'
+
+[output.html]
+no-section-label = true
+additional-js = ['solidity.min.js']
+additional-css = ['book.css']
+git-repository-url = 'https://github.com/Hats-Protocol/hats-protocol'
+default-theme = "light"
+preferred-dark-theme = "ayu"
+
+[output.html.fold]
+enable = true
