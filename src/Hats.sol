@@ -538,15 +538,16 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Change a hat's details
-    /// @dev Hat must be mutable
+    /// @dev Hat must be mutable, except for tophats
     /// @param _hatId The id of the Hat to change
     /// @param _newDetails The new details
     function changeHatDetails(uint256 _hatId, string memory _newDetails) external {
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 
-        if (!_isMutable(hat)) {
-            revert Immutable();
+        // a tophat can change its own details, but otherwise only mutable hat details can be changed
+        if (!isTopHat(_hatId)) {
+            if (!_isMutable(hat)) revert Immutable();
         }
 
         hat.details = _newDetails;
@@ -589,15 +590,16 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Change a hat's details
-    /// @dev Hat must be mutable
+    /// @dev Hat must be mutable, except for tophats
     /// @param _hatId The id of the Hat to change
     /// @param _newImageURI The new imageURI
     function changeHatImageURI(uint256 _hatId, string memory _newImageURI) external {
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 
-        if (!_isMutable(hat)) {
-            revert Immutable();
+        // a tophat can change its own imageURI, but otherwise only mutable hat imageURIs can be changed
+        if (!isTopHat(_hatId)) {
+            if (!_isMutable(hat)) revert Immutable();
         }
 
         hat.imageURI = _newImageURI;

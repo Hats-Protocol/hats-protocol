@@ -251,7 +251,7 @@ Any address can serve as an eligibility module for a given Hat. Hats Protocol su
 1. **Mechanistic eligibility** are logic contracts that implement the `IHatsEligibility` interface, which enables the Hats contract to _pull_ wearer standing by calling `checkWearerStanding` from within the `Hats.balanceOf` function. Mechanistic eligibility enables instantaneous revocation based on pre-defined triggers.
 2. **Humanistic eligibility** are either EOAs or governance contracts. To revoke a Hat, humanistic eligibility must _push_ updates to the Hats contract by calling `Hats.ruleOHatWearerStanding`.
 
-Unlike admins, an eligibility modules are explicitly set as addresses, not Hats. This is to avoid long, potentially illegible, chains of revocation authority that can affect wearer penalties (such as slashed stake).
+Unlike admins, eligibility modules are explicitly set as addresses, not Hats. This is to avoid long, potentially illegible, chains of revocation authority that can affect wearer penalties (such as slashed stake).
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
@@ -284,6 +284,12 @@ Changes are allowed to the following Hat properties:
 - `imageURI`
 
 Additionally, mutable hats can be transferred by their admins to a different wearer. Immutable hats cannot be transferred.
+
+#### Tophat Exception
+
+The only exception to the above mutability rules is for tophats, which despite being immutable are allowed to change their own `details` and `imageURI` (but not other properties).
+
+Note that this only includes non-linked tophats; a tophat that has been linked (aka grafted) onto another hat tree is no longer considered a tophat, and therefore is subject to the same mutability rules as other hats.
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
