@@ -778,12 +778,6 @@ contract EligibilitySetHatsTests is TestSetup2 {
         assertFalse(hats.isInGoodStanding(secondWearer, secondHatId));
     }
 
-    // TODO: do we need to test the following functionality?
-    // in the MVP, the following call should never happen:
-    //  setHatWearerStatus(secondHatId, secondWearer, false, false);
-    //  i.e. WearerStatus - wearing, in bad standing
-    // in a future state, this call could happen if there were less severe penalities than revocations
-
     function testCannotRevokeHatAsNonWearer() public {
         // expect NotHatsEligibility error
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatsEligibility.selector));
