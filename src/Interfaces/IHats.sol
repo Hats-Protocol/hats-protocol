@@ -1,4 +1,5 @@
-// Copyright (C) 2022 Hats Protocol
+// SPDX-License-Identifier: AGPL-3.0
+// Copyright (C) 2023 Haberdasher Labs
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -20,21 +21,9 @@ import "./HatsErrors.sol";
 import "./HatsEvents.sol";
 
 interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
-    function mintTopHat(
-        address _target,
-        string memory _details,
-        string memory _imageURI
-    ) external returns (uint256 topHatId);
-
-    // function createTopHatAndHat(
-    //     string memory _details,
-    //     uint32 _maxSupply,
-    //     address _eligibility,
-    //     address _toggle,
-    //     bool _mutable,
-    //     string memory _topHatImageURI,
-    //     string memory _firstHatImageURI
-    // ) external returns (uint256 topHatId, uint256 firstHatId);
+    function mintTopHat(address _target, string memory _details, string memory _imageURI)
+        external
+        returns (uint256 topHatId);
 
     function createHat(
         uint256 _admin,
@@ -60,34 +49,29 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
 
     function mintHat(uint256 _hatId, address _wearer) external returns (bool);
 
-    function batchMintHats(uint256[] memory _hatIds, address[] memory _wearers)
-        external
-        returns (bool);
+    function batchMintHats(uint256[] memory _hatIds, address[] memory _wearers) external returns (bool);
 
-    function setHatStatus(uint256 _hatId, bool _newStatus)
-        external
-        returns (bool);
+    function setHatStatus(uint256 _hatId, bool _newStatus) external returns (bool);
 
     function checkHatStatus(uint256 _hatId) external returns (bool);
 
-    function setHatWearerStatus(
-        uint256 _hatId,
-        address _wearer,
-        bool _eligible,
-        bool _standing
-    ) external returns (bool);
-
-    function checkHatWearerStatus(uint256 _hatId, address _wearer)
+    function setHatWearerStatus(uint256 _hatId, address _wearer, bool _eligible, bool _standing)
         external
         returns (bool);
 
+    function checkHatWearerStatus(uint256 _hatId, address _wearer) external returns (bool);
+
     function renounceHat(uint256 _hatId) external;
 
-    function transferHat(
-        uint256 _hatId,
-        address _from,
-        address _to
-    ) external;
+    function transferHat(uint256 _hatId, address _from, address _to) external;
+
+    function requestLinkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) external;
+
+    function approveLinkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) external;
+
+    function unlinkTopHatFromTree(uint32 _topHatId) external;
+
+    function relinkTopHatWithinTree(uint32 _topHatDomain, uint256 _newAdminHat) external;
 
     /*//////////////////////////////////////////////////////////////
                               HATS ADMIN FUNCTIONS
@@ -95,16 +79,13 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
 
     function makeHatImmutable(uint256 _hatId) external;
 
-    function changeHatDetails(uint256 _hatId, string memory _newDetails)
-        external;
+    function changeHatDetails(uint256 _hatId, string memory _newDetails) external;
 
-    function changeHatEligibility(uint256 _hatId, address _newEligibility)
-        external;
+    function changeHatEligibility(uint256 _hatId, address _newEligibility) external;
 
     function changeHatToggle(uint256 _hatId, address _newToggle) external;
 
-    function changeHatImageURI(uint256 _hatId, string memory _newImageURI)
-        external;
+    function changeHatImageURI(uint256 _hatId, string memory _newImageURI) external;
 
     function changeHatMaxSupply(uint256 _hatId, uint32 _newMaxSupply) external;
 
@@ -122,42 +103,24 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
             address eligibility,
             address toggle,
             string memory imageURI,
-            uint8 lastHatId,
+            uint16 lastHatId,
             bool mutable_,
             bool active
         );
 
-    function isWearerOfHat(address _user, uint256 _hatId)
-        external
-        view
-        returns (bool);
+    function isWearerOfHat(address _user, uint256 _hatId) external view returns (bool);
 
-    function isAdminOfHat(address _user, uint256 _hatId)
-        external
-        view
-        returns (bool);
+    function isAdminOfHat(address _user, uint256 _hatId) external view returns (bool);
 
-    // function isActive(uint256 _hatId) external view returns (bool);
+    function isInGoodStanding(address _wearer, uint256 _hatId) external view returns (bool);
 
-    function isInGoodStanding(address _wearer, uint256 _hatId)
-        external
-        view
-        returns (bool);
+    function isEligible(address _wearer, uint256 _hatId) external view returns (bool);
 
-    function isEligible(address _wearer, uint256 _hatId)
-        external
-        view
-        returns (bool);
+    function hatSupply(uint256 _hatId) external view returns (uint32 supply);
 
-    function getImageURIForHat(uint256 _hatId)
-        external
-        view
-        returns (string memory);
+    function getImageURIForHat(uint256 _hatId) external view returns (string memory);
 
-    function balanceOf(address wearer, uint256 hatId)
-        external
-        view
-        returns (uint256 balance);
+    function balanceOf(address wearer, uint256 hatId) external view returns (uint256 balance);
 
     function uri(uint256 id) external view returns (string memory);
 }

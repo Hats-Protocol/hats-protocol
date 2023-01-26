@@ -46,7 +46,7 @@ abstract contract TestVariables is HatsEvents, HatsErrors {
     address reteligibility;
     address rettoggle;
     string retimageURI;
-    uint8 retlastHatId;
+    uint16 retlastHatId;
     bool retmutable;
     bool retactive;
 
@@ -54,12 +54,10 @@ abstract contract TestVariables is HatsEvents, HatsErrors {
     bool mutable_;
 
     event TransferSingle(
-        address indexed operator,
-        address indexed from,
-        address indexed to,
-        uint256 id,
-        uint256 amount
+        address indexed operator, address indexed from, address indexed to, uint256 id, uint256 amount
     );
+
+    error InvalidChildHat();
 }
 
 abstract contract TestSetup is Test, TestVariables {
@@ -97,21 +95,15 @@ abstract contract TestSetup is Test, TestVariables {
 
     function createTopHat() internal {
         // create TopHat
-        topHatId = hats.mintTopHat(
-            topHatWearer,
-            "tophat",
-            "http://www.tophat.com/"
-        );
+        topHatId = hats.mintTopHat(topHatWearer, "tophat", "http://www.tophat.com/");
     }
 
     /// @dev assumes a tophat has already been created
     /// @dev doesn't apply any imageURIs
-    function createHatsBranch(
-        uint256 _length,
-        uint256 _topHatId,
-        address _topHatWearer,
-        bool _mutable
-    ) internal returns (uint256[] memory ids, address[] memory wearers) {
+    function createHatsBranch(uint256 _length, uint256 _topHatId, address _topHatWearer, bool _mutable)
+        internal
+        returns (uint256[] memory ids, address[] memory wearers)
+    {
         uint256 id;
         address wearer;
         uint256 admin;
@@ -151,7 +143,7 @@ abstract contract TestSetup is Test, TestVariables {
 
 // in addition to TestSetup, TestSetup2 creates and mints a second hat
 abstract contract TestSetup2 is TestSetup {
-    function setUp() public override {
+    function setUp() public virtual override {
         // expand on TestSetup
         super.setUp();
 
@@ -170,6 +162,25 @@ abstract contract TestSetup2 is TestSetup {
         // mint second hat
         vm.prank(address(topHatWearer));
         hats.mintHat(secondHatId, secondWearer);
+    }
+}
+
+abstract contract TestSetupMutable is TestSetup {
+    function setUp() public virtual override {
+        // expand on TestSetup
+        super.setUp();
+
+        // create a mutable Hat
+        vm.prank(topHatWearer);
+        secondHatId = hats.createHat(
+            topHatId,
+            "mutable hat",
+            2, // maxSupply
+            _eligibility,
+            _toggle,
+            true,
+            secondHatImageURI
+        );
     }
 }
 

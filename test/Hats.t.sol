@@ -22,26 +22,18 @@ contract CreateTopHatTest is TestSetup {
     function testTopHatCreated() public {
         string memory details = "tophat";
         vm.expectEmit(false, false, false, true);
-        emit HatCreated(
-            2**224,
-            details,
-            1,
-            address(0),
-            address(0),
-            false,
-            topHatImageURI
-        );
+        emit HatCreated(2 ** 224, details, 1, address(0), address(0), false, topHatImageURI);
 
         topHatId = hats.mintTopHat(topHatWearer, details, topHatImageURI);
 
         assertTrue(hats.isTopHat(topHatId));
-        assertEq(2**224, topHatId);
+        assertEq(2 ** 224, topHatId);
     }
 
     function testTopHatMinted() public {
         vm.expectEmit(true, true, true, true);
 
-        emit TransferSingle(address(this), address(0), topHatWearer, 2**224, 1);
+        emit TransferSingle(address(this), address(0), topHatWearer, 2 ** 224, 1);
 
         topHatId = hats.mintTopHat(topHatWearer, "tophat", topHatImageURI);
 
@@ -63,65 +55,33 @@ contract CreateTopHatTest is TestSetup {
 contract CreateHatsTest is TestSetup {
     function testImmutableHatCreated() public {
         // get prelim values
-        (, , , , , , uint8 lastHatId, , ) = hats.viewHat(topHatId);
+        (,,,,,, uint16 lastHatId,,) = hats.viewHat(topHatId);
 
         vm.expectEmit(false, false, false, true);
-        emit HatCreated(
-            hats.getNextId(topHatId),
-            _details,
-            _maxSupply,
-            _eligibility,
-            _toggle,
-            false,
-            secondHatImageURI
-        );
+        emit HatCreated(hats.getNextId(topHatId), _details, _maxSupply, _eligibility, _toggle, false, secondHatImageURI);
 
         // topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
         vm.prank(address(topHatWearer));
 
-        secondHatId = hats.createHat(
-            topHatId,
-            _details,
-            _maxSupply,
-            _eligibility,
-            _toggle,
-            false,
-            secondHatImageURI
-        );
+        secondHatId = hats.createHat(topHatId, _details, _maxSupply, _eligibility, _toggle, false, secondHatImageURI);
 
         // assert admin's lastHatId is incremented
-        (, , , , , , uint8 lastHatIdPost, , ) = hats.viewHat(topHatId);
-        (, , , , , , , bool mutable_, ) = hats.viewHat(secondHatId);
+        (,,,,,, uint16 lastHatIdPost,,) = hats.viewHat(topHatId);
+        (,,,,,,, mutable_,) = hats.viewHat(secondHatId);
         assertEq(lastHatId + 1, lastHatIdPost);
         assertFalse(mutable_);
     }
 
     function testMutableHatCreated() public {
         vm.expectEmit(false, false, false, true);
-        emit HatCreated(
-            hats.getNextId(topHatId),
-            _details,
-            _maxSupply,
-            _eligibility,
-            _toggle,
-            true,
-            secondHatImageURI
-        );
+        emit HatCreated(hats.getNextId(topHatId), _details, _maxSupply, _eligibility, _toggle, true, secondHatImageURI);
 
         console2.log("secondHat");
 
         vm.prank(address(topHatWearer));
-        secondHatId = hats.createHat(
-            topHatId,
-            _details,
-            _maxSupply,
-            _eligibility,
-            _toggle,
-            true,
-            secondHatImageURI
-        );
+        secondHatId = hats.createHat(topHatId, _details, _maxSupply, _eligibility, _toggle, true, secondHatImageURI);
 
-        (, , , , , , , bool mutable_, ) = hats.viewHat(secondHatId);
+        (,,,,,,, mutable_,) = hats.viewHat(secondHatId);
         assertTrue(mutable_);
     }
 
@@ -129,12 +89,7 @@ contract CreateHatsTest is TestSetup {
         // mint TopHat
         // topHatId = hats.mintTopHat(topHatWearer, topHatImageURI);
 
-        (uint256[] memory ids, address[] memory wearers) = createHatsBranch(
-            3,
-            topHatId,
-            topHatWearer,
-            false
-        );
+        (uint256[] memory ids,) = createHatsBranch(3, topHatId, topHatWearer, false);
         assertEq(hats.getHatLevel(ids[2]), 3);
         assertEq(hats.getAdminAtLevel(ids[0], 0), topHatId);
         assertEq(hats.getAdminAtLevel(ids[1], 1), ids[0]);
@@ -187,18 +142,16 @@ contract BatchCreateHats is TestSetupBatch {
             imageURIsBatch
         );
 
-        (, , , , , , uint8 lastHatId, , ) = hats.viewHat(topHatId);
+        (,,,,,, uint16 lastHatId,,) = hats.viewHat(topHatId);
 
         assertEq(lastHatId, count);
 
-        (, , , , address t, , , , ) = hats.viewHat(
-            hats.buildHatId(topHatId, uint8(count))
-        );
+        (,,,, address t,,,,) = hats.viewHat(hats.buildHatId(topHatId, uint16(count)));
         assertEq(t, _toggle);
     }
 
     function testBatchCreateHatsSkinnyFullBranch() public {
-        uint256 count = 28;
+        uint256 count = 14;
 
         adminsBatch = new uint256[](count);
         detailsBatch = new string[](count);
@@ -239,20 +192,12 @@ contract BatchCreateHats is TestSetupBatch {
 
         assertEq(
             hats.getHatLevel( // should be adminId
-                hats.buildHatId(
-                    hats.getAdminAtLevel(adminId, uint8(count - 1)),
-                    1
-                )
-            ),
+            hats.buildHatId(hats.getAdminAtLevel(adminId, uint8(count - 1)), 1)),
             count
         );
     }
 
-    function testBatchCreateHatsErrorArrayLength(
-        uint256 count,
-        uint256 offset,
-        uint256 array
-    ) public {
+    function testBatchCreateHatsErrorArrayLength(uint256 count, uint256 offset, uint256 array) public {
         count = bound(count, 1, 254);
         // count = 2;
         offset = bound(offset, 1, 255 - count);
@@ -345,9 +290,7 @@ contract BatchCreateHats is TestSetupBatch {
 
         // adminsBatch[count] = topHatId;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(HatsErrors.BatchArrayLengthMismatch.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.BatchArrayLengthMismatch.selector));
 
         hats.batchCreateHats(
             adminsBatch,
@@ -411,12 +354,7 @@ contract ImageURITest is TestSetup2 {
     function testEmptyHatBranchImageURI() public {
         uint256 topHat = hats.mintTopHat(topHatWearer, "", "");
 
-        (uint256[] memory ids, ) = createHatsBranch(
-            5,
-            topHat,
-            topHatWearer,
-            false
-        );
+        (uint256[] memory ids,) = createHatsBranch(5, topHat, topHatWearer, false);
 
         string memory uri = hats.getImageURIForHat(ids[4]);
 
@@ -457,23 +395,14 @@ contract MintHatsTest is TestSetup {
         // check transfer event will be emitted
         vm.expectEmit(true, true, true, true);
 
-        emit TransferSingle(
-            topHatWearer,
-            address(0),
-            secondWearer,
-            secondHatId,
-            1
-        );
+        emit TransferSingle(topHatWearer, address(0), secondWearer, secondHatId, 1);
 
         // 2-2. mint hat
         vm.prank(address(topHatWearer));
         hats.mintHat(secondHatId, secondWearer);
 
         // assert balance = 1
-        assertEq(
-            hats.balanceOf(secondWearer, secondHatId),
-            ++secondWearerBalance
-        );
+        assertEq(hats.balanceOf(secondWearer, secondHatId), ++secondWearerBalance);
 
         // assert iswearer
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
@@ -486,7 +415,7 @@ contract MintHatsTest is TestSetup {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(thirdWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
-        (, , , , , , uint8 lastHatId_pre, , ) = hats.viewHat(topHatId);
+        (,,,,,, uint16 lastHatId_pre,,) = hats.viewHat(topHatId);
 
         // mint hat
         vm.prank(address(topHatWearer));
@@ -506,7 +435,7 @@ contract MintHatsTest is TestSetup {
         assertEq(hats.hatSupply(secondHatId), supply_pre + 2);
 
         // assert admin's lastHatId is *not* incremented
-        (, , , , , , uint8 lastHatId_post, , ) = hats.viewHat(topHatId);
+        (,,,,,, uint16 lastHatId_post,,) = hats.viewHat(topHatId);
         assertEq(lastHatId_post, lastHatId_pre);
     }
 
@@ -514,20 +443,14 @@ contract MintHatsTest is TestSetup {
         // store prelim values
         uint256 balance_pre = hats.balanceOf(thirdWearer, secondHatId);
         uint32 supply_pre = hats.hatSupply(secondHatId);
-        (, , , , , , uint8 lastHatId_pre, , ) = hats.viewHat(topHatId);
+        (,,,,,, uint16 lastHatId_pre,,) = hats.viewHat(topHatId);
 
         // mint hat
         vm.prank(address(topHatWearer));
         hats.mintHat(secondHatId, secondWearer);
 
         // expect error AlreadyWearingHat()
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                HatsErrors.AlreadyWearingHat.selector,
-                secondWearer,
-                secondHatId
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, secondWearer, secondHatId));
 
         // mint another of same id to the same wearer
         vm.prank(address(topHatWearer));
@@ -543,7 +466,7 @@ contract MintHatsTest is TestSetup {
         assertEq(hats.hatSupply(secondHatId), supply_pre + 1);
 
         // assert admin's lastHatId is *not* incremented
-        (, , , , , , uint8 lastHatId_post, , ) = hats.viewHat(topHatId);
+        (,,,,,, uint16 lastHatId_post,,) = hats.viewHat(topHatId);
         assertEq(lastHatId_post, lastHatId_pre);
     }
 
@@ -553,13 +476,7 @@ contract MintHatsTest is TestSetup {
         uint32 supply_pre = hats.hatSupply(secondHatId);
 
         // expect NotAdmin Error
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                HatsErrors.NotAdmin.selector,
-                nonWearer,
-                secondHatId
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, nonWearer, secondHatId));
 
         // 2-1. try to mint hat from a non-wearer
         vm.prank(address(nonWearer));
@@ -587,9 +504,7 @@ contract MintHatsTest is TestSetup {
         hats.mintHat(secondHatId, topHatWearer);
 
         // expect error AllHatsWorn()
-        vm.expectRevert(
-            abi.encodeWithSelector(HatsErrors.AllHatsWorn.selector, secondHatId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AllHatsWorn.selector, secondHatId));
 
         // 2-3. fail to mint hat 3
         hats.mintHat(secondHatId, thirdWearer);
@@ -632,12 +547,7 @@ contract MintHatsTest is TestSetup {
 
         uint256 badHatId = 123e18;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                HatsErrors.HatDoesNotExist.selector,
-                badHatId
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.HatDoesNotExist.selector, badHatId));
 
         hats.mintHat(badHatId, secondWearer);
     }
@@ -656,30 +566,20 @@ contract MintHatsTest is TestSetup {
 
         // create the hats and populate the minting arrays
         for (uint256 i = 0; i < count; ++i) {
-            uint256 id = hats.createHat(
-                secondHatId,
-                "",
-                1,
-                topHatWearer,
-                topHatWearer,
-                false,
-                ""
-            );
+            uint256 id = hats.createHat(secondHatId, "", 1, topHatWearer, topHatWearer, false, "");
 
             hatBatch[i] = id;
-            wearerBatch[i] = address(uint160(10000 + i));
+            wearerBatch[i] = address(uint160(10_000 + i));
         }
 
         hats.batchMintHats(hatBatch, wearerBatch);
 
-        (, , , , , , uint8 lastHatId, , ) = hats.viewHat(secondHatId);
+        (,,,,,, uint16 lastHatId,,) = hats.viewHat(secondHatId);
 
         assertEq(lastHatId, count);
     }
 
-    function testBatchMintHatsErrorArrayLength(uint256 count, uint256 offset)
-        public
-    {
+    function testBatchMintHatsErrorArrayLength(uint256 count, uint256 offset) public {
         count = bound(count, 1, 254);
         offset = bound(offset, 1, 255 - count);
         address[] memory wearerBatch = new address[](count);
@@ -693,37 +593,19 @@ contract MintHatsTest is TestSetup {
 
         // create the hats and populate the minting arrays
         for (uint256 i = 0; i < count; ++i) {
-            uint256 id = hats.createHat(
-                secondHatId,
-                "",
-                1,
-                topHatWearer,
-                topHatWearer,
-                false,
-                ""
-            );
+            uint256 id = hats.createHat(secondHatId, "", 1, topHatWearer, topHatWearer, false, "");
 
             hatBatch[i] = id;
-            wearerBatch[i] = address(uint160(10000 + i));
+            wearerBatch[i] = address(uint160(10_000 + i));
         }
 
         // add `offset` number of hats to the batch, without corresponding wearers
         for (uint256 j = 0; j < offset; ++j) {
-            uint256 id = hats.createHat(
-                secondHatId,
-                "",
-                1,
-                topHatWearer,
-                topHatWearer,
-                false,
-                ""
-            );
+            uint256 id = hats.createHat(secondHatId, "", 1, topHatWearer, topHatWearer, false, "");
             hatBatch[count - 1 + j] = id;
         }
 
-        vm.expectRevert(
-            abi.encodeWithSelector(HatsErrors.BatchArrayLengthMismatch.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.BatchArrayLengthMismatch.selector));
 
         hats.batchMintHats(hatBatch, wearerBatch);
     }
@@ -731,17 +613,7 @@ contract MintHatsTest is TestSetup {
 
 contract ViewHatTests is TestSetup2 {
     function testViewHat1() public {
-        (
-            ,
-            ,
-            ,
-            ,
-            rettoggle,
-            retimageURI,
-            retlastHatId,
-            retmutable,
-            retactive
-        ) = hats.viewHat(secondHatId);
+        (,,,, rettoggle, retimageURI, retlastHatId, retmutable, retactive) = hats.viewHat(secondHatId);
 
         assertEq(rettoggle, address(333));
         assertEq(retimageURI, secondHatImageURI);
@@ -751,8 +623,7 @@ contract ViewHatTests is TestSetup2 {
     }
 
     function testViewHat2() public {
-        (retdetails, retmaxSupply, retsupply, reteligibility, , , , , ) = hats
-            .viewHat(secondHatId);
+        (retdetails, retmaxSupply, retsupply, reteligibility,,,,,) = hats.viewHat(secondHatId);
 
         // 3-1. viewHat - displays params as expected
         assertEq(retdetails, "second hat");
@@ -762,17 +633,7 @@ contract ViewHatTests is TestSetup2 {
     }
 
     function testViewHatOfTopHat1() public {
-        (
-            ,
-            ,
-            ,
-            ,
-            rettoggle,
-            retimageURI,
-            retlastHatId,
-            retmutable,
-            retactive
-        ) = hats.viewHat(topHatId);
+        (,,,, rettoggle, retimageURI, retlastHatId, retmutable, retactive) = hats.viewHat(topHatId);
 
         assertEq(rettoggle, address(0));
         assertEq(retlastHatId, 1);
@@ -781,8 +642,7 @@ contract ViewHatTests is TestSetup2 {
     }
 
     function testViewHatOfTopHat2() public {
-        (retdetails, retmaxSupply, retsupply, reteligibility, , , , , ) = hats
-            .viewHat(topHatId);
+        (retdetails, retmaxSupply, retsupply, reteligibility,,,,,) = hats.viewHat(topHatId);
 
         assertEq(retdetails, "tophat");
         assertEq(retmaxSupply, 1);
@@ -800,27 +660,29 @@ contract ViewHatTests is TestSetup2 {
     }
 }
 
-contract TransferHatTests is TestSetup2 {
+contract TransferHatTests is TestSetupMutable {
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(address(topHatWearer));
+
+        hats.mintHat(secondHatId, secondWearer);
+    }
+
     function testCannotTransferHatFromNonAdmin() public {
         // expect NotAdmin error
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                HatsErrors.NotAdmin.selector,
-                nonWearer,
-                secondHatId
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, nonWearer, secondHatId));
 
         // 4-1. transfer from wearer / other wallet
         vm.prank(address(nonWearer));
         hats.transferHat(secondHatId, secondWearer, thirdWearer);
     }
 
-    function testTransferHat() public {
+    function testTransferMutableHat() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
-        // 4-2. transfer from admin
         vm.prank(address(topHatWearer));
+
         hats.transferHat(secondHatId, secondWearer, thirdWearer);
 
         // assert secondWearer is no longer wearing
@@ -834,16 +696,43 @@ contract TransferHatTests is TestSetup2 {
         // assert hatSupply is not incremented
         assertEq(hats.hatSupply(secondHatId), hatSupply);
     }
+
+    function testCannotTransferHatToExistingWearer() public {
+        vm.startPrank(topHatWearer);
+
+        hats.mintHat(secondHatId, thirdWearer);
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, thirdWearer, secondHatId));
+
+        hats.transferHat(secondHatId, secondWearer, thirdWearer);
+    }
+
+    function testCannotTransferHatToRevokedWearer() public {
+        vm.startPrank(topHatWearer);
+
+        // mint the hat
+        hats.mintHat(secondHatId, thirdWearer);
+
+        // revoke the hat, but do not burn it
+        // mock calls to eligibility contract to return (eligible = true, standing = true)
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", thirdWearer, secondHatId),
+            abi.encode(false, true)
+        );
+
+        assertFalse(hats.isWearerOfHat(thirdWearer, secondHatId));
+        // transfer should revert
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, thirdWearer, secondHatId));
+
+        hats.transferHat(secondHatId, secondWearer, thirdWearer);
+    }
 }
 
 contract EligibilitySetHatsTests is TestSetup2 {
     function testDoNotRevokeHatFromEligibleWearerInGoodStanding() public {
         // confirm second hat is worn by second Wearer
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
-
-        // expectEmit WearerStatus - should be wearing, in good standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, true, true);
 
         // 5-6. do not revoke hat
         vm.prank(address(_eligibility));
@@ -854,10 +743,6 @@ contract EligibilitySetHatsTests is TestSetup2 {
 
     function testRevokeHatFromIneligibleWearerInGoodStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
-
-        // expectEmit WearerStatus - should not be wearing, in good standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, false, true);
 
         // 5-8a. revoke hat
         vm.prank(address(_eligibility));
@@ -870,9 +755,9 @@ contract EligibilitySetHatsTests is TestSetup2 {
     }
 
     function testRevokeHatFromIneligibleWearerInBadStanding() public {
-        // expectEmit WearerStatus - should not be wearing, in bad standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, false, false);
+        // expectEmit WearerStandingChanged
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, false);
 
         // 5-8b. revoke hat with bad standing
         vm.prank(address(_eligibility));
@@ -882,9 +767,9 @@ contract EligibilitySetHatsTests is TestSetup2 {
     }
 
     function testRevokeHatFromEligibleWearerInBadStanding() public {
-        // expectEmit WearerStatus - should not be wearing, in bad standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, true, false);
+        // expectEmit WearerStandingChanged
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, false);
 
         // 5-8b. revoke hat with bad standing
         vm.prank(address(_eligibility));
@@ -893,17 +778,9 @@ contract EligibilitySetHatsTests is TestSetup2 {
         assertFalse(hats.isInGoodStanding(secondWearer, secondHatId));
     }
 
-    // TODO: do we need to test the following functionality?
-    // in the MVP, the following call should never happen:
-    //  setHatWearerStatus(secondHatId, secondWearer, false, false);
-    //  i.e. WearerStatus - wearing, in bad standing
-    // in a future state, this call could happen if there were less severe penalities than revocations
-
     function testCannotRevokeHatAsNonWearer() public {
         // expect NotHatsEligibility error
-        vm.expectRevert(
-            abi.encodeWithSelector(HatsErrors.NotHatsEligibility.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatsEligibility.selector));
 
         // attempt to setHatWearerStatus as non-wearer
         vm.prank(address(nonWearer));
@@ -926,11 +803,7 @@ contract EligibilitySetHatsTests is TestSetup2 {
         // mock calls to eligibility contract to return (eligible = true, standing = true)
         vm.mockCall(
             address(_eligibility),
-            abi.encodeWithSignature(
-                "getWearerStatus(address,uint256)",
-                secondWearer,
-                secondHatId
-            ),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
             abi.encode(true, true)
         );
 
@@ -943,16 +816,29 @@ contract EligibilitySetHatsTests is TestSetup2 {
         // assert hatSupply is not incremented
         assertEq(hats.hatSupply(secondHatId), hatSupply);
     }
+
+    function testSetWearerBackInGoodStanding() public {
+        // set to bad standing
+        vm.startPrank(address(_eligibility));
+
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, false);
+
+        hats.setHatWearerStatus(secondHatId, secondWearer, false, false);
+
+        // set back to good standing
+
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, true);
+
+        hats.setHatWearerStatus(secondHatId, secondWearer, false, true);
+    }
 }
 
-contract EligibilityGetHatsTests is TestSetup2 {
-    function testCannotGetHatWearerStandingNoFunctionInEligibilityContract()
-        public
-    {
+contract EligibilityCheckHatsTests is TestSetup2 {
+    function testCannotGetHatWearerStandingNoFunctionInEligibilityContract() public {
         // expect NotHatsEligibility error
-        vm.expectRevert(
-            abi.encodeWithSelector(HatsErrors.NotHatsEligibility.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatsEligibility.selector));
 
         // fail attempt to pull wearer status from eligibility
         hats.checkHatWearerStatus(secondHatId, secondWearer);
@@ -964,18 +850,10 @@ contract EligibilityGetHatsTests is TestSetup2 {
         // confirm second hat is worn by second Wearer
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
 
-        // expectEmit WearerStatus - should be wearing, in good standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, true, true);
-
         // mock calls to eligibility contract to return (eligible = true, standing = true)
         vm.mockCall(
             address(_eligibility),
-            abi.encodeWithSignature(
-                "getWearerStatus(address,uint256)",
-                secondWearer,
-                secondHatId
-            ),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
             abi.encode(true, true)
         );
 
@@ -988,23 +866,13 @@ contract EligibilityGetHatsTests is TestSetup2 {
         assertEq(hats.hatSupply(secondHatId), hatSupply);
     }
 
-    function testCheckEligibilityToRevokeHatFromIneligibleWearerInGoodStanding()
-        public
-    {
+    function testCheckEligibilityToRevokeHatFromIneligibleWearerInGoodStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
-
-        // expectEmit WearerStatus - should not be wearing, in good standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, false, true);
 
         // mock calls to eligibility contract to return (eligible = false, standing = true)
         vm.mockCall(
             address(_eligibility),
-            abi.encodeWithSignature(
-                "getWearerStatus(address,uint256)",
-                secondWearer,
-                secondHatId
-            ),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
             abi.encode(false, true)
         );
 
@@ -1017,23 +885,17 @@ contract EligibilityGetHatsTests is TestSetup2 {
         assertEq(hats.hatSupply(secondHatId), --hatSupply);
     }
 
-    function testCheckEligibilityToRevokeHatFromIneligibleWearerInBadStanding()
-        public
-    {
+    function testCheckEligibilityToRevokeHatFromIneligibleWearerInBadStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
-        // expectEmit WearerStatus - should not be wearing, in bad standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, false, false);
+        // expectEmit WearerStandingChanged
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, false);
 
         // mock calls to eligibility contract to return (eligible = false, standing = false)
         vm.mockCall(
             address(_eligibility),
-            abi.encodeWithSignature(
-                "getWearerStatus(address,uint256)",
-                secondWearer,
-                secondHatId
-            ),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
             abi.encode(false, false)
         );
 
@@ -1046,23 +908,17 @@ contract EligibilityGetHatsTests is TestSetup2 {
         assertEq(hats.hatSupply(secondHatId), --hatSupply);
     }
 
-    function testCheckEligibilityToRevokeHatFromEligibleWearerInBadStanding()
-        public
-    {
+    function testCheckEligibilityToRevokeHatFromEligibleWearerInBadStanding() public {
         uint32 hatSupply = hats.hatSupply(secondHatId);
 
-        // expectEmit WearerStatus - should not be wearing, in bad standing
-        // vm.expectEmit(false, false, false, true);
-        // emit WearerStatus(secondHatId, secondWearer, true, false);
+        // expectEmit WearerStandingChanged
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, false);
 
         // mock calls to eligibility contract to return (eligible = true, standing = false)
         vm.mockCall(
             address(_eligibility),
-            abi.encodeWithSignature(
-                "getWearerStatus(address,uint256)",
-                secondWearer,
-                secondHatId
-            ),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
             abi.encode(true, false)
         );
 
@@ -1073,6 +929,34 @@ contract EligibilityGetHatsTests is TestSetup2 {
 
         // assert hatSupply is decremented
         assertEq(hats.hatSupply(secondHatId), --hatSupply);
+    }
+
+    function testCheckWearerBackInGoodStanding() public {
+        // set to bad standing
+        // mock call to eligibility contract to return (eligible = true, standing = false)
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(true, false)
+        );
+
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, false);
+
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
+
+        // set back to good standing
+        // mock call to eligibility contract to return (eligible = true, standing = true)
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(true, true)
+        );
+
+        vm.expectEmit(false, false, false, true);
+        emit WearerStandingChanged(secondHatId, secondWearer, true);
+
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
     }
 }
 
@@ -1090,9 +974,7 @@ contract RenounceHatsTest is TestSetup2 {
 
     function testCannotRenounceHatAsNonWearer() public {
         // expect NotHatWearer error
-        vm.expectRevert(
-            abi.encodeWithSelector(HatsErrors.NotHatWearer.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatWearer.selector));
 
         //  6-1. attempt to renounce from non-wearer
         vm.prank(address(nonWearer));
@@ -1103,7 +985,7 @@ contract RenounceHatsTest is TestSetup2 {
 contract ToggleSetHatsTest is TestSetup2 {
     function testDeactivateHat() public {
         // confirm second hat is active
-        (, , , , , , , , active_) = hats.viewHat(secondHatId);
+        (,,,,,,,, active_) = hats.viewHat(secondHatId);
         assertTrue(active_);
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
 
@@ -1114,16 +996,14 @@ contract ToggleSetHatsTest is TestSetup2 {
         // 7-2. change Hat Status true->false via setHatStatus
         vm.prank(address(_toggle));
         hats.setHatStatus(secondHatId, false);
-        (, , , , , , , mutable_, ) = hats.viewHat(secondHatId);
+        (,,,,,,, mutable_,) = hats.viewHat(secondHatId);
         assertFalse(mutable_);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 
     function testCannotDeactivateHatAsNonWearer() public {
         // expect NotHatstoggle error
-        vm.expectRevert(
-            abi.encodeWithSelector(HatsErrors.NotHatsToggle.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatsToggle.selector));
 
         // 7-1. attempt to change Hat Status hat from non-wearer
         vm.prank(address(nonWearer));
@@ -1142,7 +1022,7 @@ contract ToggleSetHatsTest is TestSetup2 {
         // changeHatStatus false->true via setHatStatus
         vm.prank(address(_toggle));
         hats.setHatStatus(secondHatId, true);
-        (, , , , , , , , active_) = hats.viewHat(secondHatId);
+        (,,,,,,,, active_) = hats.viewHat(secondHatId);
         assertTrue(active_);
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
     }
@@ -1153,9 +1033,7 @@ contract ToggleSetHatsTest is TestSetup2 {
         hats.setHatStatus(secondHatId, false);
 
         // expect NotHatstoggle error
-        vm.expectRevert(
-            abi.encodeWithSelector(HatsErrors.NotHatsToggle.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatsToggle.selector));
 
         // 8-1. attempt to changeHatStatus hat from wearer / other wallet / admin
         vm.prank(address(nonWearer));
@@ -1166,9 +1044,7 @@ contract ToggleSetHatsTest is TestSetup2 {
 contract ToggleGetHatsTest is TestSetup2 {
     function testCannotCheckHatStatusNoFunctionInToggleContract() public {
         // expect NotHatsToggle error
-        vm.expectRevert(
-            abi.encodeWithSelector(HatsErrors.NotHatsToggle.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatsToggle.selector));
 
         // fail attempt to pull Hat Status
         hats.checkHatStatus(secondHatId);
@@ -1180,15 +1056,11 @@ contract ToggleGetHatsTest is TestSetup2 {
         emit HatStatusChanged(secondHatId, false);
 
         // encode mock for function inside toggle contract to return false
-        vm.mockCall(
-            address(_toggle),
-            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
-            abi.encode(false)
-        );
+        vm.mockCall(address(_toggle), abi.encodeWithSignature("getHatStatus(uint256)", secondHatId), abi.encode(false));
 
         // call mocked function within checkHatStatus to deactivate
         hats.checkHatStatus(secondHatId);
-        (, , , , , , , mutable_, ) = hats.viewHat(secondHatId);
+        (,,,,,,, mutable_,) = hats.viewHat(secondHatId);
         assertFalse(mutable_);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
     }
@@ -1203,39 +1075,19 @@ contract ToggleGetHatsTest is TestSetup2 {
         emit HatStatusChanged(secondHatId, true);
 
         // encode mock for function inside toggle contract to return false
-        vm.mockCall(
-            address(_toggle),
-            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
-            abi.encode(true)
-        );
+        vm.mockCall(address(_toggle), abi.encodeWithSignature("getHatStatus(uint256)", secondHatId), abi.encode(true));
 
         // call mocked function within checkHatStatus to reactivate
         hats.checkHatStatus(secondHatId);
-        (, , , , , , , , active_) = hats.viewHat(secondHatId);
+        (,,,,,,,, active_) = hats.viewHat(secondHatId);
         assertTrue(active_);
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 }
 
-contract MutabilityTests is TestSetup {
-    function setUp() public override {
-        super.setUp();
-
-        // create a mutable Hat
-        vm.prank(topHatWearer);
-        secondHatId = hats.createHat(
-            topHatId,
-            "mutable hat",
-            2, // maxSupply
-            _eligibility,
-            _toggle,
-            true,
-            secondHatImageURI
-        );
-    }
-
+contract MutabilityTests is TestSetupMutable {
     function testAdminCanMakeMutableHatImmutable() public {
-        (, , , , , , , mutable_, ) = hats.viewHat(secondHatId);
+        (,,,,,,, mutable_,) = hats.viewHat(secondHatId);
         assertTrue(mutable_);
 
         vm.expectEmit(false, false, false, true);
@@ -1244,7 +1096,7 @@ contract MutabilityTests is TestSetup {
         vm.prank(topHatWearer);
         hats.makeHatImmutable(secondHatId);
 
-        (, , , , , , , mutable_, ) = hats.viewHat(secondHatId);
+        (,,,,,,, mutable_,) = hats.viewHat(secondHatId);
         assertFalse(mutable_);
     }
 
@@ -1261,7 +1113,7 @@ contract MutabilityTests is TestSetup {
             secondHatImageURI
         );
 
-        (, , , , , , , mutable_, ) = hats.viewHat(thirdHatId);
+        (,,,,,,, mutable_,) = hats.viewHat(thirdHatId);
         assertFalse(mutable_);
 
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
@@ -1271,13 +1123,7 @@ contract MutabilityTests is TestSetup {
     }
 
     function testNonAdminCannotMakeMutableHatImmutable() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                HatsErrors.NotAdmin.selector,
-                address(this),
-                secondHatId
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, address(this), secondHatId));
 
         hats.makeHatImmutable(secondHatId);
     }
@@ -1294,7 +1140,7 @@ contract MutabilityTests is TestSetup {
             secondHatImageURI
         );
 
-        (, , , , , , , mutable_, ) = hats.viewHat(thirdHatId);
+        (,,,,,,, mutable_,) = hats.viewHat(thirdHatId);
         assertFalse(mutable_);
 
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
@@ -1315,6 +1161,60 @@ contract MutabilityTests is TestSetup {
         vm.stopPrank();
     }
 
+    function testTopHatCanChangeOwnDetails() public {
+        string memory new_ = "should work";
+
+        vm.expectEmit(false, false, false, true);
+        emit HatDetailsChanged(topHatId, new_);
+
+        vm.prank(topHatWearer);
+        hats.changeHatDetails(topHatId, new_);
+
+        (string memory changed,,,,,,,,) = hats.viewHat(topHatId);
+        assertEq(changed, new_);
+    }
+
+    function testTopHatCanChangeOwnImageURI() public {
+        string memory new_ = "should work";
+
+        vm.expectEmit(false, false, false, true);
+        emit HatImageURIChanged(topHatId, new_);
+
+        vm.prank(topHatWearer);
+        hats.changeHatImageURI(topHatId, new_);
+
+        (,,,,, string memory changed,,,) = hats.viewHat(topHatId);
+        assertEq(changed, new_);
+    }
+
+    function testTopHatCannotChangeOtherProperties() public {
+        vm.startPrank(topHatWearer);
+
+        (,,,,,,, mutable_,) = hats.viewHat(topHatId);
+        assertFalse(mutable_);
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
+        hats.changeHatEligibility(topHatId, address(this));
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
+        hats.changeHatToggle(topHatId, address(this));
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
+        hats.changeHatMaxSupply(topHatId, uint32(100));
+
+        vm.stopPrank();
+    }
+
+    function testNonTopHatCannotChangeTopHatProperties() public {
+        vm.startPrank(secondWearer);
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, secondWearer, topHatId));
+        hats.changeHatImageURI(topHatId, "should fail");
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, secondWearer, topHatId));
+        hats.changeHatDetails(topHatId, "should also fail");
+    }
+
     function testAdminCanChangeMutableHatDetails() public {
         string memory new_ = "should work";
 
@@ -1324,7 +1224,7 @@ contract MutabilityTests is TestSetup {
         vm.prank(topHatWearer);
         hats.changeHatDetails(secondHatId, new_);
 
-        (string memory changed, , , , , , , , ) = hats.viewHat(secondHatId);
+        (string memory changed,,,,,,,,) = hats.viewHat(secondHatId);
         assertEq(changed, new_);
     }
 
@@ -1337,7 +1237,7 @@ contract MutabilityTests is TestSetup {
         vm.prank(topHatWearer);
         hats.changeHatEligibility(secondHatId, new_);
 
-        (, , , address changed, , , , , ) = hats.viewHat(secondHatId);
+        (,,, address changed,,,,,) = hats.viewHat(secondHatId);
         assertEq(changed, new_);
     }
 
@@ -1350,7 +1250,7 @@ contract MutabilityTests is TestSetup {
         vm.prank(topHatWearer);
         hats.changeHatToggle(secondHatId, new_);
 
-        (, , , , address changed, , , , ) = hats.viewHat(secondHatId);
+        (,,,, address changed,,,,) = hats.viewHat(secondHatId);
         assertEq(changed, new_);
     }
 
@@ -1363,7 +1263,7 @@ contract MutabilityTests is TestSetup {
         vm.prank(topHatWearer);
         hats.changeHatImageURI(secondHatId, new_);
 
-        (, , , , , string memory changed, , , ) = hats.viewHat(secondHatId);
+        (,,,,, string memory changed,,,) = hats.viewHat(secondHatId);
         assertEq(changed, new_);
     }
 
@@ -1376,13 +1276,11 @@ contract MutabilityTests is TestSetup {
         vm.prank(topHatWearer);
         hats.changeHatMaxSupply(secondHatId, new_);
 
-        (, uint32 changed, , , , , , , ) = hats.viewHat(secondHatId);
+        (, uint32 changed,,,,,,,) = hats.viewHat(secondHatId);
         assertEq(changed, new_);
     }
 
-    function testAdminCanDecreaseMutableHatMaxSupplyToAboveCurrentSupply()
-        public
-    {
+    function testAdminCanDecreaseMutableHatMaxSupplyToAboveCurrentSupply() public {
         uint32 new_ = 100;
         uint32 decreased = 5;
 
@@ -1395,13 +1293,11 @@ contract MutabilityTests is TestSetup {
 
         hats.changeHatMaxSupply(secondHatId, decreased);
 
-        (, uint32 changed, , , , , , , ) = hats.viewHat(secondHatId);
+        (, uint32 changed,,,,,,,) = hats.viewHat(secondHatId);
         assertEq(changed, decreased);
     }
 
-    function testAdminCanDecreaseMutableHatMaxSupplyToEqualToCurrentSupply()
-        public
-    {
+    function testAdminCanDecreaseMutableHatMaxSupplyToEqualToCurrentSupply() public {
         uint32 new_ = 100;
         uint32 decreased = 1;
 
@@ -1414,13 +1310,11 @@ contract MutabilityTests is TestSetup {
 
         hats.changeHatMaxSupply(secondHatId, decreased);
 
-        (, uint32 changed, , , , , , , ) = hats.viewHat(secondHatId);
+        (, uint32 changed,,,,,,,) = hats.viewHat(secondHatId);
         assertEq(changed, decreased);
     }
 
-    function testAdminCannotDecreaseMutableHatMaxSupplyBelowCurrentSupply()
-        public
-    {
+    function testAdminCannotDecreaseMutableHatMaxSupplyBelowCurrentSupply() public {
         uint32 new_ = 100;
         uint32 decreased = 1;
 
@@ -1429,33 +1323,451 @@ contract MutabilityTests is TestSetup {
         hats.mintHat(secondHatId, secondWearer);
         hats.mintHat(secondHatId, thirdWearer);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(HatsErrors.NewMaxSupplyTooLow.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NewMaxSupplyTooLow.selector));
 
         hats.changeHatMaxSupply(secondHatId, decreased);
+    }
+
+    function testAdminCannotTransferImmutableHat() public {
+        vm.startPrank(topHatWearer);
+        thirdHatId = hats.createHat(
+            topHatId,
+            "immutable hat",
+            3, // maxSupply
+            _eligibility,
+            _toggle,
+            false,
+            secondHatImageURI
+        );
+
+        (,,,,,,, mutable_,) = hats.viewHat(thirdHatId);
+        assertFalse(mutable_);
+
+        hats.mintHat(thirdHatId, thirdWearer);
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
+        hats.transferHat(thirdHatId, thirdWearer, secondWearer);
     }
 }
 
 contract OverridesHatTests is TestSetup2 {
-    function testFailSetApprovalForAll() public {
+    function testFailSetApprovalForAll() public view {
         hats.setApprovalForAll(topHatWearer, true);
     }
 
-    function testFailSafeTransferFrom() public {
+    function testFailSafeTransferFrom() public view {
         bytes memory b = bytes("");
         hats.safeTransferFrom(secondWearer, thirdWearer, secondHatId, 1, b);
     }
 
-    // TODO: test for a specific URI output
-    function testCreateUri() public {
+    function testCreateUri() public view {
         string memory jsonUri = hats.uri(secondHatId);
         console2.log("encoded URI", jsonUri);
     }
 
-    // TODO: test for a specific URI output
-    function testCreateUriForTopHat() public {
+    function testCreateUriForTopHat() public view {
         string memory jsonUri = hats.uri(topHatId);
         console2.log("encoded URI", jsonUri);
+    }
+}
+
+contract LinkHatsTests is TestSetup2 {
+    uint256 internal secondTopHatId;
+    uint32 topHatDomain;
+    uint32 secondTopHatDomain;
+    uint256 level13HatId;
+    uint256 level14HatId;
+
+    function setUp() public override {
+        super.setUp();
+
+        secondTopHatId = hats.mintTopHat(thirdWearer, "for linking", "http://www.tophat.com/");
+
+        topHatDomain = hats.getTophatDomain(topHatId);
+        secondTopHatDomain = hats.getTophatDomain(secondTopHatId);
+        level13HatId = 0x0000000100050001000100010001000100010001000100010001000100010000;
+
+        vm.prank(topHatWearer);
+        level14HatId = hats.createHat(level13HatId, "level 14 hat", _maxSupply, _eligibility, _toggle, false, "");
+    }
+
+    function testRequestLinking() public {
+        vm.prank(thirdWearer);
+
+        vm.expectEmit(true, true, true, true);
+        emit TopHatLinkRequested(secondTopHatDomain, secondHatId);
+
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        assertEq(secondHatId, hats.linkedTreeRequests(secondTopHatDomain));
+    }
+
+    function testWearerCanApproveLinkRequest() public {
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        // approve
+        vm.prank(secondWearer);
+
+        vm.expectEmit(true, true, true, true);
+        emit TopHatLinked(secondTopHatDomain, secondHatId);
+
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        assertFalse(hats.isTopHat(secondTopHatId));
+        assertEq(hats.getHatLevel(secondTopHatId), 2);
+        assertTrue(hats.isAdminOfHat(secondWearer, secondTopHatId));
+        assertEq(hats.linkedTreeRequests(secondTopHatDomain), 0);
+    }
+
+    function testAdminCanApproveLinkRequest() public {
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        // approve
+        vm.prank(topHatWearer);
+
+        vm.expectEmit(true, true, true, true);
+        emit TopHatLinked(secondTopHatDomain, secondHatId);
+
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        assertFalse(hats.isTopHat(secondTopHatId));
+        assertEq(hats.getHatLevel(secondTopHatId), 2);
+        assertTrue(hats.isAdminOfHat(secondWearer, secondTopHatId));
+        assertEq(hats.linkedTreeRequests(secondTopHatDomain), 0);
+    }
+
+    function testAdminCanApproveLinkToLastLevelHat() public {
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, level14HatId);
+
+        // approve
+        vm.prank(topHatWearer);
+
+        vm.expectEmit(true, true, true, true);
+        emit TopHatLinked(secondTopHatDomain, level14HatId);
+
+        hats.approveLinkTopHatToTree(secondTopHatDomain, level14HatId);
+
+        assertFalse(hats.isTopHat(secondTopHatId));
+        assertEq(hats.getHatLevel(secondTopHatId), 15);
+        assertTrue(hats.isAdminOfHat(topHatWearer, secondTopHatId));
+        assertEq(hats.linkedTreeRequests(secondTopHatDomain), 0);
+    }
+
+    function testWearerCanApproveLinkToLastLevelHat() public {
+        // mint last level hat to wearer
+        vm.prank(topHatWearer);
+        hats.mintHat(level14HatId, fourthWearer);
+
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, level14HatId);
+
+        // approve
+        vm.prank(fourthWearer);
+
+        vm.expectEmit(true, true, true, true);
+        emit TopHatLinked(secondTopHatDomain, level14HatId);
+
+        hats.approveLinkTopHatToTree(secondTopHatDomain, level14HatId);
+
+        assertFalse(hats.isTopHat(secondTopHatId));
+        assertEq(hats.getHatLevel(secondTopHatId), 15);
+        assertTrue(hats.isAdminOfHat(fourthWearer, secondTopHatId));
+        assertEq(hats.linkedTreeRequests(secondTopHatDomain), 0);
+    }
+
+    function testNonAdminNonWearerCannotApproveLinktoLastLevelHat() public {
+        // mint last level hat to wearer
+        vm.prank(topHatWearer);
+        hats.mintHat(level14HatId, fourthWearer);
+
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, level14HatId);
+
+        // attempt to approve from non-admin and non-wearer of new admin hat
+        assertFalse(hats.isWearerOfHat(secondWearer, level14HatId));
+        assertFalse(hats.isAdminOfHat(secondWearer, level14HatId));
+
+        vm.prank(secondWearer);
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdminOrWearer.selector));
+        hats.approveLinkTopHatToTree(secondTopHatDomain, level14HatId);
+    }
+
+    function testCannotApproveUnrequestedLink() public {
+        vm.prank(topHatWearer);
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.LinkageNotRequested.selector));
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+    }
+
+    function testAdminCanRelinkTopHatWithinTree() public {
+        // first link
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        vm.expectEmit(true, true, true, true);
+        emit TopHatLinked(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        assertFalse(hats.isTopHat(secondTopHatId));
+        assertEq(hats.getHatLevel(secondTopHatId), 2);
+
+        // relink
+        vm.prank(topHatWearer);
+        vm.expectEmit(true, true, true, true);
+        emit TopHatLinked(secondTopHatDomain, topHatId);
+        hats.relinkTopHatWithinTree(secondTopHatDomain, topHatId);
+        assertFalse(hats.isTopHat(secondTopHatId));
+        assertEq(hats.getHatLevel(secondTopHatId), 1);
+    }
+
+    function testNewAdminWearerCanRelinkTopHatWithinTree() public {
+        vm.startPrank(secondWearer);
+        uint256 level2HatId = hats.createHat(secondHatId, "", _maxSupply, _eligibility, _toggle, false, "");
+        hats.mintHat(level2HatId, fourthWearer);
+        vm.stopPrank();
+        // first link
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, level2HatId);
+        vm.prank(fourthWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, level2HatId);
+        assertEq(hats.getHatLevel(secondTopHatId), 3);
+
+        // relink to secondHatId
+        vm.prank(secondWearer);
+        vm.expectEmit(true, true, true, true);
+        emit TopHatLinked(secondTopHatDomain, secondHatId);
+        hats.relinkTopHatWithinTree(secondTopHatDomain, secondHatId);
+        assertFalse(hats.isTopHat(secondTopHatId));
+        assertEq(hats.getHatLevel(secondTopHatId), 2);
+    }
+
+    function testNewAdminAdminCanRelinkToLastLevelWithinTree() public {
+        // first link
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        // relink
+        vm.prank(topHatWearer);
+        vm.expectEmit(true, true, true, true);
+        emit TopHatLinked(secondTopHatDomain, level14HatId);
+        hats.relinkTopHatWithinTree(secondTopHatDomain, level14HatId);
+        assertFalse(hats.isTopHat(secondTopHatId));
+        assertEq(hats.getHatLevel(secondTopHatId), 15);
+        assertTrue(hats.isAdminOfHat(topHatWearer, secondTopHatId));
+        assertEq(hats.linkedTreeRequests(secondTopHatDomain), 0);
+    }
+
+    function testNewAdminNonAdminNonWearerCannotRelink() public {
+        // first link to secondHat
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        assertTrue(hats.isAdminOfHat(secondWearer, secondTopHatId));
+
+        // attempt relink to tophatId from secondWearer, who is an admin of secondTopHatId but not an admin or wearer of tophatId
+        vm.startPrank(secondWearer);
+        vm.expectRevert(
+            abi.encodeWithSelector(HatsErrors.NotAdmin.selector, secondWearer, hats.buildHatId(topHatId, 1))
+        );
+        hats.relinkTopHatWithinTree(secondTopHatDomain, topHatId);
+    }
+
+    function testNewAdminNonAdminCannotRelinkToLastLevelWithinTree() public {
+        // first link to secondHat
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        assertTrue(hats.isAdminOfHat(secondWearer, secondTopHatId));
+
+        // attempt relink to 14th level from secondhatwearer, who is an admin of secondTopHatId but not an admin or wearer of tophatId
+        vm.startPrank(secondWearer);
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdminOrWearer.selector));
+        hats.relinkTopHatWithinTree(secondTopHatDomain, level14HatId);
+    }
+
+    function testTreeRootNonAdminCannotRelink() public {
+        // create another hat under tophat
+        vm.prank(topHatWearer);
+        uint256 newHatId = hats.createHat(topHatId, "", _maxSupply, _eligibility, _toggle, false, "");
+
+        // first link to secondHat
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        // attempt relink to new hat from secondWearer
+        vm.startPrank(secondWearer);
+        vm.expectRevert(
+            abi.encodeWithSelector(HatsErrors.NotAdmin.selector, secondWearer, hats.buildHatId(newHatId, 1))
+        );
+        hats.relinkTopHatWithinTree(secondTopHatDomain, newHatId);
+    }
+
+    function testAdminCanRequestNewLink() public {
+        // first link to secondHat
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        assertEq(hats.linkedTreeRequests(secondTopHatDomain), 0);
+
+        // request new link from secondWearer
+        vm.prank(secondWearer);
+        vm.expectEmit(true, true, true, true);
+        emit TopHatLinkRequested(secondTopHatDomain, topHatId);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, topHatId);
+        assertEq(hats.linkedTreeRequests(secondTopHatDomain), topHatId);
+    }
+
+    function testNewAdminAdminCanApproveNewLinkRequest() public {
+        // first link to secondHat
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        // request new link from secondWearer
+        vm.prank(secondWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, topHatId);
+
+        // approve new link from tophatwearer
+        vm.prank(topHatWearer);
+        vm.expectEmit(true, true, true, true);
+        emit TopHatLinked(secondTopHatDomain, topHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, topHatId);
+        assertEq(hats.linkedTreeRequests(secondTopHatDomain), 0);
+        assertEq(hats.getHatLevel(secondTopHatId), 1);
+    }
+
+    function testLinkedTopHatWearerCannotRequestNewLink() public {
+        // first link
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        vm.expectEmit(true, true, true, true);
+        emit TopHatLinked(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        assertFalse(hats.isTopHat(secondTopHatId));
+        assertEq(hats.getHatLevel(secondTopHatId), 2);
+
+        // attempt second link from wearer
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, thirdWearer, secondTopHatId));
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, topHatId);
+    }
+
+    function testPreventingCircularLinking() public {
+        // request
+        vm.prank(topHatWearer);
+        hats.requestLinkTopHatToTree(topHatDomain, secondHatId);
+
+        // try approving
+        vm.prank(topHatWearer);
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
+        hats.approveLinkTopHatToTree(topHatDomain, secondHatId);
+
+        // test a recursive call
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        vm.prank(topHatWearer);
+        hats.requestLinkTopHatToTree(topHatDomain, secondTopHatId);
+        vm.prank(topHatWearer);
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
+        hats.approveLinkTopHatToTree(topHatDomain, secondTopHatId);
+    }
+
+    function testRelinkingCannotCreateCircularLink() public {
+        // first link, under secondHat
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        // second link, under first link
+        uint256 thirdTopHatId = hats.mintTopHat(fourthWearer, "for linking", "http://www.tophat.com/");
+        uint32 thirdTopHatDomain = hats.getTophatDomain(thirdTopHatId);
+
+        vm.prank(fourthWearer);
+        hats.requestLinkTopHatToTree(thirdTopHatDomain, secondTopHatId);
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(thirdTopHatDomain, secondTopHatId);
+
+        // try relink second tophat under third tophat
+        vm.prank(topHatWearer);
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
+        hats.relinkTopHatWithinTree(secondTopHatDomain, thirdTopHatId);
+    }
+
+    function testCannotCrossTreeRelink() public {
+        // create third tophat
+        uint256 thirdTopHatId = hats.mintTopHat(fourthWearer, "invalid relink recipient", "http://www.tophat.com/");
+
+        // link secondTopHat
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(secondWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        // attempt link secondTopHat to third tophat (worn by fourthWearer)
+        vm.prank(secondWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, thirdTopHatId);
+        vm.prank(fourthWearer);
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.CrossTreeLinkage.selector));
+        hats.approveLinkTopHatToTree(secondTopHatDomain, thirdTopHatId);
+    }
+
+    function testCannotApproveCrossTreeLink() public {
+        // create third tophat
+        uint256 thirdTopHatId = hats.mintTopHat(topHatWearer, "invalid relink recipient", "http://www.tophat.com/");
+
+        // link secondTopHat
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(secondWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        // attempt relink secondTopHat to third tophat (worn by topHatWearer)
+        vm.prank(topHatWearer);
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.CrossTreeLinkage.selector));
+        hats.relinkTopHatWithinTree(secondTopHatDomain, thirdTopHatId);
+    }
+
+    function testTreeLinkingAndUnlinking() public {
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, address(this), secondTopHatId));
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        vm.expectEmit(true, true, true, true);
+        emit TopHatLinked(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        assertFalse(hats.isTopHat(secondTopHatId));
+        assertEq(hats.getHatLevel(secondTopHatId), 2);
+        assertEq(hats.linkedTreeRequests(secondTopHatDomain), 0);
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, address(this), secondTopHatId));
+        hats.unlinkTopHatFromTree(secondTopHatDomain);
+
+        vm.prank(secondWearer);
+        vm.expectEmit(true, true, true, true);
+        emit TopHatLinked(secondTopHatDomain, 0);
+        hats.unlinkTopHatFromTree(secondTopHatDomain);
+        assertEq(hats.isTopHat(secondTopHatId), true);
     }
 }

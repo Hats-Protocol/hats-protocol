@@ -32,5 +32,11 @@ jobs:
         with:
           version: nightly
 
-      - name: Run tests
-        run: forge test -vvv
+      - name: Check formatting
+        run: forge fmt --check
+
+      - name: Check contract sizes
+        run: forge build --sizes --skip script
+
+      - name: Run tests w/ gas report
+        run: forge test -vvv --gas-report
