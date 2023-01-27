@@ -55,21 +55,21 @@ _Expand and collapse each section to see the 3-second tutorial to complete each 
 
   <summary>Mint a tophat</summary>
 
-  ![Mint a tophat](/assets/mintTopHat.gif)
+  ![Mint a tophat](./assets/mintTopHat.gif)
 
 </details>
 <details>
 
   <summary>Create a hat</summary>
 
-  ![Create a hat](/assets/createHat.gif)
+  ![Create a hat](./assets/createHat.gif)
 
 </details>
 <details>
 
   <summary>Mint a hat</summary>
 
-  ![Mint a hat](/assets/mintHat.gif)
+  ![Mint a hat](./assets/mintHat.gif)
 
 </details>
 
