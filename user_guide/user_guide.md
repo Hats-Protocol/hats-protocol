@@ -129,7 +129,7 @@ You are now ready to interact with the Hats contract.
 # Mint a tophat  
 Minting a tophat creates the root of a new Hats tree. Hats trees can be very large, very small, or even just a single hat — but they all start with a tophat.
 
-You can mint a tophat with the ` mintTopHat` function, which creates and mints a hat that is its own admin*, i.e. a "`topHat`.
+You can mint a tophat with the `mintTopHat` function, which creates and mints a hat that is its own admin*, i.e. a `topHat`.
 
 
 _*Note: New functionality is coming soon that will enable tophats and their associated trees to be linked and unlinked to other existing Hats trees, by changing the admin of a tophat._
@@ -222,7 +222,7 @@ You can create a hat using the `createHat` function. Note that the account/addre
    </td>
   </tr>
   <tr>
-   <td><code>_admin</code_>
+   <td><code>_admin</code>
    </td>
    <td><code>uint32</code>
    </td>
@@ -230,7 +230,7 @@ You can create a hat using the `createHat` function. Note that the account/addre
    </td>
   </tr>
   <tr>
-   <td><code>_details</code_>
+   <td><code>_details</code>
    </td>
    <td><code>string</code>
    </td>
@@ -238,7 +238,7 @@ You can create a hat using the `createHat` function. Note that the account/addre
    </td>
   </tr>
   <tr>
-   <td><code>_maxSupply</code_>
+   <td><code>_maxSupply</code>
    </td>
    <td><code>uint32</code>
    </td>
@@ -246,7 +246,7 @@ You can create a hat using the `createHat` function. Note that the account/addre
    </td>
   </tr>
   <tr>
-   <td><code>_eligibility</code_>
+   <td><code>_eligibility</code>
    </td>
    <td><code>address</code>
    </td>
@@ -254,7 +254,7 @@ You can create a hat using the `createHat` function. Note that the account/addre
    </td>
   </tr>
   <tr>
-   <td><code>_toggle</code_>
+   <td><code>_toggle</code>
    </td>
    <td><code>address</code>
    </td>
@@ -262,7 +262,7 @@ You can create a hat using the `createHat` function. Note that the account/addre
    </td>
   </tr>
   <tr>
-   <td><code>_mutable</code_>
+   <td><code>_mutable</code>
    </td>
    <td><code>bool</code>
    </td>
@@ -270,7 +270,7 @@ You can create a hat using the `createHat` function. Note that the account/addre
    </td>
   </tr>
   <tr>
-   <td><code>_imageURI</code_>
+   <td><code>_imageURI</code>
    </td>
    <td><code>string</code>
    </td>
@@ -321,7 +321,7 @@ You can mint a hat with the `mintHat` function, which mints the hat as an ERC115
    </td>
   </tr>
   <tr>
-   <td><code>_hatId</code_>
+   <td><code>_hatId</code>
    </td>
    <td><code>uint32</code>
    </td>
@@ -329,7 +329,7 @@ You can mint a hat with the `mintHat` function, which mints the hat as an ERC115
    </td>
   </tr>
   <tr>
-   <td><code>_wearer</code_>
+   <td><code>_wearer</code>
    </td>
    <td><code>address</code>  
    </td>
