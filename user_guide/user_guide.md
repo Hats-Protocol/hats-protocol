@@ -109,14 +109,14 @@ Hats v0.6-beta is deployed on three networks. Links to contracts below.
 
 Confirm you see the Hats contract address at the top of the page:
 
-  ![Contract Address](/assets/contractAddress.png)
+  ![Contract Address](./assets/contractAddress.png)
 
 _NOTE: Images included from Gnosisscan (Gnosis Chain), however, the instructions are the exact same for Polygonscan (Polygon), and Etherscan (Goerli)._
 
 ## Step 2: Select “Write Contract” in Contract section and connect wallet
 
 
-  ![Connect wallet](/assets/connectWallet.gif)
+  ![Connect wallet](./assets/connectWallet.gif)
 
 You are now ready to interact with the Hats contract.
 
@@ -139,7 +139,7 @@ _*Note: New functionality is coming soon that will enable tophats and their asso
 
   <summary>3-second tutorial to mint a tophat</summary>
 
-  ![Mint a tophat](/assets/mintTopHat.gif)
+  ![Mint a tophat](./assets/mintTopHat.gif)
 
 </details>
 
@@ -187,7 +187,7 @@ Sign the transaction when prompted.
 ## Step 3: Click “View your transaction” and save log information
 Once the transaction executes click “View your transaction”, which will take you to a [screen like this](https://gnosisscan.io/tx/0xdb6ce23a6a118f314f10835d999a74e9d2799a899673e4dfdbe16a1a00058b43#eventlog).
 
-  ![Mint top hat transaction page](/assets/mintTopHatTx.png)
+  ![Mint top hat transaction page](./assets/mintTopHatTx.png)
 
 
 Be sure to bookmark this page and/or make sure you have an easy way to access it.
@@ -206,7 +206,7 @@ You can create a hat using the `createHat` function. Note that the account/addre
 
   <summary>3-second tutorial to create a hat</summary>
 
-  ![Create a hat](/assets/createHat.gif)
+  ![Create a hat](./assets/createHat.gif)
 
 </details>
 
@@ -286,7 +286,7 @@ Sign the transaction when prompted.
 ## Step 3: Click “View your transaction” and save log information
 Once the transaction executes click “View your transaction”, which will take you to a [screen like this](https://gnosisscan.io/tx/0xeee8a13c62ddd7904c991f1d4d7006ac313b7cf05b2b30d1469aa26dab66615b#eventlog).
 
-![Create a transaction page](/assets/createHatTx.png)
+![Create a transaction page](./assets/createHatTx.png)
 
 Be sure to bookmark this page and/or make sure you have an easy way to access it.
 
@@ -305,7 +305,7 @@ You can mint a hat with the `mintHat` function, which mints the hat as an ERC115
 
   <summary>3-second tutorial to mint a hat</summary>
 
-  ![Mint a hat](/assets/mintHat.gif)
+  ![Mint a hat](./assets/mintHat.gif)
 
 </details>
 
@@ -345,7 +345,7 @@ Sign the transaction when prompted.
 ## Step 3: Click “View your transaction” and save log information
 Once the transaction executes click “View your transaction”, which will take you to a [screen like this](https://gnosisscan.io/tx/0x1bc1ade008919503de107622438b028cd4782af8627d65a9e0e9d2fedcf0ff60#eventlog).
 
-  ![Mint a hat transaction page](/assets/mintHatTx.png)
+  ![Mint a hat transaction page](./assets/mintHatTx.png)
 
 Be sure to bookmark this page and/or make sure you have an easy way to access it.
 
@@ -366,7 +366,7 @@ The eligibility and toggle design space is huge. Future guides will dive deeper 
 
   <summary>3-second tutorial to change hat eligibility</summary>
 
-  ![Change hat eligibility](/assets/changeHatEligibility.gif)
+  ![Change hat eligibility](./assets/changeHatEligibility.gif)
 
 </details>
 
@@ -406,7 +406,7 @@ Sign the transaction when prompted.
 ## Step 3: Click “View your transaction” and save log information
 Once the transaction executes click “View your transaction”, which will take you to a [screen like this](https://gnosisscan.io/tx/0xaa4b7410d14aa8581236d5df892d208584e9528abd6e0a43eda13eec9470b298#eventlog).
 
-  ![Change hat eligibility transaction page](/assets/changeHatEligibilityTx.png)
+  ![Change hat eligibility transaction page](./assets/changeHatEligibilityTx.png)
 
 Be sure to bookmark this page and/or make sure you have an easy way to access it.
 
@@ -419,7 +419,7 @@ Be sure to bookmark this page and/or make sure you have an easy way to access it
 
   <summary>3-second tutorial to change hat toggle</summary>
 
-  ![Change hat toggle](/assets/changeHatToggle.gif)
+  ![Change hat toggle](./assets/changeHatToggle.gif)
 
 </details>
 
@@ -455,7 +455,7 @@ Be sure to bookmark this page and/or make sure you have an easy way to access it
 ## Step 2: Enter parameters and click “Write”
 Once the transaction executes click “View your transaction”, which will take you to a [screen like this](https://gnosisscan.io/tx/0x4f92a5043ab3cdc45376fe8da4392aac55d55f9700234d3a8bf300cb7f74c80a).
 
-  ![Change hat toggle transaction page](/assets/changeHatToggleTx.png)
+  ![Change hat toggle transaction page](./assets/changeHatToggleTx.png)
 
 Be sure to bookmark this page and/or make sure you have an easy way to access it.
 
@@ -469,7 +469,7 @@ Platforms like [Collab.Land](https://www.collab.land/) and [Guild](https://guild
 
 
 # Example: token gate Telegram access
-![Token Gate Telegram](/assets/tokenGate_telegram.gif)
+![Token Gate Telegram](./assets/tokenGate_telegram.gif)
 
 
 
@@ -481,7 +481,7 @@ You can follow [these instructions](https://docs.guild.xyz/guild/guides/readme) 
 ## Step 2: Get the contract address and hat id
 On the `mintHat` transaction page, click “View NFT”:
 
-  ![View NFT transaction page](/assets/tokenGate_viewNFT.png)
+  ![View NFT transaction page](./assets/tokenGate_viewNFT.png)
 
 Now copy the Contract Address and Token ID (hat id).
 
