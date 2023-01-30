@@ -1039,9 +1039,30 @@ contract ToggleSetHatsTest is TestSetup2 {
         vm.prank(address(nonWearer));
         hats.setHatStatus(secondHatId, true);
     }
+
+    function testCannotSetToggleOffToArbitrarilyIncrementHatSupply() public {
+        // hat gets toggled off
+        vm.prank(address(_toggle));
+        hats.setHatStatus(secondHatId, false);
+
+        // artificially mint again to secondWearer
+        vm.prank(topHatWearer);
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, secondWearer, secondHatId));
+
+        hats.mintHat(secondHatId, secondWearer);
+
+        (,, retsupply,,,,,,) = hats.viewHat(secondHatId);
+        assertEq(retsupply, 1);
+
+        // toggle hat back on
+        vm.prank(address(_toggle));
+        hats.setHatStatus(secondHatId, true);
+        assertEq(hats.balanceOf(secondWearer, secondHatId), 1);
+    }
 }
 
-contract ToggleGetHatsTest is TestSetup2 {
+contract ToggleChecktHatsTest is TestSetup2 {
     function testCannotCheckHatStatusNoFunctionInToggleContract() public {
         // expect NotHatsToggle error
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatsToggle.selector));
@@ -1082,6 +1103,27 @@ contract ToggleGetHatsTest is TestSetup2 {
         (,,,,,,,, active_) = hats.viewHat(secondHatId);
         assertTrue(active_);
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
+    }
+
+    function testCannotCheckToggleOffToArbitrarilyIncrementHatSupply() public {
+        // hat gets toggled off
+        // encode mock for function inside toggle contract to return false
+        vm.mockCall(address(_toggle), abi.encodeWithSignature("getHatStatus(uint256)", secondHatId), abi.encode(false));
+
+        // artificially mint again to secondWearer
+        vm.prank(topHatWearer);
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, secondWearer, secondHatId));
+
+        hats.mintHat(secondHatId, secondWearer);
+
+        (,, retsupply,,,,,,) = hats.viewHat(secondHatId);
+        assertEq(retsupply, 1);
+
+        // toggle hat back on
+        // encode mock for function inside toggle contract to return false
+        vm.mockCall(address(_toggle), abi.encodeWithSignature("getHatStatus(uint256)", secondHatId), abi.encode(true));
+        assertEq(hats.balanceOf(secondWearer, secondHatId), 1);
     }
 }
 
