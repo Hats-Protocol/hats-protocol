@@ -245,7 +245,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             revert AllHatsWorn(_hatId);
         }
 
-        if (isWearerOfHat(_wearer, _hatId)) {
+        // Check if recipient is already wearing hat; checks storage to maintain balance == 1 invariant
+        if (_balanceOf[_wearer][_hatId] > 0) {
             revert AlreadyWearingHat(_wearer, _hatId);
         }
 
@@ -509,13 +510,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
 
         //Adjust balances
-
-        unchecked {
-            // should not underflow given NotHatWearer check above
-            --_balanceOf[_from][_hatId];
-            // should not overflow given AlreadyWearingHat check above
-            ++_balanceOf[_to][_hatId];
-        }
+        _balanceOf[_from][_hatId] = 0;
+        _balanceOf[_to][_hatId] = 1;
 
         emit TransferSingle(msg.sender, _from, _to, _hatId, 1);
     }
