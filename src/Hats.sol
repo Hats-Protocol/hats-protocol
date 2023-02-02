@@ -929,8 +929,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /// @notice Constructs the URI for a Hat, using data from the Hat struct
     /// @param _hatId The id of the Hat
-    /// @return uri An ERC1155-compatible JSON string
-    function _constructURI(uint256 _hatId) internal view returns (string memory uri) {
+    /// @return _uri An ERC1155-compatible JSON string
+    function _constructURI(uint256 _hatId) internal view returns (string memory _uri) {
         Hat storage hat = _hats[_hatId];
 
         uint256 hatAdmin;
@@ -972,7 +972,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             '"'
         );
 
-        uri = string(
+        _uri = string(
             abi.encodePacked(
                 "data:application/json;base64,",
                 Base64.encode(
