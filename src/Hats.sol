@@ -457,7 +457,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /// @notice Internal function to set a hat's status in storage
     /// @dev Flips the 0th bit of _hat.config via bitwise operation
-    /// @param _hat Pointer the Hat object in storage
+    /// @param _hat Pointer to the Hat object in storage
     /// @param _status The status to set for the hat
     function _setHatStatus(Hat storage _hat, bool _status) internal {
         if (_status) {
@@ -798,7 +798,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /// @notice Checks the active status of a hat
     /// @dev For internal use instead of `isActive` when passing Hat as param is preferable
-    /// @param _hat Pointer the Hat object in storage
+    /// @param _hat Pointer to the Hat object in storage
     /// @param _hatId The id of the hat
     /// @return isActive Whether the hat is active
     function _isActive(Hat storage _hat, uint256 _hatId) internal view returns (bool isActive) {
@@ -815,7 +815,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /// @notice Internal function to retrieve a hat's status from storage
     /// @dev reads the 0th bit of the hat's config
-    /// @param _hat Pointer the Hat object in storage
+    /// @param _hat Pointer to the Hat object in storage
     /// @return isActive Whether the hat is active
     function _getHatStatus(Hat storage _hat) internal view returns (bool isActive) {
         isActive = (_hat.config >> 95 != 0);
@@ -823,7 +823,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /// @notice Internal function to retrieve a hat's mutability setting
     /// @dev reads the 1st bit of the hat's config
-    /// @param _hat Pointer the Hat object in storage
+    /// @param _hat Pointer to the Hat object in storage
     /// @return isMutable Whether the hat is mutable
     function _isMutable(Hat storage _hat) internal view returns (bool isMutable) {
         isMutable = (_hat.config & uint96(1 << 94) != 0);
@@ -849,7 +849,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @notice Internal call to check whether an address is eligible for a given Hat
     /// @dev Tries an external call to the Hat's eligibility module, defaulting to existing badStandings state if the call fails (ie if the eligibility module address does not conform to the IHatsEligibility interface)
     /// @param _wearer The address of the Hat wearer
-    /// @param _hat Pointer the Hat object in storage
+    /// @param _hat Pointer to the Hat object in storage
     /// @param _hatId The id of the Hat
     /// @return eligible Whether the wearer is eligible for the Hat
     function _isEligible(address _wearer, Hat storage _hat, uint256 _hatId) internal view returns (bool eligible) {
