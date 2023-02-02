@@ -201,7 +201,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (!sameLengths) revert BatchArrayLengthMismatch();
 
         // loop through and create each hat
-        for (uint256 i = 0; i < length;) {
+        for (uint256 i; i < length;) {
             createHat(
                 _admins[i],
                 _details[i],
@@ -264,7 +264,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256 length = _hatIds.length;
         if (length != _wearers.length) revert BatchArrayLengthMismatch();
 
-        for (uint256 i = 0; i < length;) {
+        for (uint256 i; i < length;) {
             mintHat(_hatIds[i], _wearers[i]);
             unchecked {
                 ++i;
