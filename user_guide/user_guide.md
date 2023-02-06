@@ -1,6 +1,7 @@
 # Hats Protocol Self-Service Documentation
 
-<span style="color: red; font-weight: bold">  _DRAFT </span>Last updated: 26 January 2023_<br>
+
+<span style="color: red; font-weight: bold">   DRAFT </span>Last updated: 6 February  
 
 _Please add comments as you use this draft guide for anything that you feel could be clarified, improved, or added — thank you!_
 
@@ -43,19 +44,19 @@ _Images included from [Gnosisscan](https://gnosisscan.io/). However, this guide 
 # Contents
 - [tl;dr](#tldr) - _3-second tutorials of each action_
 - [Setup](#setup) - _How to interact with hats via block explorer_
-- [Mint a tophat](#mint-a-tophat) - _Mint the root of your hat tree_
+- [Mint a Top Hat](#mint-a-top-hat) - _Mint the root of your hat tree_
 - [Create a hat](#create-a-hat) - _Create a hat with new responsibilities and authorities_
 - [Mint a hat](#mint-a-hat) - _Assign a hat to an address_
-- [Eligibility and toggle](#eligitibility-and-toggle) - _Intro to Hats Protocol's most powerful module_
+- [Eligibility and toggle](#eligibility-and-toggle) - _Intro to Hats Protocol's most powerful module_
 - [Token gating](#token-gating) - _Use hat id to gate access to external tools and applications_
 
 # tl;dr
 _Expand and collapse each section to see the 3-second tutorial to complete each action._
 <details>
 
-  <summary>Mint a tophat</summary>
+  <summary>Mint a Top Hat</summary>
 
-  ![Mint a tophat](./assets/mintTopHat.gif)
+  ![Mint a Top Hat](./assets/mintTopHat.gif)
 
 </details>
 <details>
@@ -113,37 +114,49 @@ Confirm you see the Hats contract address at the top of the page:
 
 _NOTE: Images included from Gnosisscan (Gnosis Chain), however, the instructions are the exact same for Polygonscan (Polygon), and Etherscan (Goerli)._
 
+<!-- @nintynick to provide warning lanugage about connecting wallet -->
 ## Step 2: Select “Write Contract” in Contract section and connect wallet
 
+
+> Hats is currently in beta and should be used at your own risk. We take security seriously and our contracts have been thoroughly tested but are pending audit and bugs may still exist.
 
   ![Connect wallet](./assets/connectWallet.gif)
 
 You are now ready to interact with the Hats contract.
 
 ## Step 3: Proceed to your desired action
-- [Mint a tophat](#mint-a-tophat)
+- [Mint a Top Hat](#mint-a-top-hat)
 - [Create a hat](#create-a-hat)
 - [Mint a hat](#mint-a-hat)
 
 
-# Mint a tophat  
-Minting a tophat creates the root of a new Hats tree. Hats trees can be very large, very small, or even just a single hat — but they all start with a tophat.
+# Mint a Top Hat  
+Minting a Top Hat creates the root of a new Hats tree. Hats trees can be very large, very small, or even just a single hat — but they all start with a Top Hat. 
 
-You can mint a tophat with the `mintTopHat` function, which creates and mints a hat that is its own admin*, i.e. a `topHat`.
+Top Hats have special characteristics that distinguish them from other hat types:
+- They are their own admin
+- They are always immutable except they can change their own details and image fields*
+- They can be linked*
+- They can transfer themselves
+
+*_These characteristics are new in v1_
 
 
-_*Note: New functionality is coming soon that will enable tophats and their associated trees to be linked and unlinked to other existing Hats trees, by changing the admin of a tophat._
+You can mint a Top Hat with the `mintTopHat` function, which creates and mints a hat that is its own admin*, i.e. a `topHat`.
+
+
+_*Note: New functionality is coming soon that will enable Top Hats and their associated trees to be linked and unlinked to other existing Hats trees, by changing the admin of a Top Hat._
 
 ## tl;dr
 <details>
 
-  <summary>3-second tutorial to mint a tophat</summary>
+  <summary>3-second tutorial to mint a Top Hat</summary>
 
-  ![Mint a tophat](./assets/mintTopHat.gif)
+  ![Mint a Top Hat](./assets/mintTopHat.gif)
 
 </details>
 
-## Step 1: Determine mintTopHat parameters
+## Step 1: Determine `mintTopHat` parameters
 
 <table>
   <tr>
@@ -155,23 +168,23 @@ _*Note: New functionality is coming soon that will enable tophats and their asso
    </td>
   </tr>
   <tr>
-   <td><code>_target</code_>
+   <td><code>target</code>
    </td>
    <td><code>address</code>
    </td>
-   <td>The address to which the newly created <code>topHat</code> is minted
+   <td>The address to which the newly created <code>Top Hat</code> is minted
    </td>
   </tr>
   <tr>
-   <td><code>_details</code_>
+   <td><code>details</code>
    </td>
    <td><code>string</code>
    </td>
-   <td>A description of the hat
+   <td>A description of the hat. Can include the Name, details, and even a link out to a more complete description of a Hat (on IPFS or elsewhere)
    </td>
   </tr>
   <tr>
-   <td><code>_imageURI</code_>
+   <td><code>imageURI</code>
    </td>
    <td><code>string</code>
    </td>
@@ -187,19 +200,19 @@ Sign the transaction when prompted.
 ## Step 3: Click “View your transaction” and save log information
 Once the transaction executes click “View your transaction”, which will take you to a [screen like this](https://gnosisscan.io/tx/0xdb6ce23a6a118f314f10835d999a74e9d2799a899673e4dfdbe16a1a00058b43#eventlog).
 
-  ![Mint top hat transaction page](./assets/mintTopHatTx.png)
+  ![Mint Top Hat transaction page](./assets/mintTopHatTx.png)
 
 
 Be sure to bookmark this page and/or make sure you have an easy way to access it.
 
-The `id` in the Data section is the Hat id that you will use as an input for the `_admin` parameter when you create your next hat in the Hats tree.
+The `id` in the Data section is the Hat id that you will use as an input for the `admin` parameter when you create your next hat in the Hats tree.
 
-**Congratulations! You’ve created a tophat and the start of a new Hats tree.** 🎩
+**Congratulations! You’ve created a Top Hat and the start of a new Hats tree.** 🎩
 
 # Create a hat
 Creating a hat generates a new hat to which you can attach specific responsibilities, eligibility criteria for who can wear the hat, toggle criteria to determine when the hat should be active or deactivated, a unique image, and specific authorities or permissions (by plugging in the hat’s ID into token gates).
 
-You can create a hat using the `createHat` function. Note that the account/address you use to create the hat must be wearing the `_admin` hat (or one of _its_ admin hats).
+You can create a hat using the `createHat` function. Note that the account/address you use to create the hat must be wearing the `admin` hat (or one of _its_ admin hats).
 
 ## tl;dr
 <details>
@@ -222,15 +235,15 @@ You can create a hat using the `createHat` function. Note that the account/addre
    </td>
   </tr>
   <tr>
-   <td><code>_admin</code>
+   <td><code>admin</code>
    </td>
    <td><code>uint32</code>
    </td>
-   <td>The id of the Hat that will control who wears the newly created hat (if you are wearing a specific hat and wish to create new hats that you have admin rights for, you will enter the id of your hat here)
+   <td>The id of the Hat that will control the minting and granting for the newly created hat (if you are wearing a specific hat and wish to create new hats that you have admin rights for, you will enter the id of your hat here)
    </td>
   </tr>
   <tr>
-   <td><code>_details</code>
+   <td><code>details</code>
    </td>
    <td><code>string</code>
    </td>
@@ -238,7 +251,7 @@ You can create a hat using the `createHat` function. Note that the account/addre
    </td>
   </tr>
   <tr>
-   <td><code>_maxSupply</code>
+   <td><code>maxSupply</code>
    </td>
    <td><code>uint32</code>
    </td>
@@ -246,23 +259,23 @@ You can create a hat using the `createHat` function. Note that the account/addre
    </td>
   </tr>
   <tr>
-   <td><code>_eligibility</code>
+   <td><code>eligibility</code>
    </td>
    <td><code>address</code>
    </td>
-   <td>The address that can report on the hat wearer's status
+   <td>The address that can report on the hat wearer's status and has authority to revoke the hat. Addresses can be an EOA, multisig, DAO, or smart contract.
    </td>
   </tr>
   <tr>
-   <td><code>_toggle</code>
+   <td><code>toggle</code>
    </td>
    <td><code>address</code>
    </td>
-   <td>The address that can deactivate the hat
+   <td>The address that can deactivate the hat. Addresses can be an EOA, multisig, DAO, or smart contract.
    </td>
   </tr>
   <tr>
-   <td><code>_mutable</code>
+   <td><code>mutable</code>
    </td>
    <td><code>bool</code>
    </td>
@@ -270,11 +283,11 @@ You can create a hat using the `createHat` function. Note that the account/addre
    </td>
   </tr>
   <tr>
-   <td><code>_imageURI</code>
+   <td><code>imageURI</code>
    </td>
    <td><code>string</code>
    </td>
-   <td>The image uri for this hat and the fallback for its downstream hats
+   <td>The imageURI for this hat and the fallback for its downstream hats. The direct IPFS uri will be the most robust to points of failure. DAOs/orgs that host their own images can also use their respecitve URLs.
    </td>
   </tr>
 </table>
@@ -290,13 +303,15 @@ Once the transaction executes click “View your transaction”, which will take
 
 Be sure to bookmark this page and/or make sure you have an easy way to access it.
 
-The id in the Data section is the hat id that you will use as an input for the `_wearer` parameter for when you associate this hat with other addresses.
+The id in the Data section is the hat id that you will use as an input for the `wearer` parameter for when you associate this hat with other addresses.
 
 **Congrats! You’ve created a hat. 🧢**
 
 # Mint a hat
 
 Minting a hat causes a hat to be “worn” by a specific address. As a result, minting a hat gives an address the associated responsibilities and authorities associated with the Hat — as long as that address is eligible to wear the hat based on the hat’s eligibility module, and as long as that hat is active as determined by the hat’s toggle module. Multiple addresses can wear a given hat, up to the max supply of that hat.
+
+Think about a hat like a "job-in-a-box". Each hat has properties that give its wearer the ability to take certain actions under specified conditions. Adding responsibilities and authorities to a hat is something that happens between `createHat` and `mintHat` (and possibly after as well).
 
 You can mint a hat with the `mintHat` function, which mints the hat as an ERC1155 token to a recipient, who then "wears" the hat. Like with creating a hat, the account/address you use to mint a hat must be wearing the hat’s admin hat (or one of _its_ admin hats).
 
@@ -321,7 +336,7 @@ You can mint a hat with the `mintHat` function, which mints the hat as an ERC115
    </td>
   </tr>
   <tr>
-   <td><code>_hatId</code>
+   <td><code>hatId</code>
    </td>
    <td><code>uint32</code>
    </td>
@@ -329,7 +344,7 @@ You can mint a hat with the `mintHat` function, which mints the hat as an ERC115
    </td>
   </tr>
   <tr>
-   <td><code>_wearer</code>
+   <td><code>wearer</code>
    </td>
    <td><code>address</code>  
    </td>
@@ -347,8 +362,6 @@ Once the transaction executes click “View your transaction”, which will take
 
   ![Mint a hat transaction page](./assets/mintHatTx.png)
 
-Be sure to bookmark this page and/or make sure you have an easy way to access it.
-
 **Congrats! You’ve minted a hat. 🧢 The associated address is now wearing the hat, provided the address is eligible and the hat is active.**
 
 
@@ -356,6 +369,8 @@ Be sure to bookmark this page and/or make sure you have an easy way to access it
 Eligibility and toggle are dynamic and extensible modules that have the authority to rule on a hat wearer’s eligibility and standing (eligibility module) and switch the status of a hat (toggle module).
 
 The eligibility and toggle design space is huge. Future guides will dive deeper and explore more complex implementations of eligibility and toggle logic. This guide focuses on a simple implementation: setting eligibility and toggle as an address that determines eligibility and toggle for a given hat. This involves two contracts: `changeHatEligibility` and `changeHatToggle`.
+
+By default, we recommend setting the eligibility and toggle addresses to the DAO's address (or the address wearing the Top Hat), so that the DAO retains the power to revoke hats and turn them off by vote, until more structure is put in place." might also be good to mention this when creating the hat in the first place.
 
 
 # Change hat eligibility
@@ -383,7 +398,7 @@ The eligibility and toggle design space is huge. Future guides will dive deeper 
    </td>
   </tr>
   <tr>
-   <td><code>_hatId</code_>
+   <td><code>hatId</code>
    </td>
    <td><code>uint256</code>
    </td>
@@ -391,7 +406,7 @@ The eligibility and toggle design space is huge. Future guides will dive deeper 
    </td>
   </tr>
   <tr>
-   <td><code>_newEligibility</code_>
+   <td><code>newEligibility</code>
    </td>
    <td><code>address</code>
    </td>
@@ -435,7 +450,7 @@ Be sure to bookmark this page and/or make sure you have an easy way to access it
    </td>
   </tr>
   <tr>
-   <td><code>_hatId</code_>
+   <td><code>hatId</code>
    </td>
    <td><code>uint256</code>
    </td>
@@ -443,7 +458,7 @@ Be sure to bookmark this page and/or make sure you have an easy way to access it
    </td>
   </tr>
   <tr>
-   <td><code>_newEligibility</code_>
+   <td><code>newEligibility</code>
    </td>
    <td><code>address</code>
    </td>
