@@ -64,7 +64,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
     /// @return id The constructed hat id
     function buildHatId(uint256 _admin, uint16 _newHat) public pure returns (uint256 id) {
         uint256 mask;
-        for (uint256 i = 0; i < MAX_LEVELS;) {
+        for (uint256 i; i < MAX_LEVELS;) {
             unchecked {
                 mask = uint256(
                     type(uint256).max

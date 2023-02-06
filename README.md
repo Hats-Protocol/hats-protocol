@@ -381,6 +381,8 @@ Spencer Graham - [@spengrah](https://twitter.com/spengrah)
 
 nintynick - [@nintynick_](https://twitter.com/nintynick_)
 
+David Ehrlichman - [@davehrlichman](https://twitter.com/davehrlichman)
+
 Project Website: [https://hatsprotocol.xyz/](https://hatsprotocol.xyz)
 
 Project Link: [https://github.com/Hats-Protocol/hats-protocol/](https://github.com/Hats-Protocol/hats-protocol/)
