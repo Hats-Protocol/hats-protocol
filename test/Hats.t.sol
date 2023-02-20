@@ -334,12 +334,15 @@ contract ImageURITest is TestSetup2 {
 
         string memory uri3 = hats.getImageURIForHat(thirdHatId);
 
-        // assertEq(
-        //     uri3,
-        //     string.concat(secondHatImageURI, Strings.toString(thirdHatId))
-        // );
-
         assertEq(uri3, secondHatImageURI);
+    }
+
+    function testFallbackToTopHatImageURI() public {
+        vm.startPrank(topHatWearer);
+        uint256 newHatId = hats.createHat(topHatId, "new hat", 1, _eligibility, _toggle, false, "");
+
+        hats.getImageURIForHat(newHatId);
+        assertEq(hats.getImageURIForHat(newHatId), topHatImageURI);
     }
 
     function testEmptyTopHatImageURI() public {
@@ -361,14 +364,6 @@ contract ImageURITest is TestSetup2 {
         // assertEq(uri, string.concat(_baseImageURI, Strings.toString(ids[4])));
         assertEq(uri, _baseImageURI);
     }
-
-    // function testChangeGlobalBaseImageURI() public {
-    //     // only the Hats.sol contract owner can change it
-    // }
-
-    // function testNonOwnerCannotChangeGlobalBaseImageURI() public {
-    //     //
-    // }
 }
 
 contract MintHatsTest is TestSetup {

@@ -17,7 +17,7 @@
 pragma solidity >=0.8.13;
 
 import { ERC1155 } from "lib/ERC1155/ERC1155.sol";
-// import "forge-std/Test.sol"; //remove after testing
+// import { console2 } from "forge-std/Test.sol"; //remove after testing
 import "./Interfaces/IHats.sol";
 import "./HatsIdUtilities.sol";
 import "./Interfaces/IHatsToggle.sol";
@@ -918,7 +918,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @return imageURI The imageURI of this hat or, if empty, its admin
     function getImageURIForHat(uint256 _hatId) public view returns (string memory) {
         // check _hatId first to potentially avoid the `getHatLevel` call
-        Hat memory hat = _hats[_hatId]; // TODO change this to storage pointer
+        Hat storage hat = _hats[_hatId];
 
         string memory imageURI = hat.imageURI; // save 1 SLOAD
 
@@ -937,7 +937,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256 id;
 
         // already checked at `level` above, so we start the loop at `level - 1`
-
         for (uint256 i = level - 1; i > 0;) {
             id = getAdminAtLevel(_hatId, uint8(i));
             hat = _hats[id];
@@ -952,7 +951,13 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             }
         }
 
-        // TODO TRST-L-2 - we need to check level 0, ie the tophat level, for an imageURI
+        id = getAdminAtLevel(_hatId, 0);
+        hat = _hats[id];
+        imageURI = hat.imageURI;
+
+        if (bytes(imageURI).length > 0) {
+            return imageURI;
+        }
 
         // if none of _hatId's admins has an imageURI of its own, we again fall back to the global image uri
         return baseImageURI;
