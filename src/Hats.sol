@@ -246,8 +246,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (hat.supply >= hat.maxSupply) {
             revert AllHatsWorn(_hatId);
         }
-        // TODO TRST-H-1: check if the static balance is > 0 instead of the dynamic wearer check
-        if (isWearerOfHat(_wearer, _hatId)) {
+
+        if (_staticBalanceOf(_wearer, _hatId) > 0) {
             revert AlreadyWearingHat(_wearer, _hatId);
         }
 
@@ -437,7 +437,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         returns (bool updated)
     {
         // revoke/burn the hat if _wearer has a positive balance
-        if (_balanceOf[_wearer][_hatId] > 0) {
+        if (_staticBalanceOf(_wearer, _hatId) > 0) {
             // always ineligible if in bad standing
             if (!_eligible || !_standing) {
                 _burnHat(_wearer, _hatId);
@@ -468,6 +468,17 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         } else {
             _hat.config &= ~uint96(1 << 95);
         }
+    }
+
+    /**
+     * @notice Internal function to retrieve an account's internal "static" balance directly from internal storage,
+     * @dev This function bypasses the dynamic `_isActive` and `_isEligible` checks
+     * @param _account The account to check
+     * @param _hatId The hat to check
+     * @return staticBalance The account's static of the hat, from internal storage
+     */
+    function _staticBalanceOf(address _account, uint256 _hatId) internal view returns (uint256 staticBalance) {
+        staticBalance = _balanceOf[_account][_hatId];
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -502,12 +513,12 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
 
         // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
-        if (_balanceOf[_from][_hatId] < 1) {
+        if (_staticBalanceOf(_from, _hatId) < 1) {
             revert NotHatWearer();
         }
 
         // Check if recipient is already wearing hat; also checks storage to maintain balance == 1 invariant
-        if (_balanceOf[_to][_hatId] > 0) {
+        if (_staticBalanceOf(_to, _hatId) > 0) {
             revert AlreadyWearingHat(_to, _hatId);
         }
 
