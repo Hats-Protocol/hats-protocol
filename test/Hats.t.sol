@@ -95,6 +95,18 @@ contract CreateHatsTest is TestSetup {
         assertEq(hats.getAdminAtLevel(ids[1], 1), ids[0]);
         assertEq(hats.getAdminAtLevel(ids[2], 2), ids[1]);
     }
+
+    function testCannotCreateHatWithZeroAddressEligibility() public {
+        vm.expectRevert(HatsErrors.ZeroAddress.selector);
+        vm.prank(topHatWearer);
+        thirdHatId = hats.createHat(topHatId, _details, _maxSupply, address(0), _toggle, true, thirdHatImageURI);
+    }
+
+    function testCannotCreateHatWithZeroAddressToggle() public {
+        vm.expectRevert(HatsErrors.ZeroAddress.selector);
+        vm.prank(topHatWearer);
+        thirdHatId = hats.createHat(topHatId, _details, _maxSupply, _eligibility, address(0), true, thirdHatImageURI);
+    }
 }
 
 contract BatchCreateHats is TestSetupBatch {
@@ -1404,6 +1416,18 @@ contract MutabilityTests is TestSetupMutable {
 
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
         hats.transferHat(thirdHatId, thirdWearer, secondWearer);
+    }
+
+    function testAdminCannotChangeEligibilityToZeroAddress() public {
+        vm.expectRevert(HatsErrors.ZeroAddress.selector);
+        vm.prank(topHatWearer);
+        hats.changeHatEligibility(secondHatId, address(0));
+    }
+
+    function testAdminCannotChangeToggleToZeroAddress() public {
+        vm.expectRevert(HatsErrors.ZeroAddress.selector);
+        vm.prank(topHatWearer);
+        hats.changeHatToggle(secondHatId, address(0));
     }
 }
 

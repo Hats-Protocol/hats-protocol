@@ -153,6 +153,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             revert MaxLevelsReached();
         }
 
+        if (_eligibility == address(0)) revert ZeroAddress();
+        if (_toggle == address(0)) revert ZeroAddress();
+
         newHatId = getNextId(_admin);
 
         // to create a hat, you must be wearing one of its admin hats
@@ -573,7 +576,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hatId The id of the Hat to change
     /// @param _newEligibility The new eligibility module
     function changeHatEligibility(uint256 _hatId, address _newEligibility) external {
-        // TODO TRST-L-5 - check for address 0?
+        if (_newEligibility == address(0)) revert ZeroAddress();
+
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 
@@ -591,7 +595,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hatId The id of the Hat to change
     /// @param _newToggle The new toggle module
     function changeHatToggle(uint256 _hatId, address _newToggle) external {
-        // TODO TRST-L-5 - check for address 0?
+        if (_newToggle == address(0)) revert ZeroAddress();
+
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 

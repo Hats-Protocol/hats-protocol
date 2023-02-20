@@ -62,4 +62,7 @@ interface HatsErrors {
 
     /// @notice Emitted when attempting to link a tophat without a request
     error LinkageNotRequested();
+
+    /// @notice Emmited when attempted to change a hat's eligibility or toggle module to the zero address
+    error ZeroAddress();
 }
