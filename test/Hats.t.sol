@@ -972,13 +972,33 @@ contract RenounceHatsTest is TestSetup2 {
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 
-    function testCannotRenounceHatAsNonWearer() public {
+    function testCannotRenounceHatAsNonWearerWithNoStaticBalance() public {
         // expect NotHatWearer error
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatWearer.selector));
 
         //  6-1. attempt to renounce from non-wearer
         vm.prank(address(nonWearer));
         hats.renounceHat(secondHatId);
+    }
+
+    function testCanRenounceHatAsNonWearerWithStaticBalance() public {
+        // hat gets toggled off
+        // encode mock for function inside toggle contract to return false
+        vm.mockCall(address(_toggle), abi.encodeWithSignature("getHatStatus(uint256)", secondHatId), abi.encode(false));
+
+        // show that admin can't mint again to secondWearer, ie because they have a static balance
+        vm.prank(topHatWearer);
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, secondWearer, secondHatId));
+        hats.mintHat(secondHatId, secondWearer);
+        assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
+
+        // renounce should now succeed
+        vm.prank(address(secondWearer));
+        hats.renounceHat(secondHatId);
+
+        // now, admin should be able to mint again
+        vm.prank(topHatWearer);
+        hats.mintHat(secondHatId, secondWearer);
     }
 }
 

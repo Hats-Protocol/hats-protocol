@@ -364,8 +364,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev Burns the msg.sender's hat
     /// @param _hatId The id of the Hat being renounced
     function renounceHat(uint256 _hatId) external {
-        // TODO TRST-M-7 - check the static balance instead of the dynamic wearer check
-        if (!isWearerOfHat(msg.sender, _hatId)) {
+        if (_staticBalanceOf(msg.sender, _hatId) < 1) {
             revert NotHatWearer();
         }
         // remove the hat
