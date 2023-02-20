@@ -304,7 +304,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         (bool success, bytes memory returndata) = hat.toggle.staticcall(data);
 
         // if function call succeeds with data of length > 0
-        // then we know the contract exists and has the getWearerStatus function // TODO correct to getHatStatus
+        // then we know the contract exists and has the getHatStatus function
         if (success && returndata.length > 0) {
             newStatus = abi.decode(returndata, (bool));
         } else {
@@ -642,9 +642,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (_newMaxSupply < hat.supply) {
             revert NewMaxSupplyTooLow();
         }
-        // TODO only do these actions if _newMaxSupply != hat.maxSupply
-        hat.maxSupply = _newMaxSupply;
-        emit HatMaxSupplyChanged(_hatId, _newMaxSupply);
+
+        if (_newMaxSupply != hat.maxSupply) {
+            hat.maxSupply = _newMaxSupply;
+            emit HatMaxSupplyChanged(_hatId, _newMaxSupply);
+        }
     }
 
     /// @notice Submits a request to link a Hat Tree under a parent tree. Requests can be
@@ -668,7 +670,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Approve a request to link a Tree under a parent tree
-    /// @dev Requests can only be approved by an admin of the `_newAdminHat`, and there // TODO add in wearer here
+    /// @dev Requests can only be approved by wearer or an admin of the `_newAdminHat`, and there
     ///      can only be one link per tree root at a given time.
     /// @param _topHatDomain The 32 bit domain of the tophat to link
     /// @param _newAdminHat The hat that will administer the linked tree
@@ -989,7 +991,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             '", "id": "',
             LibString.toString(_hatId),
             '", "pretty id": "',
-            "{id}", // TODO change to LibString.toHexString(_hatId, 32)
+            LibString.toHexString(_hatId, 32),
             '",'
         );
 
