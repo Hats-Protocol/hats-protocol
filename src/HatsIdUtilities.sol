@@ -58,7 +58,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
     uint256 internal constant MAX_LEVELS = 14;
 
     /// @notice Constructs a valid hat id for a new hat underneath a given admin
-    /// @dev Check hats[_admin].lastHatId for the previous hat created underneath _admin
+    /// @dev Check hats[_admin].lastHatId for the previous hat created underneath _admin // TODO remove
     /// @param _admin the id of the admin for the new hat
     /// @param _newHat the uint16 id of the new hat
     /// @return id The constructed hat id
@@ -107,6 +107,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
                 ++i;
             }
         }
+        // TODO use getTopHatDomain here
         uint256 treeAdmin = linkedTreeAdmins[uint32(_hatId >> (256 - TOPHAT_ADDRESS_SPACE))];
 
         if (treeAdmin != 0) {

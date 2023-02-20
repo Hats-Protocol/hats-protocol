@@ -149,6 +149,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         bool _mutable,
         string memory _imageURI
     ) public returns (uint256 newHatId) {
+        // TODO TRST-L-1 - change to uint16 to match LOWER_LEVEL_ADDRESS_SPACE correctly
+        // do we also need to check if there are linked hats?
         if (uint8(_admin) > 0) {
             revert MaxLevelsReached();
         }
@@ -244,7 +246,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (hat.supply >= hat.maxSupply) {
             revert AllHatsWorn(_hatId);
         }
-
+        // TODO TRST-H-1: check if the static balance is > 0 instead of the dynamic wearer check
         if (isWearerOfHat(_wearer, _hatId)) {
             revert AlreadyWearingHat(_wearer, _hatId);
         }
@@ -301,7 +303,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         (bool success, bytes memory returndata) = hat.toggle.staticcall(data);
 
         // if function call succeeds with data of length > 0
-        // then we know the contract exists and has the getWearerStatus function
+        // then we know the contract exists and has the getWearerStatus function // TODO correct to getHatStatus
         if (success && returndata.length > 0) {
             newStatus = abi.decode(returndata, (bool));
         } else {
@@ -362,6 +364,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev Burns the msg.sender's hat
     /// @param _hatId The id of the Hat being renounced
     function renounceHat(uint256 _hatId) external {
+        // TODO TRST-M-7 - check the static balance instead of the dynamic wearer check
         if (!isWearerOfHat(msg.sender, _hatId)) {
             revert NotHatWearer();
         }
@@ -508,6 +511,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             revert AlreadyWearingHat(_to, _hatId);
         }
 
+        // TODO TRST-M-4 - check if _to is eligible for the hat
+
         //Adjust balances
 
         unchecked {
@@ -560,6 +565,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hatId The id of the Hat to change
     /// @param _newEligibility The new eligibility module
     function changeHatEligibility(uint256 _hatId, address _newEligibility) external {
+        // TODO TRST-L-5 - check for address 0?
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 
@@ -577,6 +583,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hatId The id of the Hat to change
     /// @param _newToggle The new toggle module
     function changeHatToggle(uint256 _hatId, address _newToggle) external {
+        // TODO TRST-L-5 - check for address 0?
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 
@@ -622,9 +629,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (_newMaxSupply < hat.supply) {
             revert NewMaxSupplyTooLow();
         }
-
+        // TODO only do these actions if _newMaxSupply != hat.maxSupply
         hat.maxSupply = _newMaxSupply;
-
         emit HatMaxSupplyChanged(_hatId, _newMaxSupply);
     }
 
@@ -649,7 +655,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Approve a request to link a Tree under a parent tree
-    /// @dev Requests can only be approved by an admin of the `_newAdminHat`, and there
+    /// @dev Requests can only be approved by an admin of the `_newAdminHat`, and there // TODO add in wearer here
     ///      can only be one link per tree root at a given time.
     /// @param _topHatDomain The 32 bit domain of the tophat to link
     /// @param _newAdminHat The hat that will administer the linked tree
@@ -713,6 +719,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _newAdminHat The new admin for the linked tree
     function _linkTopHatToTree(uint32 _topHatDomain, uint256 _newAdminHat) internal {
         if (!noCircularLinkage(_topHatDomain, _newAdminHat)) revert CircularLinkage();
+
+        // TODO TRST-M-3 - change max level type to uint32, otherwise linking trees to over 255 levels will freeze the operations
 
         // disallow relinking to separate tree
         if (linkedTreeAdmins[_topHatDomain] > 0) {
@@ -786,6 +794,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             return (isWearerOfHat(_user, _hatId));
         }
 
+        // TODO TRST-L-4 - refactor this to remove getHatLevel from the recursive loop
+
         uint8 adminHatLevel = getHatLevel(_hatId) - 1;
 
         while (adminHatLevel > 0) {
@@ -811,6 +821,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         (bool success, bytes memory returndata) = _hat.toggle.staticcall(data);
 
+        // TODO TRST-L-3 - wrap the decoding operation in a try/catch block to handle errors from the toggle contract
+        // Checking that returndata size is correct is not enough as bool encoding must be 64-bit encoded 0 or 1.
         if (success && returndata.length > 0) {
             return abi.decode(returndata, (bool));
         } else {
@@ -861,6 +873,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         (bool success, bytes memory returndata) =
             _hat.eligibility.staticcall(abi.encodeWithSignature("getWearerStatus(address,uint256)", _wearer, _hatId));
 
+        // TODO TRST-L-3 - wrap this all in a try/catch block to handle errors from the eligibility contract
+        // Checking that returndata size is correct is not enough as bool encoding must be 64-bit encoded 0 or 1.
         if (success && returndata.length > 0) {
             bool standing;
             (eligible, standing) = abi.decode(returndata, (bool, bool));
@@ -896,7 +910,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @return imageURI The imageURI of this hat or, if empty, its admin
     function getImageURIForHat(uint256 _hatId) public view returns (string memory) {
         // check _hatId first to potentially avoid the `getHatLevel` call
-        Hat memory hat = _hats[_hatId];
+        Hat memory hat = _hats[_hatId]; // TODO change this to storage pointer
 
         string memory imageURI = hat.imageURI; // save 1 SLOAD
 
@@ -915,6 +929,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256 id;
 
         // already checked at `level` above, so we start the loop at `level - 1`
+
         for (uint256 i = level - 1; i > 0;) {
             id = getAdminAtLevel(_hatId, uint8(i));
             hat = _hats[id];
@@ -928,6 +943,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
                 --i;
             }
         }
+
+        // TODO TRST-L-2 - we need to check level 0, ie the tophat level, for an imageURI
 
         // if none of _hatId's admins has an imageURI of its own, we again fall back to the global image uri
         return baseImageURI;
@@ -954,7 +971,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             '", "id": "',
             LibString.toString(_hatId),
             '", "pretty id": "',
-            "{id}",
+            "{id}", // TODO change to LibString.toHexString(_hatId, 32)
             '",'
         );
 
@@ -1041,6 +1058,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             // should not overflow given AllHatsWorn check in `mintHat`
             ++_hats[_hatId].supply;
         }
+
+        // TODO TRST-M-1 - consider checking  ERC1155TokenReceiver to conform fully to ERC1155
 
         emit TransferSingle(msg.sender, address(0), _wearer, _hatId, 1);
     }
