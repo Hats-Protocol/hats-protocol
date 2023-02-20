@@ -149,9 +149,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         bool _mutable,
         string memory _imageURI
     ) public returns (uint256 newHatId) {
-        // TODO TRST-L-1 - change to uint16 to match LOWER_LEVEL_ADDRESS_SPACE correctly
-        // do we also need to check if there are linked hats?
-        if (uint8(_admin) > 0) {
+        if (uint16(_admin) > 0) {
             revert MaxLevelsReached();
         }
 
