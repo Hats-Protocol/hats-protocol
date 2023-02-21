@@ -17,7 +17,7 @@
 pragma solidity >=0.8.13;
 
 import { ERC1155 } from "lib/ERC1155/ERC1155.sol";
-// import { console2 } from "forge-std/Test.sol"; //remove after testing
+import { console2 } from "forge-std/Test.sol"; //remove after testing
 import "./Interfaces/IHats.sol";
 import "./HatsIdUtilities.sol";
 import "./Interfaces/IHatsToggle.sol";
@@ -300,14 +300,33 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         bool newStatus;
 
         bytes memory data = abi.encodeWithSignature("getHatStatus(uint256)", _hatId);
-
         (bool success, bytes memory returndata) = hat.toggle.staticcall(data);
 
-        // if function call succeeds with data of length > 0
-        // then we know the contract exists and has the getHatStatus function
-        if (success && returndata.length > 0) {
-            newStatus = abi.decode(returndata, (bool));
+        /* 
+        if function call succeeds with data of length == 32, then we know the contract exists 
+        and has the getHatStatus function.
+        But we still can't assume that the return data is a boolean, so we need to check that manuallys
+        */
+        if (success && returndata.length == 32) {
+            console2.log("return data is 32 bytes");
+            // check the returndata manually
+            uint256 uintReturndata = uint256(bytes32(returndata));
+            // false condition
+            if (uintReturndata == 0) {
+                console2.log("return data is false");
+                newStatus = false;
+            // true condition
+            } else if (uintReturndata == 1) {
+                console2.log("return data is true");
+                newStatus = true;
+            } 
+            // invalid condition
+            else {
+                console2.log("return data is not 0 or 1");
+                revert NotHatsToggle();
+            }
         } else {
+            console2.log("call failed or return data != 32 bytes");
             revert NotHatsToggle();
         }
 
@@ -341,24 +360,55 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev Burns the wearer's hat, if revoked
     /// @param _hatId The id of the hat
     /// @param _wearer The address of the Hat wearer whose status report is being requested
-    function checkHatWearerStatus(uint256 _hatId, address _wearer) public returns (bool) {
-        Hat memory hat = _hats[_hatId];
+    /// @return wearerStatusChanged Whether the wearer's status was altered
+    function checkHatWearerStatus(uint256 _hatId, address _wearer) public returns (bool wearerStatusChanged) {
+        // Hat memory hat = _hats[_hatId];
         bool eligible;
         bool standing;
 
+        // bytes memory data = abi.encodeWithSignature("getWearerStatus(address,uint256)", _wearer, _hatId);
+
+        // (bool success, bytes memory returndata) = hat.eligibility.staticcall(data);
+
+        // // if function call succeeds with data of length > 0
+        // // then we know the contract exists and has the getWearerStatus function
+        // if (success && returndata.length > 0) {
+        //     (eligible, standing) = abi.decode(returndata, (bool, bool));
+        // } else {
+        //     revert NotHatsEligibility();
+        // }
+
+        // return _processHatWearerStatus(_hatId, _wearer, eligible, standing);
+
         bytes memory data = abi.encodeWithSignature("getWearerStatus(address,uint256)", _wearer, _hatId);
+        (bool success, bytes memory returndata) = _hats[_hatId].eligibility.staticcall(data);
 
-        (bool success, bytes memory returndata) = hat.eligibility.staticcall(data);
-
-        // if function call succeeds with data of length > 0
-        // then we know the contract exists and has the getWearerStatus function
-        if (success && returndata.length > 0) {
-            (eligible, standing) = abi.decode(returndata, (bool, bool));
+        /* 
+        if function call succeeds with data of length == 64, then we know the contract exists 
+        and has the getWearerStatus function (which returns two words).
+        But we still can't assume that the return data is in n, so we need to check that manually
+        */
+        if (success && returndata.length == 64) {
+            console2.log("return data is 64 bytes");
+            // check the returndata manually
+            (uint256 firstWord, uint256 secondWord) = abi.decode(returndata, (uint256, uint256));
+            // returndata is valid
+            if (firstWord < 2 && secondWord < 2) {
+                standing = (secondWord == 1) ? true : false;
+                // never eligible if in bad standing
+                eligible = (standing && firstWord == 1) ? true : false;
+            }
+            // returndata is invalid
+            else {
+                console2.log("return data is invalid");
+                revert NotHatsEligibility();
+            }
         } else {
+            console2.log("call failed or return data != 64 bytes");
             revert NotHatsEligibility();
         }
 
-        return _processHatWearerStatus(_hatId, _wearer, eligible, standing);
+        wearerStatusChanged = _processHatWearerStatus(_hatId, _wearer, eligible, standing);
     }
 
     /// @notice Stop wearing a hat, aka "renounce" it
@@ -831,17 +881,48 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hat The Hat struct
     /// @param _hatId The id of the hat
     /// @return active The active status of the hat
-    function _isActive(Hat memory _hat, uint256 _hatId) internal view returns (bool) {
-        bytes memory data = abi.encodeWithSignature("getHatStatus(uint256)", _hatId);
+    // TODO TRST-L-3 - wrap the decoding operation in a try/catch block to handle errors from the toggle contract
+    // Checking that returndata size is correct is not enough as bool encoding must be 64-bit encoded 0 or 1.
+    function _isActive(Hat memory _hat, uint256 _hatId) internal view returns (bool active) {
+        // bytes memory data = abi.encodeWithSignature("getHatStatus(uint256)", _hatId);
 
+        // (bool success, bytes memory returndata) = _hat.toggle.staticcall(data);
+
+        // if (success && returndata.length > 0) {
+        //     return abi.decode(returndata, (bool));
+        // } else {
+        //     return _getHatStatus(_hat);
+        // }
+
+        bytes memory data = abi.encodeWithSignature("getHatStatus(uint256)", _hatId);
         (bool success, bytes memory returndata) = _hat.toggle.staticcall(data);
 
-        // TODO TRST-L-3 - wrap the decoding operation in a try/catch block to handle errors from the toggle contract
-        // Checking that returndata size is correct is not enough as bool encoding must be 64-bit encoded 0 or 1.
-        if (success && returndata.length > 0) {
-            return abi.decode(returndata, (bool));
+        /* 
+        if function call succeeds with data of length == 32, then we know the contract exists 
+        and has the getHatStatus function.
+        But we still can't assume that the return data is a boolean, so we need to check that manuallys
+        */
+        if (success && returndata.length == 32) {
+            console2.log("return data is 32 bytes");
+            // check the returndata manually
+            uint256 uintReturndata = uint256(bytes32(returndata));
+            // false condition
+            if (uintReturndata == 0) {
+                console2.log("return data is false");
+                active = false;
+            // true condition
+            } else if (uintReturndata == 1) {
+                console2.log("return data is true");
+                active = true;
+            } 
+            // invalid condition
+            else {
+                console2.log("return data is not 0 or 1");
+                active = _getHatStatus(_hat);
+            }
         } else {
-            return _getHatStatus(_hat);
+            console2.log("call failed or return data != 32 bytes");
+            active = _getHatStatus(_hat);
         }
     }
 
@@ -862,18 +943,42 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Checks whether a wearer of a Hat is in good standing
-    /// @dev Public function for use when pa    ssing a Hat object is not possible or preferable
     /// @param _wearer The address of the Hat wearer
     /// @param _hatId The id of the Hat
     /// @return standing Whether the wearer is in good standing
     function isInGoodStanding(address _wearer, uint256 _hatId) public view returns (bool standing) {
-        (bool success, bytes memory returndata) = _hats[_hatId].eligibility.staticcall(
-            abi.encodeWithSignature("getWearerStatus(address,uint256)", _wearer, _hatId)
-        );
+        // (bool success, bytes memory returndata) = _hats[_hatId].eligibility.staticcall(
+        //     abi.encodeWithSignature("getWearerStatus(address,uint256)", _wearer, _hatId)
+        // );
+        // if (success && returndata.length > 0) {
+        //     (, standing) = abi.decode(returndata, (bool, bool));
+        // } else {
+        //     standing = !badStandings[_hatId][_wearer];
+        // }
+        
+        bytes memory data = abi.encodeWithSignature("getWearerStatus(address,uint256)", _wearer, _hatId);
+        (bool success, bytes memory returndata) = _hats[_hatId].eligibility.staticcall(data);
 
-        if (success && returndata.length > 0) {
-            (, standing) = abi.decode(returndata, (bool, bool));
+        /* 
+        if function call succeeds with data of length == 64, then we know the contract exists 
+        and has the getWearerStatus function (which returns two words).
+        But we still can't assume that the return data is in n, so we need to check that manually
+        */
+        if (success && returndata.length == 64) {
+            console2.log("return data is 64 bytes");
+            // check the returndata manually
+            (uint256 firstWord, uint256 secondWord) = abi.decode(returndata, (uint256, uint256));
+            // returndata is valid
+            if (firstWord < 2 && secondWord < 2) {
+                standing = (secondWord == 1) ? true : false;
+            // returndata is invalid
+            }
+            else {
+                console2.log("return data is invalid");
+                standing = !badStandings[_hatId][_wearer];
+            }
         } else {
+            console2.log("call failed or return data != 64 bytes");
             standing = !badStandings[_hatId][_wearer];
         }
     }
@@ -885,17 +990,46 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hatId The id of the Hat
     /// @return eligible Whether the wearer is eligible for the Hat
     function _isEligible(address _wearer, Hat memory _hat, uint256 _hatId) internal view returns (bool eligible) {
-        (bool success, bytes memory returndata) =
-            _hat.eligibility.staticcall(abi.encodeWithSignature("getWearerStatus(address,uint256)", _wearer, _hatId));
+        // (bool success, bytes memory returndata) =
+        //     _hat.eligibility.staticcall(abi.encodeWithSignature("getWearerStatus(address,uint256)", _wearer, _hatId));
 
-        // TODO TRST-L-3 - wrap this all in a try/catch block to handle errors from the eligibility contract
-        // Checking that returndata size is correct is not enough as bool encoding must be 64-bit encoded 0 or 1.
-        if (success && returndata.length > 0) {
+        // // TODO TRST-L-3 - wrap this all in a try/catch block to handle errors from the eligibility contract
+        // // Checking that returndata size is correct is not enough as bool encoding must be 64-bit encoded 0 or 1.
+        // if (success && returndata.length > 0) {
+        //     bool standing;
+        //     (eligible, standing) = abi.decode(returndata, (bool, bool));
+        //     // never eligible if in bad standing
+        //     if (eligible && !standing) eligible = false;
+        // } else {
+        //     eligible = !badStandings[_hatId][_wearer];
+        // }
+
+        bytes memory data = abi.encodeWithSignature("getWearerStatus(address,uint256)", _wearer, _hatId);
+        (bool success, bytes memory returndata) = _hat.eligibility.staticcall(data);
+
+        /* 
+        if function call succeeds with data of length == 64, then we know the contract exists 
+        and has the getWearerStatus function (which returns two words).
+        But we still can't assume that the return data is in n, so we need to check that manually
+        */
+        if (success && returndata.length == 64) {
             bool standing;
-            (eligible, standing) = abi.decode(returndata, (bool, bool));
-            // never eligible if in bad standing
-            if (eligible && !standing) eligible = false;
+            console2.log("return data is 64 bytes");
+            // check the returndata manually
+            (uint256 firstWord, uint256 secondWord) = abi.decode(returndata, (uint256, uint256));
+            // returndata is valid
+            if (firstWord < 2 && secondWord < 2) {
+                standing = (secondWord == 1) ? true : false;
+                // never eligible if in bad standing
+                eligible = (standing && firstWord == 1) ? true : false;
+            }
+            // returndata is invalid
+            else {
+                console2.log("return data is invalid");
+                eligible = !badStandings[_hatId][_wearer];
+            }
         } else {
+            console2.log("call failed or return data != 64 bytes");
             eligible = !badStandings[_hatId][_wearer];
         }
     }

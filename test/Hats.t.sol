@@ -721,7 +721,7 @@ contract TransferHatTests is TestSetupMutable {
         hats.mintHat(secondHatId, thirdWearer);
 
         // revoke the hat, but do not burn it
-        // mock calls to eligibility contract to return (eligible = true, standing = true)
+        // mock calls to eligibility contract to return (eligible = false, standing = true)
         vm.mockCall(
             address(_eligibility),
             abi.encodeWithSignature("getWearerStatus(address,uint256)", thirdWearer, secondHatId),
@@ -1089,7 +1089,7 @@ contract ToggleSetHatsTest is TestSetup2 {
     }
 }
 
-contract ToggleChecktHatsTest is TestSetup2 {
+contract ToggleCheckHatsTest is TestSetup2 {
     function testCannotCheckHatStatusNoFunctionInToggleContract() public {
         // expect NotHatsToggle error
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatsToggle.selector));
@@ -1850,5 +1850,180 @@ contract LinkHatsTests is TestSetup2 {
         emit TopHatLinked(secondTopHatDomain, 0);
         hats.unlinkTopHatFromTree(secondTopHatDomain);
         assertEq(hats.isTopHat(secondTopHatId), true);
+    }
+}
+
+contract MalformedInputsTests is TestSetup2 {
+    string internal constant longString = "this is a super long string that hopefully is longer than 32 bytes. What say we make this especially loooooooooong?";
+    address internal constant badAddress = address(0xbadadd55e);
+    uint256 internal constant badUint = 2;
+
+    function testCatchMalformedEligibilityData_isEligible() public {
+        // mock malformed return data from eligibility
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                longString, // malformed; should be a bool
+                true
+            )
+        );
+        hats.isEligible(secondWearer, secondHatId);
+
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                badUint, // malformed; should be a bool
+                true
+            )
+        );
+        hats.isEligible(secondWearer, secondHatId);
+
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                badAddress, // malformed; should be a bool
+                true
+            )
+        );
+        hats.isEligible(secondWearer, secondHatId);
+    }
+
+    function testCatchMalformedEligibilityData_isInGoodStanding() public {
+        // mock malformed return data from eligibility
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                longString, // malformed; should be a bool
+                true
+            )
+        );
+        hats.isInGoodStanding(secondWearer, secondHatId);
+
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                badUint, // malformed; should be a bool
+                true
+            )
+        );
+        hats.isInGoodStanding(secondWearer, secondHatId);
+
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                badAddress, // malformed; should be a bool
+                true
+            )
+        );
+        hats.isInGoodStanding(secondWearer, secondHatId);
+    }
+
+    function testCatchMalformedEligibilityData_checkHatWearerStatus() public {
+        // mock malformed return data from eligibility
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                longString, // malformed; should be a bool
+                true
+            )
+        );
+        vm.expectRevert(HatsErrors.NotHatsEligibility.selector);
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
+        
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                badUint, // malformed; should be a bool
+                true
+            )
+        );
+        vm.expectRevert(HatsErrors.NotHatsEligibility.selector);
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
+
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                badAddress, // malformed; should be a bool
+                true
+            )
+        );
+        vm.expectRevert(HatsErrors.NotHatsEligibility.selector);
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
+    }
+
+    function testCatchMalformedToggleData_isWearerOfHat() public {
+        // mock malformed return data as a string
+        vm.mockCall(
+            address(_toggle),
+            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
+            abi.encode(
+                 longString // malformed; should be a bool
+            )
+        );
+        assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
+
+        // mock malformed return data as a uint
+        vm.mockCall(
+            address(_toggle),
+            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
+            abi.encode(
+                badUint // malformed; should be a bool
+            )
+        );
+        assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
+
+        // mock malformed return data as an address
+        vm.mockCall(
+            address(_toggle),
+            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
+            abi.encode(
+                badAddress // malformed; should be a bool
+            )
+        );
+        assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
+    }
+
+    function testCatchMalformedToggleData_checkHatStatus() public {
+        // mock malformed return data as a string
+        vm.mockCall(
+            address(_toggle),
+            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
+            abi.encode(
+                 longString // malformed; should be a bool
+            )
+        );
+        vm.expectRevert(HatsErrors.NotHatsToggle.selector);
+        hats.checkHatStatus(secondHatId);
+
+        // mock malformed return data as a uint
+        vm.mockCall(
+            address(_toggle),
+            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
+            abi.encode(
+                badUint // malformed; should be a bool
+            )
+        );
+        vm.expectRevert(HatsErrors.NotHatsToggle.selector);
+        hats.checkHatStatus(secondHatId);
+
+        // mock malformed return data as an address
+        vm.mockCall(
+            address(_toggle),
+            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
+            abi.encode(
+                badAddress // malformed; should be a bool
+            )
+        );
+        vm.expectRevert(HatsErrors.NotHatsToggle.selector);
+        hats.checkHatStatus(secondHatId);
     }
 }
