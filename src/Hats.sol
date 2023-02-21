@@ -26,8 +26,8 @@ import "solbase/utils/Base64.sol";
 import "solbase/utils/LibString.sol";
 
 /// @title Hats Protocol
-/// @notice Hats are DAO-native, revocable, and programmable roles that are represented as non-transferable ERC-1155 tokens for composability
-/// @dev This is a multitenant contract that can manage all hats for a given chain
+/// @notice Hats are DAO-native, revocable, and programmable roles that are represented as non-transferable ERC-1155-similar tokens for composability
+/// @dev This is a multitenant contract that can manage all hats for a given chain. While it fully implements the ERC1155 interface, it does not comply full with the ERC1155 standard.
 /// @author Haberdasher Labs
 contract Hats is IHats, ERC1155, HatsIdUtilities {
     /*//////////////////////////////////////////////////////////////
@@ -1250,8 +1250,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             // should not overflow given AllHatsWorn check in `mintHat`
             ++_hats[_hatId].supply;
         }
-
-        // TODO TRST-M-1 - consider checking  ERC1155TokenReceiver to conform fully to ERC1155
 
         emit TransferSingle(msg.sender, address(0), _wearer, _hatId, 1);
     }

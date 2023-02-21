@@ -64,7 +64,7 @@
 
 Hats Protocol is a protocol for DAO-native roles and credentials that supports revocable delegation of authority and responsibility.
 
-Hats are represented on-chain by non-transferable ERC1155 tokens. An address with a balance of a given Hat token "wears" that hat, granting them the responsibilities and authorities that have been assigned to the Hat by the DAO.
+Hats are represented on-chain by non-transferable tokens that conform to the ERC1155 interface. An address with a balance of a given Hat token "wears" that hat, granting them the responsibilities and authorities that have been assigned to the Hat by the DAO.
 
 ### Deployments
 
@@ -88,6 +88,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details on how to contribute.
 <ol>
   <li><a href="#authorities-in-hats-protocol">Authorities in Hats Protocol</a></li>
   <li><a href="#hats-logic">Hats Logic</a></li>
+  <li><a href="#erc1155-compatibility">Hats Logic</a></li>
   <li><a href="#wearing-a-hat">Wearing a Hat</a></li>
   <li><a href="#hat-admins">Hat Admins</a></li>
   <li><a href="#addressable-hat-ids">Addressable Hat Ids</a></li>
@@ -109,13 +110,13 @@ Here are a few examples of how a DAO might confer authorities and responsibiliti
 
 | Authority | How is it attached to the Hat? |
 | --- | ---- |
-| Signer on a multisig | Using the Hat's ERC1155 token as a condition for membership in an Orca Protocol Pod |
-| Admin of the DAO's Github repo | Using the Hat's ERC1155 token as a condition for access via Lit Protocol |
+| Signer on a multisig | Using the Hat's ERC1155--similar token as a condition for membership in an Orca Protocol Pod |
+| Admin of the DAO's Github repo | Using the Hat's ERC1155-similar token as a condition for access via Lit Protocol |
 | Leadership of a working group | A social expectation |
 
 In each case, the DAO uses a separate tool to attach the authority to the Hat.
 
-Hats is designed to be highly composable -- it will work with any tool, application, or protocol that can interact with ERC1155. Further, it allows any number of such authorities or responsibilities to be attached to a single Hat, which greatly simplifies the process for DAOs of revoking those authorities as well as the process of role handoff.
+Hats is designed to be highly composable -- it will work with any tool, application, or protocol that can interact with the ERC1155 interface. Further, it allows any number of such authorities or responsibilities to be attached to a single Hat, which greatly simplifies the process for DAOs of revoking those authorities as well as the process of role handoff.
 
 #### Exception: Hat Admins
 
@@ -123,18 +124,26 @@ Hat admins are the one (very important!) exception to the rule that authorities 
 
 <p align="right">(<a href="#documentation-top">back to contents</a>)</p>
 
+### ERC1155 Compatibility
+
+Hats Protocol conforms fully to the ERC1155 interface. All external functions required by the [ERC1155 standard](https://eips.ethereum.org/EIPS/eip-1155) are exposed by Hats Protocol. This is how Hats can work out of the box with existing token-gating applications.
+
+However, Hats Protocol is not fully compliant with the ERC1155 standard. Since Hats are not transferable by their owners (aka "wearers"), there is little need for safe transfers and the `ERC1155TokenReceiver` logic. Developers building on top of Hats Protocol should note that mints and transfers of Hats will not, for example, include calls to `onERC1155Received`.
+
+To avoid confusion, Hats Protocol does not claim to be ERC1155-compliant. Instead, we say that Hats Protocol has "ERC1155-similar" tokens. When referring specifically to the ERC1155 interface, however, we do say that Hats Protocol conforms fully.
+
 ### Hats Logic
 
 Each Hat has several properties:
 
-- `id` - the integer identifier for the Hat, which also serves as the ERC1155 token id (see three paragraphs below)
+- `id` - the integer identifier for the Hat, which also serves as the ERC1155-similar token id (see three paragraphs below)
 - `details` - metadata about the Hat; such as a name, description, and other properties like roles and responsibilities associated with the Hat
 - `maxSupply` - the maximum number of addresses that can wear the Hat at once
 - `admin` - the Hat that controls who can wear the Hat
 - `eligibility` - the address that controls eligibility criteria and whether a given wearer of the Hat is in good standing
 - `toggle` - the address that controls whether the Hat is active
 - `mutable` - whether the hat's properties can be changed by the admin
-- `imageURI` - the URI for the image used in the Hat's ERC1155 NFT
+- `imageURI` - the URI for the image used in the Hat's ERC1155-similar token
 
 For more information on each property, refer to the detailed sections below.
 
