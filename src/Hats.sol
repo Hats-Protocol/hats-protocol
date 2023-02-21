@@ -861,7 +861,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         // TODO TRST-L-4 - refactor this to remove getHatLevel from the recursive loop
 
-        uint8 adminHatLevel = getHatLevel(_hatId) - 1;
+        uint32 adminHatLevel = getHatLevel(_hatId) - 1;
 
         while (adminHatLevel > 0) {
             if (isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel))) {
@@ -1079,7 +1079,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         // already checked at `level` above, so we start the loop at `level - 1`
         for (uint256 i = level - 1; i > 0;) {
-            id = getAdminAtLevel(_hatId, uint8(i));
+            id = getAdminAtLevel(_hatId, uint32(i));
             hat = _hats[id];
             imageURI = hat.imageURI;
 

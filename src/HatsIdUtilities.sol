@@ -93,7 +93,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
     /// @notice Identifies the level a given hat in its hat tree
     /// @param _hatId the id of the hat in question
     /// @return level (0 to type(uint8).max)
-    function getHatLevel(uint256 _hatId) public view returns (uint8) {
+    function getHatLevel(uint256 _hatId) public view returns (uint32) {
         uint256 mask;
         uint256 i;
         for (i = 0; i < MAX_LEVELS;) {
@@ -110,10 +110,10 @@ contract HatsIdUtilities is IHatsIdUtilities {
         uint256 treeAdmin = linkedTreeAdmins[getTophatDomain(_hatId)];
 
         if (treeAdmin != 0) {
-            return 1 + uint8(i) + getHatLevel(treeAdmin);
+            return 1 + uint32(i) + getHatLevel(treeAdmin);
         }
 
-        return uint8(i);
+        return uint32(i);
     }
 
     /// @notice Checks whether a hat is a topHat
@@ -130,11 +130,11 @@ contract HatsIdUtilities is IHatsIdUtilities {
     /// @param _hatId the id of the hat in question
     /// @param _level the admin level of interest
     /// @return uint256 The hat id of the resulting admin
-    function getAdminAtLevel(uint256 _hatId, uint8 _level) public view returns (uint256) {
+    function getAdminAtLevel(uint256 _hatId, uint32 _level) public view returns (uint256) {
         uint256 linkedTreeAdmin = linkedTreeAdmins[getTophatDomain(_hatId)];
         if (linkedTreeAdmin == 0) return getTreeAdminAtLevel(_hatId, _level);
 
-        uint8 localTopHatLevel = getHatLevel(getTreeAdminAtLevel(_hatId, 0));
+        uint32 localTopHatLevel = getHatLevel(getTreeAdminAtLevel(_hatId, 0));
 
         if (localTopHatLevel <= _level) return getTreeAdminAtLevel(_hatId, _level - localTopHatLevel);
 
@@ -146,7 +146,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
     /// @param _hatId the id of the hat in question
     /// @param _level the admin level of interest
     /// @return uint256 The hat id of the resulting admin
-    function getTreeAdminAtLevel(uint256 _hatId, uint8 _level) public pure returns (uint256) {
+    function getTreeAdminAtLevel(uint256 _hatId, uint32 _level) public pure returns (uint256) {
         uint256 mask = type(uint256).max << (LOWER_LEVEL_ADDRESS_SPACE * (MAX_LEVELS - _level));
 
         return _hatId & mask;
