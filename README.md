@@ -88,15 +88,18 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details on how to contribute.
 <ol>
   <li><a href="#authorities-in-hats-protocol">Authorities in Hats Protocol</a></li>
   <li><a href="#hats-logic">Hats Logic</a></li>
-  <li><a href="#erc1155-compatibility">Hats Logic</a></li>
+  <li><a href="#erc1155-compatibility">ERC1155 Compatibility</a></li>
   <li><a href="#wearing-a-hat">Wearing a Hat</a></li>
   <li><a href="#hat-admins">Hat Admins</a></li>
   <li><a href="#addressable-hat-ids">Addressable Hat Ids</a></li>
   <li><a href="#eligibility">Eligibility</a></li>
   <li><a href="#toggle">Toggle</a></li>
+  <li><a href="#hat-mutability">Hat Mutability</a></li>
+  <li><a href="#hat-image-uris">Hat Image URIs</a></li>
   <li><a href="#creating-a-hat">Creating a Hat</a></li>
   <li><a href="#minting-a-hat">Minting a Hat</a> </li>
   <li><a href="#transferring-a-hat">Transferring a Hat</a></li>
+  <li><a href="#hat-tree-grafting">Hat Tree Grafting</a></li>
   <li><a href="#renouncing-a-hat">Renouncing a Hat</a></li>
 </ol>
 
@@ -122,7 +125,7 @@ Hats is designed to be highly composable -- it will work with any tool, applicat
 
 Hat admins are the one (very important!) exception to the rule that authorities are external to the Hats Protocol. Refer to the Admins section below for more details.
 
-<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+<p align="right">(<a href="#table-of-contents">back to contents</a>)</p>
 
 ### ERC1155 Compatibility
 
@@ -147,7 +150,7 @@ Each Hat has several properties:
 
 For more information on each property, refer to the detailed sections below.
 
-<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+<p align="right">(<a href="#table-of-contents">back to contents</a>)</p>
 
 ### Wearing a Hat
 
@@ -167,7 +170,7 @@ Any address can wear a Hat, including:
 - Logic contracts (i.e., contracts with explicit logic codified within functions), or
 - Governance contracts (e.g., DAOs, multisigs, etc.)
 
-<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+<p align="right">(<a href="#table-of-contents">back to contents</a>)</p>
 
 ### Hat Admins
 
@@ -198,7 +201,7 @@ Tophats are the one exception to the rule that a Hat's admin must be another hat
 
 The root of a Hat tree is always a Tophat. Typically, a DAO will wear the Tophat that serves as admin for the tree of Hats related to the DAO's operations.
 
-<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+<p align="right">(<a href="#table-of-contents">back to contents</a>)</p>
 
 ### Addressable Hat Ids
 
@@ -234,7 +237,7 @@ We can also prettify this even further by separating hat levels with periods, a 
 
 `0x00000001.0002.0003.0000.0000.0000.0000.0000.0000.0000.0000.0000.0000.0000.0000`
 
-<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+<p align="right">(<a href="#table-of-contents">back to contents</a>)</p>
 
 ### Eligibility
 
@@ -262,7 +265,7 @@ Any address can serve as an eligibility module for a given Hat. Hats Protocol su
 
 Unlike admins, eligibility modules are explicitly set as addresses, not Hats. This is to avoid long, potentially illegible, chains of revocation authority that can affect wearer penalties (such as slashed stake).
 
-<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+<p align="right">(<a href="#table-of-contents">back to contents</a>)</p>
 
 ### Toggle
 
@@ -275,7 +278,7 @@ Any address can serve as a Hat's toggle. As with eligibility modules, Hats Proto
 
 Unlike admins, toggle modules are explicitly set as addresses, not Hats.
 
-<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+<p align="right">(<a href="#table-of-contents">back to contents</a>)</p>
 
 ### Hat Mutability
 
@@ -300,7 +303,7 @@ The only exception to the above mutability rules is for tophats, which despite b
 
 Note that this only includes non-linked tophats; a tophat that has been linked (aka grafted) onto another hat tree is no longer considered a tophat, and therefore is subject to the same mutability rules as other hats.
 
-<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+<p align="right">(<a href="#table-of-contents">back to contents</a>)</p>
 
 ### Hat Image URIs
 
@@ -314,7 +317,7 @@ Like any other NFT, Hats have images. The image for a given Hat is determined by
 
 This logic creates flexibility for DAOs to efficiently customize images for their Hats, while keeping images as optional.
 
-<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+<p align="right">(<a href="#table-of-contents">back to contents</a>)</p>
 
 ### Creating a Hat
 
@@ -330,13 +333,13 @@ Enabling this latter forking/exit scenario is an important protection for Hat we
 
 To create a batch of Hats, a DAO can call the `Hats.batchCreateHats()` function. This function takes arrays as its arguments, from which it constructs multiple Hats.  As long as each of these Hats is part of the same tree of Hats &mdash; i.e., they either have the same existing Hat or any of the newly created Hats as admin(s) &mdash; they can all be created together.
 
-<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+<p align="right">(<a href="#table-of-contents">back to contents</a>)</p>
 
 ### Minting a Hat
 
 Only a Hat's admin can mint its token to a wearer.
 
-To mint a Hat, the Hat's max supply must not have already been reached, the target wearer must not already wear the Hat, and the target wearer must not be eligible for the hat. 
+To mint a Hat, the Hat's max supply must not have already been reached, the target wearer must not already wear the Hat, and the target wearer must not be eligible for the hat.
 
 A Hat's admin can mint its token individually by calling `Hats.mintHat`.
 
@@ -344,7 +347,7 @@ A Hat's admin can mint its token individually by calling `Hats.mintHat`.
 
 An admin can also mint multiple Hats by calling `Hats.batchMintHats`. This enables an admin to mint instances of the same hat to multiple wearers, to mint several Hats at once, or even to mint an entire Hats tree it just created.
 
-<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+<p align="right">(<a href="#table-of-contents">back to contents</a>)</p>
 
 ### Transferring a Hat
 
@@ -360,7 +363,7 @@ As a replacement, Hats can be transfered by admins via `Hats.transferHat`, which
 
 With the exception of tophats — which can always transfer themselves — only mutable Hats can be transferred.
 
-### Hat Tree Grafting (also called Linking)
+### Hat Tree Grafting
 
 Not all Hats trees will unfurl from top down or inside out. Sometimes, new branches will form independently from the main tree, or multiple trees will form before a main tree even exists.
 
@@ -375,7 +378,7 @@ Linked Hat trees can also be unlinked by the tree root from its linked admin, vi
 
 The wearer of a Hat can "take off" their Hat via `Hats.renounceHat`. This burns the token and revokes any associated authorities and responsibilities from the now-former wearer, but does not put the wearer in bad standing.
 
-<p align="right">(<a href="#documentation-top">back to contents</a>)</p>
+<p align="right">(<a href="#table-of-contents">back to contents</a>)</p>
 
 ## License
 
