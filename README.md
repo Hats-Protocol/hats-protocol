@@ -327,7 +327,7 @@ To create a batch of Hats, a DAO can call the `Hats.batchCreateHats()` function.
 
 Only a Hat's admin can mint its token to a wearer.
 
-To mint a Hat, the Hat's max supply must not have already been reached, and the target wearer must not already wear the Hat.
+To mint a Hat, the Hat's max supply must not have already been reached, the target wearer must not already wear the Hat, and the target wearer must not be eligible for the hat. 
 
 A Hat's admin can mint its token individually by calling `Hats.mintHat`.
 
@@ -347,11 +347,11 @@ As a result, there is no need for safe transfers (transfers which check whether 
 
 For these reasons, in Hats Protocol, the standard ERC1155 transfer functions &mdash; `safeTransferFrom` and `safeBatchTransferFrom` are disabled and will always revert. Similarly, token approvals are not required and `setApprovalForAll` will always revert.
 
-As a replacement, Hats can be transfered by admins via `Hats.transferHat`, which emits the ERC1155 standard event `TransferSingle`.
+As a replacement, Hats can be transfered by admins via `Hats.transferHat`, which emits the ERC1155 standard event `TransferSingle`. Transfer recipients must not already be wearing the hat, and must be eligible to wear the hat.
 
 With the exception of tophats — which can always transfer themselves — only mutable Hats can be transferred.
 
-### Hat Tree Grafting
+### Hat Tree Grafting (also called Linking)
 
 Not all Hats trees will unfurl from top down or inside out. Sometimes, new branches will form independently from the main tree, or multiple trees will form before a main tree even exists.
 

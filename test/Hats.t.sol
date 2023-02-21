@@ -559,6 +559,18 @@ contract MintHatsTest is TestSetup {
         hats.mintHat(badHatId, secondWearer);
     }
 
+    function testCannotMintHatToIneligibleWearer() public {
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(false, true)
+        );
+
+        vm.expectRevert(HatsErrors.NotEligible.selector);
+        vm.prank(topHatWearer);
+        hats.mintHat(secondHatId, secondWearer);
+    }
+
     function testBatchMintHats(uint256 count) public {
         vm.assume(count <= 255);
 
@@ -732,6 +744,18 @@ contract TransferHatTests is TestSetupMutable {
         // transfer should revert
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, thirdWearer, secondHatId));
 
+        hats.transferHat(secondHatId, secondWearer, thirdWearer);
+    }
+
+    function testCannotTransferHatToIneligibleWearer() public {
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", thirdWearer, secondHatId),
+            abi.encode(false, true)
+        );
+
+        vm.expectRevert(HatsErrors.NotEligible.selector);
+        vm.prank(topHatWearer);
         hats.transferHat(secondHatId, secondWearer, thirdWearer);
     }
 }

@@ -232,8 +232,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         return buildHatId(_admin, nextHatId);
     }
 
-    /// @notice Mints an ERC1155 token of the Hat to a recipient, who then "wears" the hat
-    /// @dev The msg.sender must wear the admin Hat of `_hatId`
+    /// @notice Mints an ERC1155 token of the Hat to an eligible recipient, who then "wears" the hat
+    /// @dev The msg.sender must wear an admin Hat of `_hatId`, and the recipient must be eligible to wear `_hatId`
     /// @param _hatId The id of the Hat to mint
     /// @param _wearer The address to which the Hat is minted
     /// @return bool Whether the mint succeeded
@@ -241,7 +241,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         Hat memory hat = _hats[_hatId];
         if (hat.maxSupply == 0) revert HatDoesNotExist(_hatId);
 
-        // TODO TRST-M-4 - check if _to is eligible for the hat
+        if (!isEligible(_wearer, _hatId)) revert NotEligible();
 
         // only the wearer of a hat's admin Hat can mint it
         _checkAdmin(_hatId);
@@ -551,7 +551,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
     }
 
-    /// @notice Transfers a hat from one wearer to another
+    /// @notice Transfers a hat from one wearer to another eligible wearer
     /// @dev The hat must be mutable, and the transfer must be initiated by an admin
     /// @param _hatId The hat in question
     /// @param _from The current wearer
@@ -574,7 +574,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             revert AlreadyWearingHat(_to, _hatId);
         }
 
-        // TODO TRST-M-4 - check if _to is eligible for the hat
+        if (!isEligible(_to, _hatId)) revert NotEligible();
 
         //Adjust balances
 
