@@ -827,49 +827,37 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         return (balanceOf(_user, _hatId) > 0);
     }
 
-    // TODO TRST-L-4 - refactor this to remove getHatLevel from the recursive loop
-    // would like to be able to stay within a tree until we hit the top hat, and only then deal with linkage logic
     /// @notice Checks whether a given address serves as the admin of a given Hat
     /// @dev Recursively checks if `_user` wears the admin Hat of the Hat in question. This is recursive since there may be a string of Hats as admins of Hats.
     /// @param _user The address in question
     /// @param _hatId The id of the Hat for which the `_user` might be the admin
     /// @return bool Whether the `_user` has admin rights for the Hat
     function isAdminOfHat(address _user, uint256 _hatId) public view returns (bool) {
-        // console2.log("starting isAdminOfHat", _hatId);
         uint256 linkedTreeAdmin;
         uint32 adminLocalHatLevel;
         if (isLocalTopHat(_hatId)) {
             linkedTreeAdmin = linkedTreeAdmins[getTophatDomain(_hatId)];
             if (linkedTreeAdmin == 0) {
                 // tree is not linked
-                // console2.log("tree is not linked", _hatId);
                 return isWearerOfHat(_user, _hatId);
             } else {
                 // tree is linked
-                // console2.log("tree is linked", _hatId);
-                // console2.log("linkedTreeAdmin", linkedTreeAdmin);
                 if (isWearerOfHat(_user, linkedTreeAdmin)) {
                     return true;
                 } // user wears the treeAdmin
                 else {
-                    //  return isAdminOfHat(_user, linkedTreeAdmin); // check if user is admin of treeAdmin (recursion)
                     adminLocalHatLevel = getLocalHatLevel(linkedTreeAdmin);
                     _hatId = linkedTreeAdmin;
                 }
             }
         } else {
-            // hatId = _hatId;
             // if we get here, _hatId is not a tophat of any kind
-            // console2.log("not a local tophat", hatId);
             // get the local tree level of _hatId's admin
             adminLocalHatLevel = getLocalHatLevel(_hatId) - 1;
-            // console2.log("adminTreeHatLevel, before loop", adminTreeHatLevel);
         }
 
         // search up _hatId's local address space for an admin hat that the _user wears
         while (adminLocalHatLevel > 0) {
-            // console2.log("searching local tree", hatId, adminTreeHatLevel);
-
             if (isWearerOfHat(_user, getLocalAdminAtLevel(_hatId, adminLocalHatLevel))) {
                 return true;
             }
@@ -883,10 +871,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         linkedTreeAdmin = linkedTreeAdmins[getTophatDomain(_hatId)];
         if (linkedTreeAdmin == 0) {
             // tree is not linked
-            // console2.log("tree is not linked", hatId);
             return isWearerOfHat(_user, getLocalAdminAtLevel(_hatId, 0));
         } else {
-            // console2.log("tree is linked", hatId);
             if (isWearerOfHat(_user, linkedTreeAdmin)) return true; // user wears the linkedTreeAdmin
 
             else return isAdminOfHat(_user, linkedTreeAdmin); // check if user is admin of linkedTreeAdmin (recursion)
@@ -912,20 +898,16 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             uint256 uintReturndata = uint256(bytes32(returndata));
             // false condition
             if (uintReturndata == 0) {
-                // console2.log("return data is false");
                 active = false;
                 // true condition
             } else if (uintReturndata == 1) {
-                // console2.log("return data is true");
                 active = true;
             }
             // invalid condition
             else {
-                // console2.log("return data is not 0 or 1");
                 active = _getHatStatus(_hat);
             }
         } else {
-            // console2.log("call failed or return data != 32 bytes");
             active = _getHatStatus(_hat);
         }
     }
@@ -961,7 +943,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         But we still can't assume that the return data is in n, so we need to check that manually
         */
         if (success && returndata.length == 64) {
-            // console2.log("return data is 64 bytes");
             // check the returndata manually
             (uint256 firstWord, uint256 secondWord) = abi.decode(returndata, (uint256, uint256));
             // returndata is valid
@@ -969,11 +950,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
                 standing = (secondWord == 1) ? true : false;
                 // returndata is invalid
             } else {
-                // console2.log("return data is invalid");
                 standing = !badStandings[_hatId][_wearer];
             }
         } else {
-            // console2.log("call failed or return data != 64 bytes");
             standing = !badStandings[_hatId][_wearer];
         }
     }
