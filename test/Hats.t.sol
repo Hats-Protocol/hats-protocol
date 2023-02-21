@@ -1469,6 +1469,7 @@ contract LinkHatsTests is TestSetup2 {
         level13HatId = 0x0000000100050001000100010001000100010001000100010001000100010000;
 
         vm.prank(topHatWearer);
+        console2.log("creating level 14 hat");
         level14HatId = hats.createHat(level13HatId, "level 14 hat", _maxSupply, _eligibility, _toggle, false, "");
     }
 
@@ -1517,6 +1518,7 @@ contract LinkHatsTests is TestSetup2 {
 
         assertFalse(hats.isTopHat(secondTopHatId));
         assertEq(hats.getHatLevel(secondTopHatId), 2);
+        console2.log("starting isAdminOfHat assertion");
         assertTrue(hats.isAdminOfHat(secondWearer, secondTopHatId));
         assertEq(hats.linkedTreeRequests(secondTopHatDomain), 0);
     }
@@ -1744,6 +1746,7 @@ contract LinkHatsTests is TestSetup2 {
         assertEq(hats.getHatLevel(secondTopHatId), 2);
 
         // attempt second link from wearer
+        console2.log("attempting second link");
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, thirdWearer, secondTopHatId));
         vm.prank(thirdWearer);
         hats.requestLinkTopHatToTree(secondTopHatDomain, topHatId);
@@ -1854,7 +1857,8 @@ contract LinkHatsTests is TestSetup2 {
 }
 
 contract MalformedInputsTests is TestSetup2 {
-    string internal constant longString = "this is a super long string that hopefully is longer than 32 bytes. What say we make this especially loooooooooong?";
+    string internal constant longString =
+        "this is a super long string that hopefully is longer than 32 bytes. What say we make this especially loooooooooong?";
     address internal constant badAddress = address(0xbadadd55e);
     uint256 internal constant badUint = 2;
 
@@ -1936,7 +1940,7 @@ contract MalformedInputsTests is TestSetup2 {
         );
         vm.expectRevert(HatsErrors.NotHatsEligibility.selector);
         hats.checkHatWearerStatus(secondHatId, secondWearer);
-        
+
         vm.mockCall(
             address(_eligibility),
             abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
@@ -1966,7 +1970,7 @@ contract MalformedInputsTests is TestSetup2 {
             address(_toggle),
             abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
             abi.encode(
-                 longString // malformed; should be a bool
+                longString // malformed; should be a bool
             )
         );
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
@@ -1998,7 +2002,7 @@ contract MalformedInputsTests is TestSetup2 {
             address(_toggle),
             abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
             abi.encode(
-                 longString // malformed; should be a bool
+                longString // malformed; should be a bool
             )
         );
         vm.expectRevert(HatsErrors.NotHatsToggle.selector);
