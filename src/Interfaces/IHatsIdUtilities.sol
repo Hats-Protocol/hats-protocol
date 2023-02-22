@@ -23,9 +23,11 @@ interface IHatsIdUtilities {
 
     function isTopHat(uint256 _hatId) external view returns (bool);
 
+    function isLocalTopHat(uint256 _hatId) external pure returns (bool);
+
     function getAdminAtLevel(uint256 _hatId, uint32 _level) external view returns (uint256);
 
-    function getTreeAdminAtLevel(uint256 _hatId, uint32 _level) external pure returns (uint256);
+    function getLocalAdminAtLevel(uint256 _hatId, uint32 _level) external pure returns (uint256);
 
     function getTophatDomain(uint256 _hatId) external view returns (uint32);
 

@@ -95,6 +95,18 @@ contract CreateHatsTest is TestSetup {
         assertEq(hats.getAdminAtLevel(ids[1], 1), ids[0]);
         assertEq(hats.getAdminAtLevel(ids[2], 2), ids[1]);
     }
+
+    function testCannotCreateHatWithZeroAddressEligibility() public {
+        vm.expectRevert(HatsErrors.ZeroAddress.selector);
+        vm.prank(topHatWearer);
+        thirdHatId = hats.createHat(topHatId, _details, _maxSupply, address(0), _toggle, true, thirdHatImageURI);
+    }
+
+    function testCannotCreateHatWithZeroAddressToggle() public {
+        vm.expectRevert(HatsErrors.ZeroAddress.selector);
+        vm.prank(topHatWearer);
+        thirdHatId = hats.createHat(topHatId, _details, _maxSupply, _eligibility, address(0), true, thirdHatImageURI);
+    }
 }
 
 contract BatchCreateHats is TestSetupBatch {
@@ -334,12 +346,15 @@ contract ImageURITest is TestSetup2 {
 
         string memory uri3 = hats.getImageURIForHat(thirdHatId);
 
-        // assertEq(
-        //     uri3,
-        //     string.concat(secondHatImageURI, Strings.toString(thirdHatId))
-        // );
-
         assertEq(uri3, secondHatImageURI);
+    }
+
+    function testFallbackToTopHatImageURI() public {
+        vm.startPrank(topHatWearer);
+        uint256 newHatId = hats.createHat(topHatId, "new hat", 1, _eligibility, _toggle, false, "");
+
+        hats.getImageURIForHat(newHatId);
+        assertEq(hats.getImageURIForHat(newHatId), topHatImageURI);
     }
 
     function testEmptyTopHatImageURI() public {
@@ -361,14 +376,6 @@ contract ImageURITest is TestSetup2 {
         // assertEq(uri, string.concat(_baseImageURI, Strings.toString(ids[4])));
         assertEq(uri, _baseImageURI);
     }
-
-    // function testChangeGlobalBaseImageURI() public {
-    //     // only the Hats.sol contract owner can change it
-    // }
-
-    // function testNonOwnerCannotChangeGlobalBaseImageURI() public {
-    //     //
-    // }
 }
 
 contract MintHatsTest is TestSetup {
@@ -552,6 +559,18 @@ contract MintHatsTest is TestSetup {
         hats.mintHat(badHatId, secondWearer);
     }
 
+    function testCannotMintHatToIneligibleWearer() public {
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(false, true)
+        );
+
+        vm.expectRevert(HatsErrors.NotEligible.selector);
+        vm.prank(topHatWearer);
+        hats.mintHat(secondHatId, secondWearer);
+    }
+
     function testBatchMintHats(uint256 count) public {
         vm.assume(count <= 255);
 
@@ -714,7 +733,7 @@ contract TransferHatTests is TestSetupMutable {
         hats.mintHat(secondHatId, thirdWearer);
 
         // revoke the hat, but do not burn it
-        // mock calls to eligibility contract to return (eligible = true, standing = true)
+        // mock calls to eligibility contract to return (eligible = false, standing = true)
         vm.mockCall(
             address(_eligibility),
             abi.encodeWithSignature("getWearerStatus(address,uint256)", thirdWearer, secondHatId),
@@ -725,6 +744,18 @@ contract TransferHatTests is TestSetupMutable {
         // transfer should revert
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, thirdWearer, secondHatId));
 
+        hats.transferHat(secondHatId, secondWearer, thirdWearer);
+    }
+
+    function testCannotTransferHatToIneligibleWearer() public {
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", thirdWearer, secondHatId),
+            abi.encode(false, true)
+        );
+
+        vm.expectRevert(HatsErrors.NotEligible.selector);
+        vm.prank(topHatWearer);
         hats.transferHat(secondHatId, secondWearer, thirdWearer);
     }
 }
@@ -972,13 +1003,33 @@ contract RenounceHatsTest is TestSetup2 {
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
     }
 
-    function testCannotRenounceHatAsNonWearer() public {
+    function testCannotRenounceHatAsNonWearerWithNoStaticBalance() public {
         // expect NotHatWearer error
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatWearer.selector));
 
         //  6-1. attempt to renounce from non-wearer
         vm.prank(address(nonWearer));
         hats.renounceHat(secondHatId);
+    }
+
+    function testCanRenounceHatAsNonWearerWithStaticBalance() public {
+        // hat gets toggled off
+        // encode mock for function inside toggle contract to return false
+        vm.mockCall(address(_toggle), abi.encodeWithSignature("getHatStatus(uint256)", secondHatId), abi.encode(false));
+
+        // show that admin can't mint again to secondWearer, ie because they have a static balance
+        vm.prank(topHatWearer);
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, secondWearer, secondHatId));
+        hats.mintHat(secondHatId, secondWearer);
+        assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
+
+        // renounce should now succeed
+        vm.prank(address(secondWearer));
+        hats.renounceHat(secondHatId);
+
+        // now, admin should be able to mint again
+        vm.prank(topHatWearer);
+        hats.mintHat(secondHatId, secondWearer);
     }
 }
 
@@ -1039,9 +1090,30 @@ contract ToggleSetHatsTest is TestSetup2 {
         vm.prank(address(nonWearer));
         hats.setHatStatus(secondHatId, true);
     }
+
+    function testCannotSetToggleOffToArbitrarilyIncrementHatSupply() public {
+        // hat gets toggled off
+        vm.prank(address(_toggle));
+        hats.setHatStatus(secondHatId, false);
+
+        // artificially mint again to secondWearer
+        vm.prank(topHatWearer);
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, secondWearer, secondHatId));
+
+        hats.mintHat(secondHatId, secondWearer);
+
+        (,, retsupply,,,,,,) = hats.viewHat(secondHatId);
+        assertEq(retsupply, 1);
+
+        // toggle hat back on
+        vm.prank(address(_toggle));
+        hats.setHatStatus(secondHatId, true);
+        assertEq(hats.balanceOf(secondWearer, secondHatId), 1);
+    }
 }
 
-contract ToggleGetHatsTest is TestSetup2 {
+contract ToggleCheckHatsTest is TestSetup2 {
     function testCannotCheckHatStatusNoFunctionInToggleContract() public {
         // expect NotHatsToggle error
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotHatsToggle.selector));
@@ -1082,6 +1154,27 @@ contract ToggleGetHatsTest is TestSetup2 {
         (,,,,,,,, active_) = hats.viewHat(secondHatId);
         assertTrue(active_);
         assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
+    }
+
+    function testCannotCheckToggleOffToArbitrarilyIncrementHatSupply() public {
+        // hat gets toggled off
+        // encode mock for function inside toggle contract to return false
+        vm.mockCall(address(_toggle), abi.encodeWithSignature("getHatStatus(uint256)", secondHatId), abi.encode(false));
+
+        // artificially mint again to secondWearer
+        vm.prank(topHatWearer);
+
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, secondWearer, secondHatId));
+
+        hats.mintHat(secondHatId, secondWearer);
+
+        (,, retsupply,,,,,,) = hats.viewHat(secondHatId);
+        assertEq(retsupply, 1);
+
+        // toggle hat back on
+        // encode mock for function inside toggle contract to return false
+        vm.mockCall(address(_toggle), abi.encodeWithSignature("getHatStatus(uint256)", secondHatId), abi.encode(true));
+        assertEq(hats.balanceOf(secondWearer, secondHatId), 1);
     }
 }
 
@@ -1348,6 +1441,18 @@ contract MutabilityTests is TestSetupMutable {
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.Immutable.selector));
         hats.transferHat(thirdHatId, thirdWearer, secondWearer);
     }
+
+    function testAdminCannotChangeEligibilityToZeroAddress() public {
+        vm.expectRevert(HatsErrors.ZeroAddress.selector);
+        vm.prank(topHatWearer);
+        hats.changeHatEligibility(secondHatId, address(0));
+    }
+
+    function testAdminCannotChangeToggleToZeroAddress() public {
+        vm.expectRevert(HatsErrors.ZeroAddress.selector);
+        vm.prank(topHatWearer);
+        hats.changeHatToggle(secondHatId, address(0));
+    }
 }
 
 contract OverridesHatTests is TestSetup2 {
@@ -1388,6 +1493,7 @@ contract LinkHatsTests is TestSetup2 {
         level13HatId = 0x0000000100050001000100010001000100010001000100010001000100010000;
 
         vm.prank(topHatWearer);
+        console2.log("creating level 14 hat");
         level14HatId = hats.createHat(level13HatId, "level 14 hat", _maxSupply, _eligibility, _toggle, false, "");
     }
 
@@ -1436,6 +1542,7 @@ contract LinkHatsTests is TestSetup2 {
 
         assertFalse(hats.isTopHat(secondTopHatId));
         assertEq(hats.getHatLevel(secondTopHatId), 2);
+        console2.log("starting isAdminOfHat assertion");
         assertTrue(hats.isAdminOfHat(secondWearer, secondTopHatId));
         assertEq(hats.linkedTreeRequests(secondTopHatDomain), 0);
     }
@@ -1663,6 +1770,7 @@ contract LinkHatsTests is TestSetup2 {
         assertEq(hats.getHatLevel(secondTopHatId), 2);
 
         // attempt second link from wearer
+        console2.log("attempting second link");
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, thirdWearer, secondTopHatId));
         vm.prank(thirdWearer);
         hats.requestLinkTopHatToTree(secondTopHatDomain, topHatId);
@@ -1769,5 +1877,181 @@ contract LinkHatsTests is TestSetup2 {
         emit TopHatLinked(secondTopHatDomain, 0);
         hats.unlinkTopHatFromTree(secondTopHatDomain);
         assertEq(hats.isTopHat(secondTopHatId), true);
+    }
+}
+
+contract MalformedInputsTests is TestSetup2 {
+    string internal constant longString =
+        "this is a super long string that hopefully is longer than 32 bytes. What say we make this especially loooooooooong?";
+    address internal constant badAddress = address(0xbadadd55e);
+    uint256 internal constant badUint = 2;
+
+    function testCatchMalformedEligibilityData_isEligible() public {
+        // mock malformed return data from eligibility
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                longString, // malformed; should be a bool
+                true
+            )
+        );
+        hats.isEligible(secondWearer, secondHatId);
+
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                badUint, // malformed; should be a bool
+                true
+            )
+        );
+        hats.isEligible(secondWearer, secondHatId);
+
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                badAddress, // malformed; should be a bool
+                true
+            )
+        );
+        hats.isEligible(secondWearer, secondHatId);
+    }
+
+    function testCatchMalformedEligibilityData_isInGoodStanding() public {
+        // mock malformed return data from eligibility
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                longString, // malformed; should be a bool
+                true
+            )
+        );
+        hats.isInGoodStanding(secondWearer, secondHatId);
+
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                badUint, // malformed; should be a bool
+                true
+            )
+        );
+        hats.isInGoodStanding(secondWearer, secondHatId);
+
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                badAddress, // malformed; should be a bool
+                true
+            )
+        );
+        hats.isInGoodStanding(secondWearer, secondHatId);
+    }
+
+    function testCatchMalformedEligibilityData_checkHatWearerStatus() public {
+        // mock malformed return data from eligibility
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                longString, // malformed; should be a bool
+                true
+            )
+        );
+        vm.expectRevert(HatsErrors.NotHatsEligibility.selector);
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
+
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                badUint, // malformed; should be a bool
+                true
+            )
+        );
+        vm.expectRevert(HatsErrors.NotHatsEligibility.selector);
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
+
+        vm.mockCall(
+            address(_eligibility),
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(
+                badAddress, // malformed; should be a bool
+                true
+            )
+        );
+        vm.expectRevert(HatsErrors.NotHatsEligibility.selector);
+        hats.checkHatWearerStatus(secondHatId, secondWearer);
+    }
+
+    function testCatchMalformedToggleData_isWearerOfHat() public {
+        // mock malformed return data as a string
+        vm.mockCall(
+            address(_toggle),
+            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
+            abi.encode(
+                longString // malformed; should be a bool
+            )
+        );
+        assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
+
+        // mock malformed return data as a uint
+        vm.mockCall(
+            address(_toggle),
+            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
+            abi.encode(
+                badUint // malformed; should be a bool
+            )
+        );
+        assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
+
+        // mock malformed return data as an address
+        vm.mockCall(
+            address(_toggle),
+            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
+            abi.encode(
+                badAddress // malformed; should be a bool
+            )
+        );
+        assertTrue(hats.isWearerOfHat(secondWearer, secondHatId));
+    }
+
+    function testCatchMalformedToggleData_checkHatStatus() public {
+        // mock malformed return data as a string
+        vm.mockCall(
+            address(_toggle),
+            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
+            abi.encode(
+                longString // malformed; should be a bool
+            )
+        );
+        vm.expectRevert(HatsErrors.NotHatsToggle.selector);
+        hats.checkHatStatus(secondHatId);
+
+        // mock malformed return data as a uint
+        vm.mockCall(
+            address(_toggle),
+            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
+            abi.encode(
+                badUint // malformed; should be a bool
+            )
+        );
+        vm.expectRevert(HatsErrors.NotHatsToggle.selector);
+        hats.checkHatStatus(secondHatId);
+
+        // mock malformed return data as an address
+        vm.mockCall(
+            address(_toggle),
+            abi.encodeWithSignature("getHatStatus(uint256)", secondHatId),
+            abi.encode(
+                badAddress // malformed; should be a bool
+            )
+        );
+        vm.expectRevert(HatsErrors.NotHatsToggle.selector);
+        hats.checkHatStatus(secondHatId);
     }
 }

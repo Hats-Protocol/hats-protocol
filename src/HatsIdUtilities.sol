@@ -58,7 +58,6 @@ contract HatsIdUtilities is IHatsIdUtilities {
     uint256 internal constant MAX_LEVELS = 14;
 
     /// @notice Constructs a valid hat id for a new hat underneath a given admin
-    /// @dev Check hats[_admin].lastHatId for the previous hat created underneath _admin // TODO remove
     /// @param _admin the id of the admin for the new hat
     /// @param _newHat the uint16 id of the new hat
     /// @return id The constructed hat id
@@ -93,36 +92,56 @@ contract HatsIdUtilities is IHatsIdUtilities {
 
     /// @notice Identifies the level a given hat in its hat tree
     /// @param _hatId the id of the hat in question
-    /// @return level (0 to type(uint8).max)
-    function getHatLevel(uint256 _hatId) public view returns (uint32) {
-        uint256 mask;
-        uint256 i;
-        for (i = 0; i < MAX_LEVELS;) {
-            mask = uint256(type(uint256).max >> (TOPHAT_ADDRESS_SPACE + (LOWER_LEVEL_ADDRESS_SPACE * i)));
+    /// @return level (0 to type(uint32).max)
+    function getHatLevel(uint256 _hatId) public view returns (uint32 level) {
+        // uint256 mask;
+        // uint256 i;
+        level = getLocalHatLevel(_hatId);
 
-            if (_hatId & mask == 0) break;
-
-            // should not overflow based on < MAX_LEVELS stopping condition
-            unchecked {
-                ++i;
-            }
-        }
-        // TODO use getTopHatDomain here
-        uint256 treeAdmin = linkedTreeAdmins[uint32(_hatId >> (256 - TOPHAT_ADDRESS_SPACE))];
+        uint256 treeAdmin = linkedTreeAdmins[getTophatDomain(_hatId)];
 
         if (treeAdmin != 0) {
-            return 1 + uint32(i) + getHatLevel(treeAdmin);
+            level = 1 + level + getHatLevel(treeAdmin);
         }
 
-        return uint32(i);
+        // return uint32(i);
+    }
+
+    /// @notice Identifies the level a given hat in its local hat tree
+    /// @dev Similar to getHatLevel, but does not account for linked trees
+    /// @param _hatId the id of the hat in question
+    /// @return level The local level, from 0 to 14
+    function getLocalHatLevel(uint256 _hatId) public pure returns (uint32 level) {
+        if (_hatId & uint256(type(uint224).max) == 0) return 0;
+        if (_hatId & uint256(type(uint208).max) == 0) return 1;
+        if (_hatId & uint256(type(uint192).max) == 0) return 2;
+        if (_hatId & uint256(type(uint176).max) == 0) return 3;
+        if (_hatId & uint256(type(uint160).max) == 0) return 4;
+        if (_hatId & uint256(type(uint144).max) == 0) return 5;
+        if (_hatId & uint256(type(uint128).max) == 0) return 6;
+        if (_hatId & uint256(type(uint112).max) == 0) return 7;
+        if (_hatId & uint256(type(uint96).max) == 0) return 8;
+        if (_hatId & uint256(type(uint80).max) == 0) return 9;
+        if (_hatId & uint256(type(uint64).max) == 0) return 10;
+        if (_hatId & uint256(type(uint48).max) == 0) return 11;
+        if (_hatId & uint256(type(uint32).max) == 0) return 12;
+        if (_hatId & uint256(type(uint16).max) == 0) return 13;
+        return 14;
     }
 
     /// @notice Checks whether a hat is a topHat
-    /// @dev For use when passing a Hat object is not appropriate
     /// @param _hatId The hat in question
     /// @return bool Whether the hat is a topHat
     function isTopHat(uint256 _hatId) public view returns (bool) {
-        return _hatId > 0 && uint224(_hatId) == 0 && linkedTreeAdmins[getTophatDomain(_hatId)] == 0;
+        return isLocalTopHat(_hatId) && linkedTreeAdmins[getTophatDomain(_hatId)] == 0;
+    }
+
+    /// @notice Checks whether a hat is a topHat in its local hat tree
+    /// @dev Similar to isTopHat, but does not account for linked trees
+    /// @param _hatId The hat in question
+    /// @return bool Whether the hat is a topHat for its local tree
+    function isLocalTopHat(uint256 _hatId) public pure returns (bool) {
+        return _hatId > 0 && uint224(_hatId) == 0;
     }
 
     /// @notice Gets the hat id of the admin at a given level of a given hat
@@ -133,11 +152,11 @@ contract HatsIdUtilities is IHatsIdUtilities {
     /// @return uint256 The hat id of the resulting admin
     function getAdminAtLevel(uint256 _hatId, uint32 _level) public view returns (uint256) {
         uint256 linkedTreeAdmin = linkedTreeAdmins[getTophatDomain(_hatId)];
-        if (linkedTreeAdmin == 0) return getTreeAdminAtLevel(_hatId, _level);
+        if (linkedTreeAdmin == 0) return getLocalAdminAtLevel(_hatId, _level);
 
-        uint32 localTopHatLevel = getHatLevel(getTreeAdminAtLevel(_hatId, 0));
+        uint32 localTopHatLevel = getHatLevel(getLocalAdminAtLevel(_hatId, 0));
 
-        if (localTopHatLevel <= _level) return getTreeAdminAtLevel(_hatId, _level - localTopHatLevel);
+        if (localTopHatLevel <= _level) return getLocalAdminAtLevel(_hatId, _level - localTopHatLevel);
 
         return getAdminAtLevel(linkedTreeAdmin, _level);
     }
@@ -147,7 +166,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
     /// @param _hatId the id of the hat in question
     /// @param _level the admin level of interest
     /// @return uint256 The hat id of the resulting admin
-    function getTreeAdminAtLevel(uint256 _hatId, uint32 _level) public pure returns (uint256) {
+    function getLocalAdminAtLevel(uint256 _hatId, uint32 _level) public pure returns (uint256) {
         uint256 mask = type(uint256).max << (LOWER_LEVEL_ADDRESS_SPACE * (MAX_LEVELS - _level));
 
         return _hatId & mask;
