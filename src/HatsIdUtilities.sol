@@ -97,16 +97,6 @@ contract HatsIdUtilities is IHatsIdUtilities {
         // uint256 mask;
         // uint256 i;
         level = getLocalHatLevel(_hatId);
-        // for (i = 0; i < MAX_LEVELS;) {
-        //     mask = uint256(type(uint256).max >> (TOPHAT_ADDRESS_SPACE + (LOWER_LEVEL_ADDRESS_SPACE * i)));
-
-        //     if (_hatId & mask == 0) break;
-
-        //     // should not overflow based on < MAX_LEVELS stopping condition
-        //     unchecked {
-        //         ++i;
-        //     }
-        // }
 
         uint256 treeAdmin = linkedTreeAdmins[getTophatDomain(_hatId)];
 

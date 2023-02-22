@@ -113,7 +113,7 @@ Here are a few examples of how a DAO might confer authorities and responsibiliti
 
 | Authority | How is it attached to the Hat? |
 | --- | ---- |
-| Signer on a multisig | Using the Hat's ERC1155--similar token as a condition for membership in an Orca Protocol Pod |
+| Signer on a multisig | Using the Hat's ERC1155-similar token as a condition for membership in a Metropolis Pod |
 | Admin of the DAO's Github repo | Using the Hat's ERC1155-similar token as a condition for access via Lit Protocol |
 | Leadership of a working group | A social expectation |
 
@@ -339,7 +339,7 @@ To create a batch of Hats, a DAO can call the `Hats.batchCreateHats()` function.
 
 Only a Hat's admin can mint its token to a wearer.
 
-To mint a Hat, the Hat's max supply must not have already been reached, the target wearer must not already wear the Hat, and the target wearer must not be eligible for the hat.
+To mint a Hat, the Hat's max supply must not have already been reached, the target wearer must not already wear the Hat, and the target wearer must be eligible for the hat.
 
 A Hat's admin can mint its token individually by calling `Hats.mintHat`.
 

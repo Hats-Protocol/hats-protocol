@@ -27,7 +27,7 @@ import "solbase/utils/LibString.sol";
 
 /// @title Hats Protocol
 /// @notice Hats are DAO-native, revocable, and programmable roles that are represented as non-transferable ERC-1155-similar tokens for composability
-/// @dev This is a multitenant contract that can manage all hats for a given chain. While it fully implements the ERC1155 interface, it does not comply full with the ERC1155 standard.
+/// @dev This is a multitenant contract that can manage all hats for a given chain. While it fully implements the ERC1155 interface, it does not fully comply with the ERC1155 standard.
 /// @author Haberdasher Labs
 contract Hats is IHats, ERC1155, HatsIdUtilities {
     /*//////////////////////////////////////////////////////////////
@@ -232,7 +232,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         return buildHatId(_admin, nextHatId);
     }
 
-    /// @notice Mints an ERC1155 token of the Hat to an eligible recipient, who then "wears" the hat
+    /// @notice Mints an ERC1155-similar token of the Hat to an eligible recipient, who then "wears" the hat
     /// @dev The msg.sender must wear an admin Hat of `_hatId`, and the recipient must be eligible to wear `_hatId`
     /// @param _hatId The id of the Hat to mint
     /// @param _wearer The address to which the Hat is minted
@@ -305,13 +305,14 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         (bool success, bytes memory returndata) = hat.toggle.staticcall(data);
 
         /* 
-        if function call succeeds with data of length == 32, then we know the contract exists 
-        and has the getHatStatus function.
-        But we still can't assume that the return data is a boolean, so we need to check that manuallys
+        * if function call succeeds with data of length == 32, then we know the contract exists 
+        * and has the getHatStatus function.
+        * But — since function selectors don't include return types — we still can't assume that the return data is a boolean, 
+        * so we treat it as a uint so it will always safely decode without throwing.
         */
         if (success && returndata.length == 32) {
             // check the returndata manually
-            uint256 uintReturndata = uint256(bytes32(returndata));
+            uint256 uintReturndata = abi.decode(returndata, (uint256));
             // false condition
             if (uintReturndata == 0) {
                 newStatus = false;
@@ -367,9 +368,10 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         );
 
         /* 
-        if function call succeeds with data of length == 64, then we know the contract exists 
-        and has the getWearerStatus function (which returns two words).
-        But we still can't assume that the return data is in n, so we need to check that manually
+        * if function call succeeds with data of length == 64, then we know the contract exists 
+        * and has the getWearerStatus function (which returns two words).
+        * But — since function selectors don't include return types — we still can't assume that the return data is two booleans, 
+        * so we treat it as a uint so it will always safely decode without throwing.
         */
         if (success && returndata.length == 64) {
             // check the returndata manually
@@ -889,9 +891,10 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             _hat.toggle.staticcall(abi.encodeWithSignature("getHatStatus(uint256)", _hatId));
 
         /* 
-        if function call succeeds with data of length == 32, then we know the contract exists 
-        and has the getHatStatus function.
-        But we still can't assume that the return data is a boolean, so we need to check that manuallys
+        * if function call succeeds with data of length == 32, then we know the contract exists 
+        * and has the getHatStatus function.
+        * But — since function selectors don't include return types — we still can't assume that the return data is a boolean, 
+        * so we treat it as a uint so it will always safely decode without throwing.
         */
         if (success && returndata.length == 32) {
             // check the returndata manually
@@ -938,9 +941,10 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         );
 
         /* 
-        if function call succeeds with data of length == 64, then we know the contract exists 
-        and has the getWearerStatus function (which returns two words).
-        But we still can't assume that the return data is in n, so we need to check that manually
+        * if function call succeeds with data of length == 64, then we know the contract exists 
+        * and has the getWearerStatus function (which returns two words).
+        * But — since function selectors don't include return types — we still can't assume that the return data is two booleans, 
+        * so we treat it as a uint so it will always safely decode without throwing.
         */
         if (success && returndata.length == 64) {
             // check the returndata manually
@@ -968,9 +972,10 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             _hat.eligibility.staticcall(abi.encodeWithSignature("getWearerStatus(address,uint256)", _wearer, _hatId));
 
         /* 
-        if function call succeeds with data of length == 64, then we know the contract exists 
-        and has the getWearerStatus function (which returns two words).
-        But we still can't assume that the return data is in n, so we need to check that manually
+        * if function call succeeds with data of length == 64, then we know the contract exists 
+        * and has the getWearerStatus function (which returns two words).
+        * But — since function selectors don't include return types — we still can't assume that the return data is two booleans, 
+        * so we treat it as a uint so it will always safely decode without throwing.
         */
         if (success && returndata.length == 64) {
             bool standing;
