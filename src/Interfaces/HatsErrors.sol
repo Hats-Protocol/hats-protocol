@@ -39,6 +39,9 @@ interface HatsErrors {
     /// @notice Emitted when attempting to mint a non-existant hat
     error HatDoesNotExist(uint256 hatId);
 
+    /// @notice Emitted when attempting to mint or transfer a hat to an ineligible wearer
+    error NotEligible();
+
     /// @notice Emitted when attempting to check or set a hat's status from an account that is not that hat's toggle module
     error NotHatsToggle();
 
@@ -62,4 +65,7 @@ interface HatsErrors {
 
     /// @notice Emitted when attempting to link a tophat without a request
     error LinkageNotRequested();
+
+    /// @notice Emmited when attempted to change a hat's eligibility or toggle module to the zero address
+    error ZeroAddress();
 }

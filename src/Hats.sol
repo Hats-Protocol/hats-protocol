@@ -17,7 +17,7 @@
 pragma solidity >=0.8.13;
 
 import { ERC1155 } from "lib/ERC1155/ERC1155.sol";
-// import "forge-std/Test.sol"; //remove after testing
+// import { console2 } from "forge-std/Test.sol"; //remove after testing
 import "./Interfaces/IHats.sol";
 import "./HatsIdUtilities.sol";
 import "./Interfaces/IHatsToggle.sol";
@@ -26,8 +26,8 @@ import "solbase/utils/Base64.sol";
 import "solbase/utils/LibString.sol";
 
 /// @title Hats Protocol
-/// @notice Hats are DAO-native, revocable, and programmable roles that are represented as non-transferable ERC-1155 tokens for composability
-/// @dev This is a multitenant contract that can manage all hats for a given chain
+/// @notice Hats are DAO-native, revocable, and programmable roles that are represented as non-transferable ERC-1155-similar tokens for composability
+/// @dev This is a multitenant contract that can manage all hats for a given chain. While it fully implements the ERC1155 interface, it does not fully comply with the ERC1155 standard.
 /// @author Haberdasher Labs
 contract Hats is IHats, ERC1155, HatsIdUtilities {
     /*//////////////////////////////////////////////////////////////
@@ -149,9 +149,12 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         bool _mutable,
         string memory _imageURI
     ) public returns (uint256 newHatId) {
-        if (uint8(_admin) > 0) {
+        if (uint16(_admin) > 0) {
             revert MaxLevelsReached();
         }
+
+        if (_eligibility == address(0)) revert ZeroAddress();
+        if (_toggle == address(0)) revert ZeroAddress();
 
         newHatId = getNextId(_admin);
 
@@ -229,14 +232,16 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         return buildHatId(_admin, nextHatId);
     }
 
-    /// @notice Mints an ERC1155 token of the Hat to a recipient, who then "wears" the hat
-    /// @dev The msg.sender must wear the admin Hat of `_hatId`
+    /// @notice Mints an ERC1155-similar token of the Hat to an eligible recipient, who then "wears" the hat
+    /// @dev The msg.sender must wear an admin Hat of `_hatId`, and the recipient must be eligible to wear `_hatId`
     /// @param _hatId The id of the Hat to mint
     /// @param _wearer The address to which the Hat is minted
     /// @return bool Whether the mint succeeded
     function mintHat(uint256 _hatId, address _wearer) public returns (bool) {
         Hat memory hat = _hats[_hatId];
         if (hat.maxSupply == 0) revert HatDoesNotExist(_hatId);
+
+        if (!isEligible(_wearer, _hatId)) revert NotEligible();
 
         // only the wearer of a hat's admin Hat can mint it
         _checkAdmin(_hatId);
@@ -245,7 +250,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             revert AllHatsWorn(_hatId);
         }
 
-        if (isWearerOfHat(_wearer, _hatId)) {
+        if (_staticBalanceOf(_wearer, _hatId) > 0) {
             revert AlreadyWearingHat(_wearer, _hatId);
         }
 
@@ -297,13 +302,28 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         bool newStatus;
 
         bytes memory data = abi.encodeWithSignature("getHatStatus(uint256)", _hatId);
-
         (bool success, bytes memory returndata) = hat.toggle.staticcall(data);
 
-        // if function call succeeds with data of length > 0
-        // then we know the contract exists and has the getWearerStatus function
-        if (success && returndata.length > 0) {
-            newStatus = abi.decode(returndata, (bool));
+        /* 
+        * if function call succeeds with data of length == 32, then we know the contract exists 
+        * and has the getHatStatus function.
+        * But — since function selectors don't include return types — we still can't assume that the return data is a boolean, 
+        * so we treat it as a uint so it will always safely decode without throwing.
+        */
+        if (success && returndata.length == 32) {
+            // check the returndata manually
+            uint256 uintReturndata = abi.decode(returndata, (uint256));
+            // false condition
+            if (uintReturndata == 0) {
+                newStatus = false;
+                // true condition
+            } else if (uintReturndata == 1) {
+                newStatus = true;
+            }
+            // invalid condition
+            else {
+                revert NotHatsToggle();
+            }
         } else {
             revert NotHatsToggle();
         }
@@ -338,31 +358,46 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev Burns the wearer's hat, if revoked
     /// @param _hatId The id of the hat
     /// @param _wearer The address of the Hat wearer whose status report is being requested
-    function checkHatWearerStatus(uint256 _hatId, address _wearer) public returns (bool) {
-        Hat memory hat = _hats[_hatId];
+    /// @return wearerStatusChanged Whether the wearer's status was altered
+    function checkHatWearerStatus(uint256 _hatId, address _wearer) public returns (bool wearerStatusChanged) {
         bool eligible;
         bool standing;
 
-        bytes memory data = abi.encodeWithSignature("getWearerStatus(address,uint256)", _wearer, _hatId);
+        (bool success, bytes memory returndata) = _hats[_hatId].eligibility.staticcall(
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", _wearer, _hatId)
+        );
 
-        (bool success, bytes memory returndata) = hat.eligibility.staticcall(data);
-
-        // if function call succeeds with data of length > 0
-        // then we know the contract exists and has the getWearerStatus function
-        if (success && returndata.length > 0) {
-            (eligible, standing) = abi.decode(returndata, (bool, bool));
+        /* 
+        * if function call succeeds with data of length == 64, then we know the contract exists 
+        * and has the getWearerStatus function (which returns two words).
+        * But — since function selectors don't include return types — we still can't assume that the return data is two booleans, 
+        * so we treat it as a uint so it will always safely decode without throwing.
+        */
+        if (success && returndata.length == 64) {
+            // check the returndata manually
+            (uint256 firstWord, uint256 secondWord) = abi.decode(returndata, (uint256, uint256));
+            // returndata is valid
+            if (firstWord < 2 && secondWord < 2) {
+                standing = (secondWord == 1) ? true : false;
+                // never eligible if in bad standing
+                eligible = (standing && firstWord == 1) ? true : false;
+            }
+            // returndata is invalid
+            else {
+                revert NotHatsEligibility();
+            }
         } else {
             revert NotHatsEligibility();
         }
 
-        return _processHatWearerStatus(_hatId, _wearer, eligible, standing);
+        wearerStatusChanged = _processHatWearerStatus(_hatId, _wearer, eligible, standing);
     }
 
     /// @notice Stop wearing a hat, aka "renounce" it
     /// @dev Burns the msg.sender's hat
     /// @param _hatId The id of the Hat being renounced
     function renounceHat(uint256 _hatId) external {
-        if (!isWearerOfHat(msg.sender, _hatId)) {
+        if (_staticBalanceOf(msg.sender, _hatId) < 1) {
             revert NotHatWearer();
         }
         // remove the hat
@@ -434,7 +469,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         returns (bool updated)
     {
         // revoke/burn the hat if _wearer has a positive balance
-        if (_balanceOf[_wearer][_hatId] > 0) {
+        if (_staticBalanceOf(_wearer, _hatId) > 0) {
             // always ineligible if in bad standing
             if (!_eligible || !_standing) {
                 _burnHat(_wearer, _hatId);
@@ -467,6 +502,17 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
     }
 
+    /**
+     * @notice Internal function to retrieve an account's internal "static" balance directly from internal storage,
+     * @dev This function bypasses the dynamic `_isActive` and `_isEligible` checks
+     * @param _account The account to check
+     * @param _hatId The hat to check
+     * @return staticBalance The account's static of the hat, from internal storage
+     */
+    function _staticBalanceOf(address _account, uint256 _hatId) internal view returns (uint256 staticBalance) {
+        staticBalance = _balanceOf[_account][_hatId];
+    }
+
     /*//////////////////////////////////////////////////////////////
                               HATS ADMIN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -485,7 +531,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
     }
 
-    /// @notice Transfers a hat from one wearer to another
+    /// @notice Transfers a hat from one wearer to another eligible wearer
     /// @dev The hat must be mutable, and the transfer must be initiated by an admin
     /// @param _hatId The hat in question
     /// @param _from The current wearer
@@ -499,14 +545,16 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
 
         // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
-        if (_balanceOf[_from][_hatId] < 1) {
+        if (_staticBalanceOf(_from, _hatId) < 1) {
             revert NotHatWearer();
         }
 
         // Check if recipient is already wearing hat; also checks storage to maintain balance == 1 invariant
-        if (_balanceOf[_to][_hatId] > 0) {
+        if (_staticBalanceOf(_to, _hatId) > 0) {
             revert AlreadyWearingHat(_to, _hatId);
         }
+
+        if (!isEligible(_to, _hatId)) revert NotEligible();
 
         //Adjust balances
 
@@ -560,6 +608,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hatId The id of the Hat to change
     /// @param _newEligibility The new eligibility module
     function changeHatEligibility(uint256 _hatId, address _newEligibility) external {
+        if (_newEligibility == address(0)) revert ZeroAddress();
+
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 
@@ -577,6 +627,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hatId The id of the Hat to change
     /// @param _newToggle The new toggle module
     function changeHatToggle(uint256 _hatId, address _newToggle) external {
+        if (_newToggle == address(0)) revert ZeroAddress();
+
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 
@@ -623,9 +675,10 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             revert NewMaxSupplyTooLow();
         }
 
-        hat.maxSupply = _newMaxSupply;
-
-        emit HatMaxSupplyChanged(_hatId, _newMaxSupply);
+        if (_newMaxSupply != hat.maxSupply) {
+            hat.maxSupply = _newMaxSupply;
+            emit HatMaxSupplyChanged(_hatId, _newMaxSupply);
+        }
     }
 
     /// @notice Submits a request to link a Hat Tree under a parent tree. Requests can be
@@ -649,7 +702,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Approve a request to link a Tree under a parent tree
-    /// @dev Requests can only be approved by an admin of the `_newAdminHat`, and there
+    /// @dev Requests can only be approved by wearer or an admin of the `_newAdminHat`, and there
     ///      can only be one link per tree root at a given time.
     /// @param _topHatDomain The 32 bit domain of the tophat to link
     /// @param _newAdminHat The hat that will administer the linked tree
@@ -782,23 +835,50 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hatId The id of the Hat for which the `_user` might be the admin
     /// @return bool Whether the `_user` has admin rights for the Hat
     function isAdminOfHat(address _user, uint256 _hatId) public view returns (bool) {
-        if (isTopHat(_hatId)) {
-            return (isWearerOfHat(_user, _hatId));
+        uint256 linkedTreeAdmin;
+        uint32 adminLocalHatLevel;
+        if (isLocalTopHat(_hatId)) {
+            linkedTreeAdmin = linkedTreeAdmins[getTophatDomain(_hatId)];
+            if (linkedTreeAdmin == 0) {
+                // tree is not linked
+                return isWearerOfHat(_user, _hatId);
+            } else {
+                // tree is linked
+                if (isWearerOfHat(_user, linkedTreeAdmin)) {
+                    return true;
+                } // user wears the treeAdmin
+                else {
+                    adminLocalHatLevel = getLocalHatLevel(linkedTreeAdmin);
+                    _hatId = linkedTreeAdmin;
+                }
+            }
+        } else {
+            // if we get here, _hatId is not a tophat of any kind
+            // get the local tree level of _hatId's admin
+            adminLocalHatLevel = getLocalHatLevel(_hatId) - 1;
         }
 
-        uint8 adminHatLevel = getHatLevel(_hatId) - 1;
-
-        while (adminHatLevel > 0) {
-            if (isWearerOfHat(_user, getAdminAtLevel(_hatId, adminHatLevel))) {
+        // search up _hatId's local address space for an admin hat that the _user wears
+        while (adminLocalHatLevel > 0) {
+            if (isWearerOfHat(_user, getLocalAdminAtLevel(_hatId, adminLocalHatLevel))) {
                 return true;
             }
             // should not underflow given stopping condition > 0
             unchecked {
-                --adminHatLevel;
+                --adminLocalHatLevel;
             }
         }
 
-        return isWearerOfHat(_user, getAdminAtLevel(_hatId, 0));
+        // if we get here, we're at the top of _hatId's local tree
+        linkedTreeAdmin = linkedTreeAdmins[getTophatDomain(_hatId)];
+        if (linkedTreeAdmin == 0) {
+            // tree is not linked
+            return isWearerOfHat(_user, getLocalAdminAtLevel(_hatId, 0));
+        } else {
+            if (isWearerOfHat(_user, linkedTreeAdmin)) return true; // user wears the linkedTreeAdmin
+
+            else return isAdminOfHat(_user, linkedTreeAdmin); // check if user is admin of linkedTreeAdmin (recursion)
+        }
     }
 
     /// @notice Checks the active status of a hat
@@ -806,15 +886,32 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hat The Hat struct
     /// @param _hatId The id of the hat
     /// @return active The active status of the hat
-    function _isActive(Hat memory _hat, uint256 _hatId) internal view returns (bool) {
-        bytes memory data = abi.encodeWithSignature("getHatStatus(uint256)", _hatId);
+    function _isActive(Hat memory _hat, uint256 _hatId) internal view returns (bool active) {
+        (bool success, bytes memory returndata) =
+            _hat.toggle.staticcall(abi.encodeWithSignature("getHatStatus(uint256)", _hatId));
 
-        (bool success, bytes memory returndata) = _hat.toggle.staticcall(data);
-
-        if (success && returndata.length > 0) {
-            return abi.decode(returndata, (bool));
+        /* 
+        * if function call succeeds with data of length == 32, then we know the contract exists 
+        * and has the getHatStatus function.
+        * But — since function selectors don't include return types — we still can't assume that the return data is a boolean, 
+        * so we treat it as a uint so it will always safely decode without throwing.
+        */
+        if (success && returndata.length == 32) {
+            // check the returndata manually
+            uint256 uintReturndata = uint256(bytes32(returndata));
+            // false condition
+            if (uintReturndata == 0) {
+                active = false;
+                // true condition
+            } else if (uintReturndata == 1) {
+                active = true;
+            }
+            // invalid condition
+            else {
+                active = _getHatStatus(_hat);
+            }
         } else {
-            return _getHatStatus(_hat);
+            active = _getHatStatus(_hat);
         }
     }
 
@@ -835,7 +932,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Checks whether a wearer of a Hat is in good standing
-    /// @dev Public function for use when pa    ssing a Hat object is not possible or preferable
     /// @param _wearer The address of the Hat wearer
     /// @param _hatId The id of the Hat
     /// @return standing Whether the wearer is in good standing
@@ -844,8 +940,22 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             abi.encodeWithSignature("getWearerStatus(address,uint256)", _wearer, _hatId)
         );
 
-        if (success && returndata.length > 0) {
-            (, standing) = abi.decode(returndata, (bool, bool));
+        /* 
+        * if function call succeeds with data of length == 64, then we know the contract exists 
+        * and has the getWearerStatus function (which returns two words).
+        * But — since function selectors don't include return types — we still can't assume that the return data is two booleans, 
+        * so we treat it as a uint so it will always safely decode without throwing.
+        */
+        if (success && returndata.length == 64) {
+            // check the returndata manually
+            (uint256 firstWord, uint256 secondWord) = abi.decode(returndata, (uint256, uint256));
+            // returndata is valid
+            if (firstWord < 2 && secondWord < 2) {
+                standing = (secondWord == 1) ? true : false;
+                // returndata is invalid
+            } else {
+                standing = !badStandings[_hatId][_wearer];
+            }
         } else {
             standing = !badStandings[_hatId][_wearer];
         }
@@ -861,11 +971,26 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         (bool success, bytes memory returndata) =
             _hat.eligibility.staticcall(abi.encodeWithSignature("getWearerStatus(address,uint256)", _wearer, _hatId));
 
-        if (success && returndata.length > 0) {
+        /* 
+        * if function call succeeds with data of length == 64, then we know the contract exists 
+        * and has the getWearerStatus function (which returns two words).
+        * But — since function selectors don't include return types — we still can't assume that the return data is two booleans, 
+        * so we treat it as a uint so it will always safely decode without throwing.
+        */
+        if (success && returndata.length == 64) {
             bool standing;
-            (eligible, standing) = abi.decode(returndata, (bool, bool));
-            // never eligible if in bad standing
-            if (eligible && !standing) eligible = false;
+            // check the returndata manually
+            (uint256 firstWord, uint256 secondWord) = abi.decode(returndata, (uint256, uint256));
+            // returndata is valid
+            if (firstWord < 2 && secondWord < 2) {
+                standing = (secondWord == 1) ? true : false;
+                // never eligible if in bad standing
+                eligible = (standing && firstWord == 1) ? true : false;
+            }
+            // returndata is invalid
+            else {
+                eligible = !badStandings[_hatId][_wearer];
+            }
         } else {
             eligible = !badStandings[_hatId][_wearer];
         }
@@ -877,7 +1002,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _wearer The address to check
     /// @return bool
     function isEligible(address _wearer, uint256 _hatId) public view returns (bool) {
-        // Hat memory hat = _hats[_hatId];
         return _isEligible(_wearer, _hats[_hatId], _hatId);
     }
 
@@ -896,7 +1020,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @return imageURI The imageURI of this hat or, if empty, its admin
     function getImageURIForHat(uint256 _hatId) public view returns (string memory) {
         // check _hatId first to potentially avoid the `getHatLevel` call
-        Hat memory hat = _hats[_hatId];
+        Hat storage hat = _hats[_hatId];
 
         string memory imageURI = hat.imageURI; // save 1 SLOAD
 
@@ -916,7 +1040,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         // already checked at `level` above, so we start the loop at `level - 1`
         for (uint256 i = level - 1; i > 0;) {
-            id = getAdminAtLevel(_hatId, uint8(i));
+            id = getAdminAtLevel(_hatId, uint32(i));
             hat = _hats[id];
             imageURI = hat.imageURI;
 
@@ -927,6 +1051,14 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             unchecked {
                 --i;
             }
+        }
+
+        id = getAdminAtLevel(_hatId, 0);
+        hat = _hats[id];
+        imageURI = hat.imageURI;
+
+        if (bytes(imageURI).length > 0) {
+            return imageURI;
         }
 
         // if none of _hatId's admins has an imageURI of its own, we again fall back to the global image uri
@@ -954,7 +1086,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             '", "id": "',
             LibString.toString(_hatId),
             '", "pretty id": "',
-            "{id}",
+            LibString.toHexString(_hatId, 32),
             '",'
         );
 
