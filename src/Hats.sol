@@ -763,7 +763,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         // disallow relinking to separate tree
         if (linkedTreeAdmins[_topHatDomain] > 0) {
-            if (!sameTippyTophatDomain(_topHatDomain, _newAdminHat)) {
+            if (!sameTippyTopHatDomain(_topHatDomain, _newAdminHat)) {
                 revert CrossTreeLinkage();
             }
         }
@@ -832,7 +832,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256 linkedTreeAdmin;
         uint32 adminLocalHatLevel;
         if (isLocalTopHat(_hatId)) {
-            linkedTreeAdmin = linkedTreeAdmins[getTophatDomain(_hatId)];
+            linkedTreeAdmin = linkedTreeAdmins[getTopHatDomain(_hatId)];
             if (linkedTreeAdmin == 0) {
                 // tree is not linked
                 return isAdmin = isWearerOfHat(_user, _hatId);
@@ -868,7 +868,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (isWearerOfHat(_user, getAdminAtLocalLevel(_hatId, 0))) return isAdmin = true;
 
         // if not, we check if it's linked to another tree
-        linkedTreeAdmin = linkedTreeAdmins[getTophatDomain(_hatId)];
+        linkedTreeAdmin = linkedTreeAdmins[getTopHatDomain(_hatId)];
         if (linkedTreeAdmin == 0) {
             // tree is not linked
             // we've already learned that user doesn't wear the local tophat, so there's nothing else to check; we return false
@@ -1083,7 +1083,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         // split into two objects to avoid stack too deep error
         string memory idProperties = string.concat(
             '"domain": "',
-            LibString.toString(getTophatDomain(_hatId)),
+            LibString.toString(getTopHatDomain(_hatId)),
             '", "id": "',
             LibString.toString(_hatId),
             '", "pretty id": "',

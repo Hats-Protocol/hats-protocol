@@ -31,13 +31,13 @@ interface IHatsIdUtilities {
 
     function getAdminAtLocalLevel(uint256 _hatId, uint32 _level) external pure returns (uint256 admin);
 
-    function getTophatDomain(uint256 _hatId) external view returns (uint32 domain);
+    function getTopHatDomain(uint256 _hatId) external view returns (uint32 domain);
 
-    function getTippyTophatDomain(uint32 _topHatDomain) external view returns (uint32 domain);
+    function getTippyTopHatDomain(uint32 _topHatDomain) external view returns (uint32 domain);
 
     function noCircularLinkage(uint32 _topHatDomain, uint256 _linkedAdmin) external view returns (bool notCircular);
 
-    function sameTippyTophatDomain(uint32 _topHatDomain, uint256 _newAdminHat)
+    function sameTippyTopHatDomain(uint32 _topHatDomain, uint256 _newAdminHat)
         external
         view
         returns (bool sameDomain);

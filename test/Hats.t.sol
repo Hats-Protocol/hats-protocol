@@ -1488,8 +1488,8 @@ contract LinkHatsTests is TestSetup2 {
 
         secondTopHatId = hats.mintTopHat(thirdWearer, "for linking", "http://www.tophat.com/");
 
-        topHatDomain = hats.getTophatDomain(topHatId);
-        secondTopHatDomain = hats.getTophatDomain(secondTopHatId);
+        topHatDomain = hats.getTopHatDomain(topHatId);
+        secondTopHatDomain = hats.getTopHatDomain(secondTopHatId);
         level13HatId = 0x0000000100050001000100010001000100010001000100010001000100010000;
 
         vm.prank(topHatWearer);
@@ -1808,7 +1808,7 @@ contract LinkHatsTests is TestSetup2 {
 
         // second link, under first link
         uint256 thirdTopHatId = hats.mintTopHat(fourthWearer, "for linking", "http://www.tophat.com/");
-        uint32 thirdTopHatDomain = hats.getTophatDomain(thirdTopHatId);
+        uint32 thirdTopHatDomain = hats.getTopHatDomain(thirdTopHatId);
 
         vm.prank(fourthWearer);
         hats.requestLinkTopHatToTree(thirdTopHatDomain, secondTopHatId);
