@@ -869,15 +869,23 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             }
         }
 
-        // if we get here, we're at the top of _hatId's local tree
+        // if we get here, we've reached the top of _hatId's local tree, ie the local tophat
+        // check if the user wears the local tophat
+        if (isWearerOfHat(_user, getLocalAdminAtLevel(_hatId, 0))) return true;
+
+        // if not, we check if it's linked to another tree
         linkedTreeAdmin = linkedTreeAdmins[getTophatDomain(_hatId)];
         if (linkedTreeAdmin == 0) {
             // tree is not linked
-            return isWearerOfHat(_user, getLocalAdminAtLevel(_hatId, 0));
+            // we've already learned that user doesn't wear the local tophat, so there's nothing else to check; we return false
+            return false;
         } else {
-            if (isWearerOfHat(_user, linkedTreeAdmin)) return true; // user wears the linkedTreeAdmin
+            // tree is linked
+            // check if user is wearer of linkedTreeAdmin
+            if (isWearerOfHat(_user, linkedTreeAdmin)) return true;
 
-            else return isAdminOfHat(_user, linkedTreeAdmin); // check if user is admin of linkedTreeAdmin (recursion)
+            // if not, recurse to traverse the parent tree for a hat that the user wears
+            else return isAdminOfHat(_user, linkedTreeAdmin);
         }
     }
 
