@@ -238,7 +238,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _wearer The address to which the Hat is minted
     /// @return bool Whether the mint succeeded
     function mintHat(uint256 _hatId, address _wearer) public returns (bool) {
-        Hat memory hat = _hats[_hatId];
+        Hat storage hat = _hats[_hatId];
         if (hat.maxSupply == 0) revert HatDoesNotExist(_hatId);
 
         if (!isEligible(_wearer, _hatId)) revert NotEligible();
@@ -298,7 +298,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hatId The id of the Hat whose toggle we are checking
     /// @return bool Whether there was a new status
     function checkHatStatus(uint256 _hatId) external returns (bool) {
-        Hat memory hat = _hats[_hatId];
+        Hat storage hat = _hats[_hatId];
         bool newStatus;
 
         bytes memory data = abi.encodeWithSignature("getHatStatus(uint256)", _hatId);
@@ -343,7 +343,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         external
         returns (bool)
     {
-        Hat memory hat = _hats[_hatId];
+        Hat storage hat = _hats[_hatId];
 
         if (msg.sender != hat.eligibility) {
             revert NotHatsEligibility();
@@ -808,7 +808,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             bool active
         )
     {
-        Hat memory hat = _hats[_hatId];
+        Hat storage hat = _hats[_hatId];
         details = hat.details;
         maxSupply = hat.maxSupply;
         supply = hat.supply;
@@ -883,7 +883,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             // tree is linked
             // check if user is wearer of linkedTreeAdmin
             if (isWearerOfHat(_user, linkedTreeAdmin)) return true;
-
             // if not, recurse to traverse the parent tree for a hat that the user wears
             else return isAdminOfHat(_user, linkedTreeAdmin);
         }
@@ -894,7 +893,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hat The Hat struct
     /// @param _hatId The id of the hat
     /// @return active The active status of the hat
-    function _isActive(Hat memory _hat, uint256 _hatId) internal view returns (bool active) {
+    function _isActive(Hat storage _hat, uint256 _hatId) internal view returns (bool active) {
         (bool success, bytes memory returndata) =
             _hat.toggle.staticcall(abi.encodeWithSignature("getHatStatus(uint256)", _hatId));
 
@@ -927,7 +926,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev reads the 0th bit of the hat's config
     /// @param _hat The hat object
     /// @return Whether the hat is active
-    function _getHatStatus(Hat memory _hat) internal pure returns (bool) {
+    function _getHatStatus(Hat storage _hat) internal view returns (bool) {
         return (_hat.config >> 95 != 0);
     }
 
@@ -935,7 +934,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev reads the 1st bit of the hat's config
     /// @param _hat The hat object
     /// @return Whether the hat is mutable
-    function _isMutable(Hat memory _hat) internal pure returns (bool) {
+    function _isMutable(Hat storage _hat) internal view returns (bool) {
         return (_hat.config & uint96(1 << 94) != 0);
     }
 
@@ -975,7 +974,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hat The Hat object
     /// @param _hatId The id of the Hat
     /// @return eligible Whether the wearer is eligible for the Hat
-    function _isEligible(address _wearer, Hat memory _hat, uint256 _hatId) internal view returns (bool eligible) {
+    function _isEligible(address _wearer, Hat storage _hat, uint256 _hatId) internal view returns (bool eligible) {
         (bool success, bytes memory returndata) =
             _hat.eligibility.staticcall(abi.encodeWithSignature("getWearerStatus(address,uint256)", _wearer, _hatId));
 
@@ -1077,7 +1076,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hatId The id of the Hat
     /// @return An ERC1155-compatible JSON string
     function _constructURI(uint256 _hatId) internal view returns (string memory) {
-        Hat memory hat = _hats[_hatId];
+        Hat storage hat = _hats[_hatId];
 
         uint256 hatAdmin;
 
@@ -1159,7 +1158,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         override(ERC1155, IHats)
         returns (uint256 balance)
     {
-        Hat memory hat = _hats[_hatId];
+        Hat storage hat = _hats[_hatId];
 
         balance = 0;
 
