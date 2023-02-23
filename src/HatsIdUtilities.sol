@@ -103,8 +103,6 @@ contract HatsIdUtilities is IHatsIdUtilities {
         if (treeAdmin != 0) {
             level = 1 + level + getHatLevel(treeAdmin);
         }
-
-        // return uint32(i);
     }
 
     /// @notice Identifies the level a given hat in its local hat tree
@@ -131,17 +129,17 @@ contract HatsIdUtilities is IHatsIdUtilities {
 
     /// @notice Checks whether a hat is a topHat
     /// @param _hatId The hat in question
-    /// @return bool Whether the hat is a topHat
-    function isTopHat(uint256 _hatId) public view returns (bool) {
-        return isLocalTopHat(_hatId) && linkedTreeAdmins[getTophatDomain(_hatId)] == 0;
+    /// @return _isTopHat Whether the hat is a topHat
+    function isTopHat(uint256 _hatId) public view returns (bool _isTopHat) {
+        _isTopHat = isLocalTopHat(_hatId) && linkedTreeAdmins[getTophatDomain(_hatId)] == 0;
     }
 
     /// @notice Checks whether a hat is a topHat in its local hat tree
     /// @dev Similar to isTopHat, but does not account for linked trees
     /// @param _hatId The hat in question
-    /// @return bool Whether the hat is a topHat for its local tree
-    function isLocalTopHat(uint256 _hatId) public pure returns (bool) {
-        return _hatId > 0 && uint224(_hatId) == 0;
+    /// @return _isLocalTopHat Whether the hat is a topHat for its local tree
+    function isLocalTopHat(uint256 _hatId) public pure returns (bool _isLocalTopHat) {
+        _isLocalTopHat = _hatId > 0 && uint224(_hatId) == 0;
     }
 
     /// @notice Gets the hat id of the admin at a given level of a given hat
@@ -149,51 +147,51 @@ contract HatsIdUtilities is IHatsIdUtilities {
     ///       pointer to a hat located in a different tree
     /// @param _hatId the id of the hat in question
     /// @param _level the admin level of interest
-    /// @return uint256 The hat id of the resulting admin
-    function getAdminAtLevel(uint256 _hatId, uint32 _level) public view returns (uint256) {
+    /// @return admin The hat id of the resulting admin
+    function getAdminAtLevel(uint256 _hatId, uint32 _level) public view returns (uint256 admin) {
         uint256 linkedTreeAdmin = linkedTreeAdmins[getTophatDomain(_hatId)];
-        if (linkedTreeAdmin == 0) return getLocalAdminAtLevel(_hatId, _level);
+        if (linkedTreeAdmin == 0) return admin = getAdminAtLocalLevel(_hatId, _level);
 
-        uint32 localTopHatLevel = getHatLevel(getLocalAdminAtLevel(_hatId, 0));
+        uint32 localTopHatLevel = getHatLevel(getAdminAtLocalLevel(_hatId, 0));
 
-        if (localTopHatLevel <= _level) return getLocalAdminAtLevel(_hatId, _level - localTopHatLevel);
+        if (localTopHatLevel <= _level) return admin = getAdminAtLocalLevel(_hatId, _level - localTopHatLevel);
 
-        return getAdminAtLevel(linkedTreeAdmin, _level);
+        return admin = getAdminAtLevel(linkedTreeAdmin, _level);
     }
 
     /// @notice Gets the hat id of the admin at a given level of a given hat
     ///         local to the tree containing the hat.
     /// @param _hatId the id of the hat in question
     /// @param _level the admin level of interest
-    /// @return uint256 The hat id of the resulting admin
-    function getLocalAdminAtLevel(uint256 _hatId, uint32 _level) public pure returns (uint256) {
+    /// @return admin The hat id of the resulting admin
+    function getAdminAtLocalLevel(uint256 _hatId, uint32 _level) public pure returns (uint256 admin) {
         uint256 mask = type(uint256).max << (LOWER_LEVEL_ADDRESS_SPACE * (MAX_LEVELS - _level));
 
-        return _hatId & mask;
+        admin = _hatId & mask;
     }
 
     /// @notice Gets the tophat domain of a given hat
     /// @dev A domain is the identifier for a given hat tree, stored in the first 4 bytes of a hat's id
     /// @param _hatId the id of the hat in question
-    /// @return uint32 The domain
-    function getTophatDomain(uint256 _hatId) public pure returns (uint32) {
-        return uint32(_hatId >> (LOWER_LEVEL_ADDRESS_SPACE * MAX_LEVELS));
+    /// @return domain The domain of the hat's tophat
+    function getTophatDomain(uint256 _hatId) public pure returns (uint32 domain) {
+        domain = uint32(_hatId >> (LOWER_LEVEL_ADDRESS_SPACE * MAX_LEVELS));
     }
 
     /// @notice Gets the domain of the highest parent tophat — the "tippy tophat"
     /// @param _topHatDomain the 32 bit domain of a (likely linked) tophat
-    /// @return The tippy tophat domain
-    function getTippyTophatDomain(uint32 _topHatDomain) public view returns (uint32) {
+    /// @return domain The tippy tophat domain
+    function getTippyTophatDomain(uint32 _topHatDomain) public view returns (uint32 domain) {
         uint256 linkedAdmin = linkedTreeAdmins[_topHatDomain];
-        if (linkedAdmin == 0) return _topHatDomain;
-        return getTippyTophatDomain(getTophatDomain(linkedAdmin));
+        if (linkedAdmin == 0) return domain = _topHatDomain;
+        return domain = getTippyTophatDomain(getTophatDomain(linkedAdmin));
     }
 
     /// @notice Checks For any circular linkage of trees
     /// @param _topHatDomain the 32 bit domain of the tree to be linked
     /// @param _linkedAdmin the hatId of the potential tree admin
-    /// @return bool circular link has been found
-    function noCircularLinkage(uint32 _topHatDomain, uint256 _linkedAdmin) public view returns (bool) {
+    /// @return notCircular circular link has not been found
+    function noCircularLinkage(uint32 _topHatDomain, uint256 _linkedAdmin) public view returns (bool notCircular) {
         if (_linkedAdmin == 0) return true;
         uint32 adminDomain = getTophatDomain(_linkedAdmin);
         if (_topHatDomain == adminDomain) return false;
@@ -204,13 +202,14 @@ contract HatsIdUtilities is IHatsIdUtilities {
     /// @notice Checks that a tophat domain and its potential linked admin are from the same tree, ie have the same tippy tophat domain
     /// @param _topHatDomain The 32 bit domain of the tophat to be linked
     /// @param _newAdminHat The new admin for the linked tree
-    function sameTippyTophatDomain(uint32 _topHatDomain, uint256 _newAdminHat) public view returns (bool) {
+    /// @return sameDomain Whether the _topHatDomain and the domain of its potential linked _newAdminHat domains are the same
+    function sameTippyTophatDomain(uint32 _topHatDomain, uint256 _newAdminHat) public view returns (bool sameDomain) {
         // get highest parent domains for current and new tree root admins
         uint32 currentTippyTophatDomain = getTippyTophatDomain(_topHatDomain);
         uint32 newAdminDomain = getTophatDomain(_newAdminHat);
         uint32 newHTippyTophatDomain = getTippyTophatDomain(newAdminDomain);
 
         // check that both domains are equal
-        return (currentTippyTophatDomain == newHTippyTophatDomain);
+        sameDomain = (currentTippyTophatDomain == newHTippyTophatDomain);
     }
 }
