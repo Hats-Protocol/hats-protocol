@@ -108,7 +108,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _imageURI The image uri for this top hat and the fallback for its
     ///                  downstream hats [optional]
     /// @return topHatId The id of the newly created topHat
-    function mintTopHat(address _target, string memory _details, string memory _imageURI)
+    function mintTopHat(address _target, string calldata _details, string calldata _imageURI)
         public
         returns (uint256 topHatId)
     {
@@ -142,12 +142,12 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @return newHatId The id of the newly created Hat
     function createHat(
         uint256 _admin,
-        string memory _details,
+        string calldata _details,
         uint32 _maxSupply,
         address _eligibility,
         address _toggle,
         bool _mutable,
-        string memory _imageURI
+        string calldata _imageURI
     ) public returns (uint256 newHatId) {
         if (uint16(_admin) > 0) {
             revert MaxLevelsReached();
@@ -181,27 +181,28 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _imageURIs Array of imageURIs for each hat to create
     /// @return bool True if all createHat calls succeeded
     function batchCreateHats(
-        uint256[] memory _admins,
-        string[] memory _details,
-        uint32[] memory _maxSupplies,
+        uint256[] calldata _admins,
+        string[] calldata _details,
+        uint32[] calldata _maxSupplies,
         address[] memory _eligibilityModules,
         address[] memory _toggleModules,
-        bool[] memory _mutables,
-        string[] memory _imageURIs
+        bool[] calldata _mutables,
+        string[] calldata _imageURIs
     ) public returns (bool) {
         // check if array lengths are the same
         uint256 length = _admins.length; // save an MLOAD
 
-        bool sameLengths = (
-            length == _details.length // details
-                && length == _maxSupplies.length // supplies
-                && length == _eligibilityModules.length // eligibility
-                && length == _toggleModules.length // toggle
-                && length == _mutables.length // mutable
-                && length == _imageURIs.length
-        ); // imageURI
-
-        if (!sameLengths) revert BatchArrayLengthMismatch();
+        {
+            bool sameLengths = (
+                length == _details.length // details
+                    && length == _maxSupplies.length // supplies
+                    && length == _eligibilityModules.length // eligibility
+                    && length == _toggleModules.length // toggle
+                    && length == _mutables.length // mutable
+                    && length == _imageURIs.length
+            ); // imageURI
+            if (!sameLengths) revert BatchArrayLengthMismatch();
+        }
 
         // loop through and create each hat
         for (uint256 i = 0; i < length;) {
@@ -264,7 +265,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _hatIds Array of ids of hats to mint
     /// @param _wearers Array of addresses to which the hats will be minted
     /// @return bool True if all mintHat calls succeeded
-    function batchMintHats(uint256[] memory _hatIds, address[] memory _wearers) public returns (bool) {
+    function batchMintHats(uint256[] calldata _hatIds, address[] calldata _wearers) public returns (bool) {
         uint256 length = _hatIds.length;
         if (length != _wearers.length) revert BatchArrayLengthMismatch();
 
@@ -421,12 +422,12 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @return hat The contents of the newly created hat
     function _createHat(
         uint256 _id,
-        string memory _details,
+        string calldata _details,
         uint32 _maxSupply,
         address _eligibility,
         address _toggle,
         bool _mutable,
-        string memory _imageURI
+        string calldata _imageURI
     ) internal returns (Hat memory hat) {
         hat.details = _details;
         hat.maxSupply = _maxSupply;
@@ -589,7 +590,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev Hat must be mutable, except for tophats
     /// @param _hatId The id of the Hat to change
     /// @param _newDetails The new details
-    function changeHatDetails(uint256 _hatId, string memory _newDetails) external {
+    function changeHatDetails(uint256 _hatId, string calldata _newDetails) external {
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 
@@ -645,7 +646,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev Hat must be mutable, except for tophats
     /// @param _hatId The id of the Hat to change
     /// @param _newImageURI The new imageURI
-    function changeHatImageURI(uint256 _hatId, string memory _newImageURI) external {
+    function changeHatImageURI(uint256 _hatId, string calldata _newImageURI) external {
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 
