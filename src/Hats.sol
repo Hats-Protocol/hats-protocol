@@ -558,13 +558,8 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         if (!isEligible(_to, _hatId)) revert NotEligible();
 
         //Adjust balances
-
-        unchecked {
-            // should not underflow given NotHatWearer check above
-            --_balanceOf[_from][_hatId];
-            // should not overflow given AlreadyWearingHat check above
-            ++_balanceOf[_to][_hatId];
-        }
+        _balanceOf[_from][_hatId] = 0;
+        _balanceOf[_to][_hatId] = 1;
 
         emit TransferSingle(msg.sender, _from, _to, _hatId, 1);
     }
