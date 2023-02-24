@@ -15,7 +15,7 @@ _Please add comments as you use this draft guide for anything that you feel coul
 - [Create a hat](#create-a-hat) - _Create a hat with new responsibilities and authorities_
 - [Mint a hat](#mint-a-hat) - _Assign a hat to an address_
 - [View hat information](#view-hat-information) - _See information about a hat without connecting your wallet to the block explorer_
-- [Eligibility and toggle](#eligitibility-and-toggle) - _Intro to Hats Protocol's most powerful module_
+- [Eligibility and toggle](#eligibility-and-toggle) - _Intro to Hats Protocol's most powerful module_
 - [Token gating](#token-gating) - _Use hat id to gate access to external tools and applications_
 - [Hat Tree linking](#hat-tree-linking) - _A brief intro to the hat tree linking ("grafting") functionality_
 
@@ -166,7 +166,7 @@ _NOTE: Images included from Gnosisscan (Gnosis Chain), however, the instructions
 You are now ready to interact with the Hats contract.
 
 ## Step 3: Proceed to your desired action
-- [Mint a Top Hat](#mint-a-tophat)
+- [Mint a Top Hat](#mint-a-top-hat)
 - [Create a hat](#create-a-hat)
 - [Mint a hat](#mint-a-hat)
 
@@ -343,7 +343,7 @@ You can create a hat using the `createHat` function. Note that the account/addre
    </td>
   </tr>
   <tr>
-   <td><code>mutable</code_>
+   <td><code>mutable</code>
    </td>
    <td><code>bool</code>
    </td>
@@ -351,7 +351,7 @@ You can create a hat using the `createHat` function. Note that the account/addre
    </td>
   </tr>
   <tr>
-   <td><code>imageURI</code_>
+   <td><code>imageURI</code>
    </td>
    <td><code>string</code>
    </td>
@@ -624,13 +624,15 @@ _NOTE: If you’re unsure where your Telegram Group ID is, follow [these instruc
 **Congrats! You’ve successfully token gated Telegram channel access using hat id!**
 
 # Hat Tree linking
-As of v1-beta.1 you can link, or "graft", trees to one another. 
+This powerful feature lets you graft two trees together, by linking the Top Hat from one tree to a hat from another tree.
 
-This powerful feature lets you attach the Top Hat from one to another Hat Tree. Some example use cases include:
+When this happens, as seen in the diagram, the level 2 hat from Tree 1 becomes the admin for the Top Hat of tree 2, and therefore the Top Hat of Tree 2 effectively becomes a level 3 hat in Tree 1. The previous Top Hat from the now nonexistent Tree 2 will then hold the same properties as as any other hat in Tree 1, with one distinction: the Top Hat and its child hats can be unlinked from Tree 1 at any point in the future, thereby returning back to the initial state of having two separate hats trees. 
+
+Some example use cases include:
 - On-chain DAO mergers (i.e. one DAO joining another DAO)
-- subDAO experimentation (e.g. let a subDAO try out new hats features with different authorities and responsibilities, before merging into the main DAO)
+- subDAO, working group, or individual experimentation (e.g. enable a group to build out its own hats tree and try out new hats features with different authorities and responsibilities, before merging into the main DAO)
 - "Refactor" your DAO (e.g. fork your DAO to try different hats configurations before merging with the main DAO)
-
+- 
 At a high level the process looks like this:
 Two separate Hat Trees exist, each with their own respective Top Hats
 
