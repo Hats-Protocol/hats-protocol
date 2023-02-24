@@ -70,6 +70,12 @@ Hats are represented on-chain by non-transferable tokens that conform to the ERC
 
 For information on Hats Protocol versions and deployments, see [Releases](https://github.com/Hats-Protocol/hats-protocol/releases).
 
+### Audits
+
+This project has received the following security audits. See the [audits](https://github.com/Hats-Protocol/audits) directory for the detailed reports.
+
+* Trust Security (includes review of the [HatsSignerGate](https://github.com/Hats-Protocol/hats-zodiac) contracts as well)
+
 <!-- CONTRIBUTING -->
 ## Contributing
 
