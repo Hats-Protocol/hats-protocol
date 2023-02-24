@@ -78,8 +78,8 @@ contract HatIdUtilTests is Test {
         assertEq(utils.isTopHat(admin + 1), false);
         assertEq(utils.isTopHat(admin - 1), false);
 
-        assertEq(utils.getTophatDomain(admin + 1), admin >> 224);
-        assertEq(utils.getTophatDomain(1), 0);
-        assertEq(utils.getTophatDomain(admin - 1), 0);
+        assertEq(utils.getTopHatDomain(admin + 1), admin >> 224);
+        assertEq(utils.getTopHatDomain(1), 0);
+        assertEq(utils.getTopHatDomain(admin - 1), 0);
     }
 }

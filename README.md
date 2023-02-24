@@ -48,10 +48,11 @@
       <a href="#about-the-project">About The Project</a>
       <ul>
         <li><a href="#latest-deployments">Deployments</a></li>
+        <li><a href="#security-audits">Security Audits</a></li>
       </ul>
     </li>
-    <li><a href="#getting-started">Getting Started</a></li>
-    <li><a href="#use-cases">Use Cases</a></li>
+    <!-- <li><a href="#getting-started">Getting Started</a></li>
+    <li><a href="#use-cases">Use Cases</a></li> -->
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#hats-protocol-docs">Hats Protocol Docs</a></li>
     <li><a href="#license">License</a></li>
@@ -70,10 +71,16 @@ Hats are represented on-chain by non-transferable tokens that conform to the ERC
 
 For information on Hats Protocol versions and deployments, see [Releases](https://github.com/Hats-Protocol/hats-protocol/releases).
 
+### Security Audits
+
+This project has received the following security audits. See the [audits](https://github.com/Hats-Protocol/hats-protocol/audits) directory for the detailed reports.
+
+* Trust Security (also includes review of the [HatsSignerGate](https://github.com/Hats-Protocol/hats-zodiac) contracts)
+
 <!-- CONTRIBUTING -->
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for details on how to contribute.
+See [CONTRIBUTING.md](https://github.com/Hats-Protocol/hats-protocol/blob/main/CONTRIBUTING.md) for details on how to contribute.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -139,14 +146,14 @@ To avoid confusion, Hats Protocol does not claim to be ERC1155-compliant. Instea
 
 Each Hat has several properties:
 
-- `id` - the integer identifier for the Hat, which also serves as the ERC1155-similar token id (see three paragraphs below)
-- `details` - metadata about the Hat; such as a name, description, and other properties like roles and responsibilities associated with the Hat
-- `maxSupply` - the maximum number of addresses that can wear the Hat at once
-- `admin` - the Hat that controls who can wear the Hat
-- `eligibility` - the address that controls eligibility criteria and whether a given wearer of the Hat is in good standing
-- `toggle` - the address that controls whether the Hat is active
-- `mutable` - whether the hat's properties can be changed by the admin
-- `imageURI` - the URI for the image used in the Hat's ERC1155-similar token
+* `id` - the integer identifier for the Hat, which also serves as the ERC1155-similar token id (see three paragraphs below)
+* `details` - metadata about the Hat; such as a name, description, and other properties like roles and responsibilities associated with the Hat
+* `maxSupply` - the maximum number of addresses that can wear the Hat at once
+* `admin` - the Hat that controls who can wear the Hat
+* `eligibility` - the address that controls eligibility criteria and whether a given wearer of the Hat is in good standing
+* `toggle` - the address that controls whether the Hat is active
+* `mutable` - whether the hat's properties can be changed by the admin
+* `imageURI` - the URI for the image used in the Hat's ERC1155-similar token
 
 For more information on each property, refer to the detailed sections below.
 
@@ -166,9 +173,9 @@ All of these factors are reflected in the `Hats.balanceOf` function, which will 
 
 Any address can wear a Hat, including:
 
-- Externally Owned Accounts (EOAs)
-- Logic contracts (i.e., contracts with explicit logic codified within functions), or
-- Governance contracts (e.g., DAOs, multisigs, etc.)
+* Externally Owned Accounts (EOAs)
+* Logic contracts (i.e., contracts with explicit logic codified within functions), or
+* Governance contracts (e.g., DAOs, multisigs, etc.)
 
 <p align="right">(<a href="#table-of-contents">back to contents</a>)</p>
 
@@ -184,10 +191,10 @@ Logic contracts that serve as admins are informally known as "hatter" contracts.
 
 Hatter contract logic is a wide design space for DAOs. Here are some examples of hatter logic:
 
-- **Wearer eligibility** - Enforce certain requirements that prospective wearers must meet in order to wear a given Hat, such as membership in a DAO or holding some token(s).
-- **Wearer staking** - One particularly important type of eligibility requirement is staking tokens, DAO shares, or some other asset as a bond that could be slashed if the wearer is not a good steward of the accountabilities associated with the Hat, or does not follow through on its associated responsibilities.
-- **Hat creation** - Allow certain addresses -- such as members of a DAO -- to create Hats that are then admin'd by the DAO.
-- **Hat minting** - Allow certain addresses -- such as members of a DAO -- to mint Hat tokens. Together with the above, a DAO could in this way enable its members to create and wear a certain type of Hat permissionlessly. This would be esepcially if using Hats to facilitate role clarity and legibility.
+* **Wearer eligibility** - Enforce certain requirements that prospective wearers must meet in order to wear a given Hat, such as membership in a DAO or holding some token(s).
+* **Wearer staking** - One particularly important type of eligibility requirement is staking tokens, DAO shares, or some other asset as a bond that could be slashed if the wearer is not a good steward of the accountabilities associated with the Hat, or does not follow through on its associated responsibilities.
+* **Hat creation** - Allow certain addresses -- such as members of a DAO -- to create Hats that are then admin'd by the DAO.
+* **Hat minting** - Allow certain addresses -- such as members of a DAO -- to mint Hat tokens. Together with the above, a DAO could in this way enable its members to create and wear a certain type of Hat permissionlessly. This would be esepcially if using Hats to facilitate role clarity and legibility.
 
 #### Hat Trees
 
@@ -209,8 +216,8 @@ Hat ids are uint256 bitmaps that create an "address" &mdash; more like an web or
 
 The 32 bytes of a hat's id are structured as follows:
 
-- The first 4 bytes are reserved for the top hat id. Since top hat ids are unique across a given deployment of Hats Protocol, we can also think of them as the top level "domain" for a hat tree.
-- Each of the next chunks of 16 bits refers to a single "Hat Level".
+* The first 4 bytes are reserved for the top hat id. Since top hat ids are unique across a given deployment of Hats Protocol, we can also think of them as the top level "domain" for a hat tree.
+* Each of the next chunks of 16 bits refers to a single "Hat Level".
 
 This means there are 15 total hat levels, beginning with the top hat at level 0 and going up to level 14. A hat at level 6 will have 6 admins in its branch of the tree, and therefore its id will have non-zero values at levels 0-5 as well as its own level. Since these values correspond to its admins, all that is needed to know which hats have admin authorities over a given hat is to know that given hat's id.
 
@@ -228,10 +235,10 @@ For example, instead of a hat id looking like this under base 10: `2696076943826
 
 In this second version, you can see that this hat is...
 
-- a level 2 hat
-- is in the first hat tree (top hat id = 1)
-- is the third hat created at level 2 within this tree
-- admin'd by the second hat created at level 1 within this tree
+* a level 2 hat
+* is in the first hat tree (top hat id = 1)
+* is the third hat created at level 2 within this tree
+* admin'd by the second hat created at level 1 within this tree
 
 We can also prettify this even further by separating hat levels with periods, a la IP addresses:
 
@@ -288,12 +295,12 @@ An **immutable** Hat cannot be changed at all once it has been created. A **muta
 
 Changes are allowed to the following Hat properties:
 
-- `details`
-- `maxSupply` - as long as the new maxSupply is not less than the current supply
-- `eligibility`
-- `toggle`
-- `mutable` - this is a one-way change
-- `imageURI`
+* `details`
+* `maxSupply` - as long as the new maxSupply is not less than the current supply
+* `eligibility`
+* `toggle`
+* `mutable` - this is a one-way change
+* `imageURI`
 
 Additionally, mutable hats can be transferred by their admins to a different wearer. Immutable hats cannot be transferred.
 
