@@ -48,10 +48,11 @@
       <a href="#about-the-project">About The Project</a>
       <ul>
         <li><a href="#latest-deployments">Deployments</a></li>
+        <li><a href="#security-audits">Security Audits</a></li>
       </ul>
     </li>
-    <li><a href="#getting-started">Getting Started</a></li>
-    <li><a href="#use-cases">Use Cases</a></li>
+    <!-- <li><a href="#getting-started">Getting Started</a></li>
+    <li><a href="#use-cases">Use Cases</a></li> -->
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#hats-protocol-docs">Hats Protocol Docs</a></li>
     <li><a href="#license">License</a></li>
@@ -70,16 +71,16 @@ Hats are represented on-chain by non-transferable tokens that conform to the ERC
 
 For information on Hats Protocol versions and deployments, see [Releases](https://github.com/Hats-Protocol/hats-protocol/releases).
 
-### Audits
+### Security Audits
 
-This project has received the following security audits. See the [audits](https://github.com/Hats-Protocol/audits) directory for the detailed reports.
+This project has received the following security audits. See the [audits](https://github.com/Hats-Protocol/hats-protocol/audits) directory for the detailed reports.
 
-* Trust Security (includes review of the [HatsSignerGate](https://github.com/Hats-Protocol/hats-zodiac) contracts as well)
+* Trust Security (also includes review of the [HatsSignerGate](https://github.com/Hats-Protocol/hats-zodiac) contracts)
 
 <!-- CONTRIBUTING -->
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for details on how to contribute.
+See [CONTRIBUTING.md](https://github.com/Hats-Protocol/hats-protocol/blob/main/CONTRIBUTING.md) for details on how to contribute.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
