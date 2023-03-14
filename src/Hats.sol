@@ -1215,6 +1215,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         revert();
     }
 
+    /// @notice Since Hat balances are handled differently, this function is not supported
+    function balanceOfBatch(address[] calldata, uint256[] calldata) public pure override returns (uint256[] memory) {
+        revert();
+    }
+
     /// @notice View the uri for a Hat
     /// @param id The id of the Hat
     /// @return _uri An 1155-compatible JSON object
