@@ -654,7 +654,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Change a hat's details
-    /// @dev Hat must be mutable; new max supply cannot be greater than current supply
+    /// @dev Hat must be mutable; new max supply cannot be less than current supply
     /// @param _hatId The id of the Hat to change
     /// @param _newMaxSupply The new max supply
     function changeHatMaxSupply(uint256 _hatId, uint32 _newMaxSupply) external {
