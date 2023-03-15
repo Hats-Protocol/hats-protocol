@@ -71,6 +71,13 @@ contract HatIdUtilTests is Test {
         }
     }
 
+    function testBuildHatIdRevertsAfterMaxLevel() public {
+        uint256 admin = 0x0000000100010001000100010001000100010001000100010001000100010001;
+        vm.expectRevert(MaxLevelsReached.selector);
+        uint256 invalidChild = utils.buildHatId(admin, 1);
+        console2.log(invalidChild);
+    }
+
     function testTopHatDomain() public {
         uint256 admin = 1 << 224;
         assertEq(utils.isTopHat(admin), true);
