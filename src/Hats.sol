@@ -408,7 +408,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Internal call for creating a new hat
-    /// @dev Initializes a new Hat struct, but does not mint any tokens
+    /// @dev Initializes a new Hat in storage, but does not mint any tokens
     /// @param _id ID of the hat to be stored
     /// @param _details A description of the hat
     /// @param _maxSupply The total instances of the Hat that can be worn at once
@@ -417,7 +417,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _mutable Whether the hat's properties are changeable after creation
     /// @param _imageURI The image uri for this top hat and the fallback for its
     ///                  downstream hats [optional]
-    /// @return hat The contents of the newly created hat
     function _createHat(
         uint256 _id,
         string calldata _details,
@@ -426,14 +425,20 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         address _toggle,
         bool _mutable,
         string calldata _imageURI
-    ) internal returns (Hat memory hat) {
+    ) internal {
+        /* 
+          We write directly to storage instead of first building the Hat struct in memory.
+          This allows us to cheaply use the existing lastHatId value in case it was incremented by creating a hat while skipping admin levels.
+          (Resetting it to 0 would be bad since this hat's child hat(s) would overwrite the previously created hat(s) at that level.)
+        */
+        Hat storage hat = _hats[_id];
         hat.details = _details;
         hat.maxSupply = _maxSupply;
         hat.eligibility = _eligibility;
         hat.toggle = _toggle;
         hat.imageURI = _imageURI;
+        // config is a concatenation of the status and mutability properties
         hat.config = _mutable ? uint96(3 << 94) : uint96(1 << 95);
-        _hats[_id] = hat;
 
         emit HatCreated(_id, _details, _maxSupply, _eligibility, _toggle, _mutable, _imageURI);
     }
