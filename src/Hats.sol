@@ -155,15 +155,14 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         if (_eligibility == address(0)) revert ZeroAddress();
         if (_toggle == address(0)) revert ZeroAddress();
-
+        // check that the admin id is valid, ie does not contain empty levels between filled levels
+        if (!isValidHatId(_admin)) revert InvalidHatId();
+        // construct the next hat id
         newHatId = getNextId(_admin);
-
         // to create a hat, you must be wearing one of its admin hats
         _checkAdmin(newHatId);
-
         // create the new hat
         _createHat(newHatId, _details, _maxSupply, _eligibility, _toggle, _mutable, _imageURI);
-
         // increment _admin.lastHatId
         // use the overflow check to constrain to correct number of hats per level
         ++_hats[_admin].lastHatId;

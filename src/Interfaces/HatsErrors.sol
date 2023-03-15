@@ -33,6 +33,9 @@ interface HatsErrors {
     /// @notice Emitted when attempting to create a hat with a level 14 hat as its admin
     error MaxLevelsReached();
 
+    /// @notice Emitted when an attempted hat id has empty intermediate level(s)
+    error InvalidHatId();
+
     /// @notice Emitted when attempting to mint `hatId` to a `wearer` who is already wearing the hat
     error AlreadyWearingHat(address wearer, uint256 hatId);
 
