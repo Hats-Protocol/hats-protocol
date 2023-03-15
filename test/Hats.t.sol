@@ -50,7 +50,6 @@ contract CreateTopHatTest is TestSetup {
         vm.prank(address(topHatWearer));
         hats.transferHat(topHatId, topHatWearer, nonWearer);
     }
-
 }
 
 contract CreateHatsTest is TestSetup {
@@ -321,20 +320,22 @@ contract BatchCreateHats is TestSetupBatch {
         // first, skip a level to create a hat
         uint256 level1Hat = 0x000000010001 << (224 - 16);
         vm.startPrank(topHatWearer);
-        uint256 level2HatA = hats.createHat(level1Hat, "should not be overwritten", testMax, _eligibility, _toggle, false, "amistillhere.com");
+        uint256 level2HatA = hats.createHat(
+            level1Hat, "should not be overwritten", testMax, _eligibility, _toggle, false, "amistillhere.com"
+        );
 
         // then, create the hat at the skipped level
-        uint256 skippedHat = hats.createHat(topHatId, "At first I was skipped, now I'm here", 1, _eligibility, _toggle, false, "gm");
+        uint256 skippedHat =
+            hats.createHat(topHatId, "At first I was skipped, now I'm here", 1, _eligibility, _toggle, false, "gm");
         assertEq(skippedHat, level1Hat);
 
         // finally, attempt to create a new child of skippedHat
         uint256 level2HatB = hats.createHat(skippedHat, "i should be hat 2", 1, _eligibility, _toggle, false, "");
         assertEq(level2HatB, 0x0000000100010002 << (224 - 32));
         assertFalse(level2HatB == level2HatA);
-        (,uint32 max,,,,,,,) = hats.viewHat(level2HatA);
+        (, uint32 max,,,,,,,) = hats.viewHat(level2HatA);
         assertEq(max, testMax);
     }
-
 }
 
 contract ImageURITest is TestSetup2 {
