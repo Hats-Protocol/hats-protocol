@@ -1493,7 +1493,7 @@ contract LinkHatsTests is TestSetup2 {
         level13HatId = 0x0000000100050001000100010001000100010001000100010001000100010000;
 
         vm.prank(topHatWearer);
-        console2.log("creating level 14 hat");
+
         level14HatId = hats.createHat(level13HatId, "level 14 hat", _maxSupply, _eligibility, _toggle, false, "");
     }
 
@@ -1519,7 +1519,7 @@ contract LinkHatsTests is TestSetup2 {
         vm.expectEmit(true, true, true, true);
         emit TopHatLinked(secondTopHatDomain, secondHatId);
 
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
 
         assertFalse(hats.isTopHat(secondTopHatId));
         assertEq(hats.getHatLevel(secondTopHatId), 2);
@@ -1538,7 +1538,7 @@ contract LinkHatsTests is TestSetup2 {
         vm.expectEmit(true, true, true, true);
         emit TopHatLinked(secondTopHatDomain, secondHatId);
 
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
 
         assertFalse(hats.isTopHat(secondTopHatId));
         assertEq(hats.getHatLevel(secondTopHatId), 2);
@@ -1558,7 +1558,7 @@ contract LinkHatsTests is TestSetup2 {
         vm.expectEmit(true, true, true, true);
         emit TopHatLinked(secondTopHatDomain, level14HatId);
 
-        hats.approveLinkTopHatToTree(secondTopHatDomain, level14HatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, level14HatId, address(0), address(0), "", "");
 
         assertFalse(hats.isTopHat(secondTopHatId));
         assertEq(hats.getHatLevel(secondTopHatId), 15);
@@ -1581,7 +1581,7 @@ contract LinkHatsTests is TestSetup2 {
         vm.expectEmit(true, true, true, true);
         emit TopHatLinked(secondTopHatDomain, level14HatId);
 
-        hats.approveLinkTopHatToTree(secondTopHatDomain, level14HatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, level14HatId, address(0), address(0), "", "");
 
         assertFalse(hats.isTopHat(secondTopHatId));
         assertEq(hats.getHatLevel(secondTopHatId), 15);
@@ -1605,13 +1605,13 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(secondWearer);
 
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdminOrWearer.selector));
-        hats.approveLinkTopHatToTree(secondTopHatDomain, level14HatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, level14HatId, address(0), address(0), "", "");
     }
 
     function testCannotApproveUnrequestedLink() public {
         vm.prank(topHatWearer);
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.LinkageNotRequested.selector));
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
     }
 
     function testAdminCanRelinkTopHatWithinTree() public {
@@ -1621,7 +1621,7 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(topHatWearer);
         vm.expectEmit(true, true, true, true);
         emit TopHatLinked(secondTopHatDomain, secondHatId);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
         assertFalse(hats.isTopHat(secondTopHatId));
         assertEq(hats.getHatLevel(secondTopHatId), 2);
 
@@ -1629,7 +1629,7 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(topHatWearer);
         vm.expectEmit(true, true, true, true);
         emit TopHatLinked(secondTopHatDomain, topHatId);
-        hats.relinkTopHatWithinTree(secondTopHatDomain, topHatId);
+        hats.relinkTopHatWithinTree(secondTopHatDomain, topHatId, address(0), address(0), "", "");
         assertFalse(hats.isTopHat(secondTopHatId));
         assertEq(hats.getHatLevel(secondTopHatId), 1);
     }
@@ -1643,14 +1643,14 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(thirdWearer);
         hats.requestLinkTopHatToTree(secondTopHatDomain, level2HatId);
         vm.prank(fourthWearer);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, level2HatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, level2HatId, address(0), address(0), "", "");
         assertEq(hats.getHatLevel(secondTopHatId), 3);
 
         // relink to secondHatId
         vm.prank(secondWearer);
         vm.expectEmit(true, true, true, true);
         emit TopHatLinked(secondTopHatDomain, secondHatId);
-        hats.relinkTopHatWithinTree(secondTopHatDomain, secondHatId);
+        hats.relinkTopHatWithinTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
         assertFalse(hats.isTopHat(secondTopHatId));
         assertEq(hats.getHatLevel(secondTopHatId), 2);
     }
@@ -1660,13 +1660,13 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(thirdWearer);
         hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
         vm.prank(topHatWearer);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
 
         // relink
         vm.prank(topHatWearer);
         vm.expectEmit(true, true, true, true);
         emit TopHatLinked(secondTopHatDomain, level14HatId);
-        hats.relinkTopHatWithinTree(secondTopHatDomain, level14HatId);
+        hats.relinkTopHatWithinTree(secondTopHatDomain, level14HatId, address(0), address(0), "", "");
         assertFalse(hats.isTopHat(secondTopHatId));
         assertEq(hats.getHatLevel(secondTopHatId), 15);
         assertTrue(hats.isAdminOfHat(topHatWearer, secondTopHatId));
@@ -1678,7 +1678,7 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(thirdWearer);
         hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
         vm.prank(topHatWearer);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
         assertTrue(hats.isAdminOfHat(secondWearer, secondTopHatId));
 
         // attempt relink to tophatId from secondWearer, who is an admin of secondTopHatId but not an admin or wearer of tophatId
@@ -1686,7 +1686,7 @@ contract LinkHatsTests is TestSetup2 {
         vm.expectRevert(
             abi.encodeWithSelector(HatsErrors.NotAdmin.selector, secondWearer, hats.buildHatId(topHatId, 1))
         );
-        hats.relinkTopHatWithinTree(secondTopHatDomain, topHatId);
+        hats.relinkTopHatWithinTree(secondTopHatDomain, topHatId, address(0), address(0), "", "");
     }
 
     function testNewAdminNonAdminCannotRelinkToLastLevelWithinTree() public {
@@ -1694,13 +1694,13 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(thirdWearer);
         hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
         vm.prank(topHatWearer);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
         assertTrue(hats.isAdminOfHat(secondWearer, secondTopHatId));
 
         // attempt relink to 14th level from secondhatwearer, who is an admin of secondTopHatId but not an admin or wearer of tophatId
         vm.startPrank(secondWearer);
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdminOrWearer.selector));
-        hats.relinkTopHatWithinTree(secondTopHatDomain, level14HatId);
+        hats.relinkTopHatWithinTree(secondTopHatDomain, level14HatId, address(0), address(0), "", "");
     }
 
     function testTreeRootNonAdminCannotRelink() public {
@@ -1712,14 +1712,14 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(thirdWearer);
         hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
         vm.prank(topHatWearer);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
 
         // attempt relink to new hat from secondWearer
         vm.startPrank(secondWearer);
         vm.expectRevert(
             abi.encodeWithSelector(HatsErrors.NotAdmin.selector, secondWearer, hats.buildHatId(newHatId, 1))
         );
-        hats.relinkTopHatWithinTree(secondTopHatDomain, newHatId);
+        hats.relinkTopHatWithinTree(secondTopHatDomain, newHatId, address(0), address(0), "", "");
     }
 
     function testAdminCanRequestNewLink() public {
@@ -1727,7 +1727,7 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(thirdWearer);
         hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
         vm.prank(topHatWearer);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
         assertEq(hats.linkedTreeRequests(secondTopHatDomain), 0);
 
         // request new link from secondWearer
@@ -1743,7 +1743,7 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(thirdWearer);
         hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
         vm.prank(topHatWearer);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
 
         // request new link from secondWearer
         vm.prank(secondWearer);
@@ -1753,7 +1753,7 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(topHatWearer);
         vm.expectEmit(true, true, true, true);
         emit TopHatLinked(secondTopHatDomain, topHatId);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, topHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, topHatId, address(0), address(0), "", "");
         assertEq(hats.linkedTreeRequests(secondTopHatDomain), 0);
         assertEq(hats.getHatLevel(secondTopHatId), 1);
     }
@@ -1765,7 +1765,7 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(topHatWearer);
         vm.expectEmit(true, true, true, true);
         emit TopHatLinked(secondTopHatDomain, secondHatId);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
         assertFalse(hats.isTopHat(secondTopHatId));
         assertEq(hats.getHatLevel(secondTopHatId), 2);
 
@@ -1784,19 +1784,19 @@ contract LinkHatsTests is TestSetup2 {
         // try approving
         vm.prank(topHatWearer);
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
-        hats.approveLinkTopHatToTree(topHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(topHatDomain, secondHatId, address(0), address(0), "", "");
 
         // test a recursive call
         vm.prank(thirdWearer);
         hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
         vm.prank(topHatWearer);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
 
         vm.prank(topHatWearer);
         hats.requestLinkTopHatToTree(topHatDomain, secondTopHatId);
         vm.prank(topHatWearer);
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
-        hats.approveLinkTopHatToTree(topHatDomain, secondTopHatId);
+        hats.approveLinkTopHatToTree(topHatDomain, secondTopHatId, address(0), address(0), "", "");
     }
 
     function testRelinkingCannotCreateCircularLink() public {
@@ -1804,7 +1804,7 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(thirdWearer);
         hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
         vm.prank(topHatWearer);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
 
         // second link, under first link
         uint256 thirdTopHatId = hats.mintTopHat(fourthWearer, "for linking", "http://www.tophat.com/");
@@ -1813,12 +1813,12 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(fourthWearer);
         hats.requestLinkTopHatToTree(thirdTopHatDomain, secondTopHatId);
         vm.prank(topHatWearer);
-        hats.approveLinkTopHatToTree(thirdTopHatDomain, secondTopHatId);
+        hats.approveLinkTopHatToTree(thirdTopHatDomain, secondTopHatId, address(0), address(0), "", "");
 
         // try relink second tophat under third tophat
         vm.prank(topHatWearer);
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
-        hats.relinkTopHatWithinTree(secondTopHatDomain, thirdTopHatId);
+        hats.relinkTopHatWithinTree(secondTopHatDomain, thirdTopHatId, address(0), address(0), "", "");
     }
 
     function testCannotCrossTreeRelink() public {
@@ -1829,14 +1829,14 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(thirdWearer);
         hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
         vm.prank(secondWearer);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
 
         // attempt link secondTopHat to third tophat (worn by fourthWearer)
         vm.prank(secondWearer);
         hats.requestLinkTopHatToTree(secondTopHatDomain, thirdTopHatId);
         vm.prank(fourthWearer);
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.CrossTreeLinkage.selector));
-        hats.approveLinkTopHatToTree(secondTopHatDomain, thirdTopHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, thirdTopHatId, address(0), address(0), "", "");
     }
 
     function testCannotApproveCrossTreeLink() public {
@@ -1847,12 +1847,12 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(thirdWearer);
         hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
         vm.prank(secondWearer);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
 
         // attempt relink secondTopHat to third tophat (worn by topHatWearer)
         vm.prank(topHatWearer);
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.CrossTreeLinkage.selector));
-        hats.relinkTopHatWithinTree(secondTopHatDomain, thirdTopHatId);
+        hats.relinkTopHatWithinTree(secondTopHatDomain, thirdTopHatId, address(0), address(0), "", "");
     }
 
     function testTreeLinkingAndUnlinking() public {
@@ -1864,7 +1864,7 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(topHatWearer);
         vm.expectEmit(true, true, true, true);
         emit TopHatLinked(secondTopHatDomain, secondHatId);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
         assertFalse(hats.isTopHat(secondTopHatId));
         assertEq(hats.getHatLevel(secondTopHatId), 2);
         assertEq(hats.linkedTreeRequests(secondTopHatDomain), 0);
@@ -1884,7 +1884,7 @@ contract LinkHatsTests is TestSetup2 {
         vm.prank(thirdWearer);
         hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
         vm.prank(topHatWearer);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
 
         // tophat wearer creates a new tree B
         vm.startPrank(topHatWearer);
@@ -1899,9 +1899,46 @@ contract LinkHatsTests is TestSetup2 {
 
         // admin B should not be able to rug the tree by approving the link without the tree's permission
         vm.expectRevert(HatsErrors.LinkageNotRequested.selector);
-        hats.approveLinkTopHatToTree(secondTopHatDomain, treeB);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, treeB, address(0), address(0), "", "");
 
         assertTrue(hats.isAdminOfHat(thirdWearer, secondTopHatId));
+    }
+
+    function testCanChangeModulesAndMetadataWhenApprovingOrRelinking() public {
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        // approve with updated modules and metadata
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, _eligibility, _toggle, "details", "image");
+        (string memory details,,, address eligibility, address toggle, string memory image,,,) =
+            hats.viewHat(secondTopHatId);
+        assertEq(details, "details");
+        assertEq(image, "image");
+        assertEq(eligibility, _eligibility);
+        assertEq(toggle, _toggle);
+
+        // relink with updated modules and metadata
+        vm.prank(topHatWearer);
+        hats.relinkTopHatWithinTree(secondTopHatDomain, secondHatId, address(100), address(101), "details2", "image2");
+        (details,,, eligibility, toggle, image,,,) = hats.viewHat(secondTopHatId);
+        assertEq(details, "details2");
+        assertEq(image, "image2");
+        assertEq(eligibility, address(100));
+        assertEq(toggle, address(101));
+
+        // check that linked top hat can be toggled off
+        vm.mockCall(address(101), abi.encodeWithSignature("getHatStatus(uint256)", secondTopHatId), abi.encode(false));
+        (,,,,,,,, bool status) = hats.viewHat(secondTopHatId);
+        assertFalse(status);
+
+        // modules values reset on unlink
+        vm.prank(topHatWearer);
+        hats.unlinkTopHatFromTree(secondTopHatDomain);
+        (,,, eligibility, toggle,,,,) = hats.viewHat(secondTopHatId);
+        assertEq(eligibility, address(0));
+        assertEq(toggle, address(0));
     }
 }
 

@@ -83,11 +83,25 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
 
     function requestLinkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) external;
 
-    function approveLinkTopHatToTree(uint32 _topHatId, uint256 _newAdminHat) external;
+    function approveLinkTopHatToTree(
+        uint32 _topHatId,
+        uint256 _newAdminHat,
+        address _eligibility,
+        address _toggle,
+        string calldata _details,
+        string calldata _imageURI
+    ) external;
 
     function unlinkTopHatFromTree(uint32 _topHatId) external;
 
-    function relinkTopHatWithinTree(uint32 _topHatDomain, uint256 _newAdminHat) external;
+    function relinkTopHatWithinTree(
+        uint32 _topHatDomain,
+        uint256 _newAdminHat,
+        address _eligibility,
+        address _toggle,
+        string calldata _details,
+        string calldata _imageURI
+    ) external;
 
     /*//////////////////////////////////////////////////////////////
                               VIEW FUNCTIONS

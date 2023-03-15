@@ -17,7 +17,7 @@
 pragma solidity >=0.8.13;
 
 import { ERC1155 } from "lib/ERC1155/ERC1155.sol";
-// import { console2 } from "forge-std/Test.sol"; //remove after testing
+import { console2 } from "forge-std/Test.sol"; //remove after testing
 import "./Interfaces/IHats.sol";
 import "./HatsIdUtilities.sol";
 import "./Interfaces/IHatsToggle.sol";
@@ -677,13 +677,13 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /// @notice Submits a request to link a Hat Tree under a parent tree. Requests can be
     /// submitted by either...
-    ///     a) the wearer of a tophat, previous to any linkage, or
-    ///     b) the admin(s) of an already-linked tophat (aka tree root), where such a
+    ///     a) the wearer of a topHat, previous to any linkage, or
+    ///     b) the admin(s) of an already-linked topHat (aka tree root), where such a
     ///        request is to move the tree root to another admin within the same parent
     ///        tree
-    /// @dev A tophat can have at most 1 request at a time. Submitting a new request will
+    /// @dev A topHat can have at most 1 request at a time. Submitting a new request will
     ///      replace the existing request.
-    /// @param _topHatDomain The domain of the tophat to link
+    /// @param _topHatDomain The domain of the topHat to link
     /// @param _requestedAdminHat The hat that will administer the linked tree
     function requestLinkTopHatToTree(uint32 _topHatDomain, uint256 _requestedAdminHat) external {
         uint256 fullTopHatId = uint256(_topHatDomain) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
@@ -695,12 +695,23 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         emit TopHatLinkRequested(_topHatDomain, _requestedAdminHat);
     }
 
-    /// @notice Approve a request to link a Tree under a parent tree
+    /// @notice Approve a request to link a Tree under a parent tree, with options to add eligibility or toggle modules and change its metadata
     /// @dev Requests can only be approved by wearer or an admin of the `_newAdminHat`, and there
     ///      can only be one link per tree root at a given time.
-    /// @param _topHatDomain The 32 bit domain of the tophat to link
+    /// @param _topHatDomain The 32 bit domain of the topHat to link
     /// @param _newAdminHat The hat that will administer the linked tree
-    function approveLinkTopHatToTree(uint32 _topHatDomain, uint256 _newAdminHat) external {
+    /// @param _eligibility Optional new eligibility module for the linked topHat
+    /// @param _toggle Optional new toggle module for the linked topHat
+    /// @param _details Optional new details for the linked topHat
+    /// @param _imageURI Optional new imageURI for the linked topHat
+    function approveLinkTopHatToTree(
+        uint32 _topHatDomain,
+        uint256 _newAdminHat,
+        address _eligibility,
+        address _toggle,
+        string calldata _details,
+        string calldata _imageURI
+    ) external {
         // for everything but the last hat level, check the admin of `_newAdminHat`'s theoretical child hat, since either wearer or admin of `_newAdminHat` can approve
         if (getHatLevel(_newAdminHat) < MAX_LEVELS) {
             _checkAdmin(buildHatId(_newAdminHat, 1));
@@ -717,27 +728,44 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         delete linkedTreeRequests[_topHatDomain];
 
         // execute the link. Replaces existing link, if any.
-        _linkTopHatToTree(_topHatDomain, _newAdminHat);
+        _linkTopHatToTree(_topHatDomain, _newAdminHat, _eligibility, _toggle, _details, _imageURI);
     }
 
     /// @notice Unlink a Tree from the parent tree
     /// @dev This can only be called by an admin of the tree root
-    /// @param _topHatDomain The 32 bit domain of the tophat to unlink
+    /// @param _topHatDomain The 32 bit domain of the topHat to unlink
     function unlinkTopHatFromTree(uint32 _topHatDomain) external {
         uint256 fullTopHatId = uint256(_topHatDomain) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
         _checkAdmin(fullTopHatId);
 
         delete linkedTreeAdmins[_topHatDomain];
         delete linkedTreeRequests[_topHatDomain];
+
+        // reset eligibility and storage to defaults for unlinked top hats
+        Hat storage hat = _hats[fullTopHatId];
+        delete hat.eligibility;
+        delete hat.toggle;
+
         emit TopHatLinked(_topHatDomain, 0);
     }
 
     /// @notice Move a tree root to a different position within the same parent tree,
     ///         without a request
     /// @dev Caller must be both an admin tree root and admin or wearer of `_newAdminHat`
-    /// @param _topHatDomain The 32 bit domain of the tophat to relink
+    /// @param _topHatDomain The 32 bit domain of the topHat to relink
     /// @param _newAdminHat The new admin for the linked tree
-    function relinkTopHatWithinTree(uint32 _topHatDomain, uint256 _newAdminHat) external {
+    /// @param _eligibility Optional new eligibility module for the linked topHat
+    /// @param _toggle Optional new toggle module for the linked topHat
+    /// @param _details Optional new details for the linked topHat
+    /// @param _imageURI Optional new imageURI for the linked topHat
+    function relinkTopHatWithinTree(
+        uint32 _topHatDomain,
+        uint256 _newAdminHat,
+        address _eligibility,
+        address _toggle,
+        string calldata _details,
+        string calldata _imageURI
+    ) external {
         uint256 fullTopHatId = uint256(_topHatDomain) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
 
         // msg.sender being capable of both requesting and approving allows us to skip the request step
@@ -752,14 +780,26 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
 
         // execute the new link, replacing the old link
-        _linkTopHatToTree(_topHatDomain, _newAdminHat);
+        _linkTopHatToTree(_topHatDomain, _newAdminHat, _eligibility, _toggle, _details, _imageURI);
     }
 
-    /// @notice Internal function to link a Tree under a parent Tree, with protection against circular linkages and relinking to a separate Tree
+    /// @notice Internal function to link a Tree under a parent Tree, with protection against circular linkages and relinking to a separate Tree,
+    ///         with options to add eligibility or toggle modules and change its metadata
     /// @dev Linking `_topHatDomain` replaces any existing links
-    /// @param _topHatDomain The 32 bit domain of the tophat to link
+    /// @param _topHatDomain The 32 bit domain of the topHat to link
     /// @param _newAdminHat The new admin for the linked tree
-    function _linkTopHatToTree(uint32 _topHatDomain, uint256 _newAdminHat) internal {
+    /// @param _eligibility Optional new eligibility module for the linked topHat
+    /// @param _toggle Optional new toggle module for the linked topHat
+    /// @param _details Optional new details for the linked topHat
+    /// @param _imageURI Optional new imageURI for the linked topHat
+    function _linkTopHatToTree(
+        uint32 _topHatDomain,
+        uint256 _newAdminHat,
+        address _eligibility,
+        address _toggle,
+        string calldata _details,
+        string calldata _imageURI
+    ) internal {
         if (!noCircularLinkage(_topHatDomain, _newAdminHat)) revert CircularLinkage();
 
         // disallow relinking to separate tree
@@ -767,6 +807,27 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             if (!sameTippyTopHatDomain(_topHatDomain, _newAdminHat)) {
                 revert CrossTreeLinkage();
             }
+        }
+
+        // update and log the linked topHat's modules and metadata, if any changes
+        uint256 topHatId = uint256(_topHatDomain) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
+        Hat storage hat = _hats[topHatId];
+
+        if (_eligibility != address(0)) {
+            hat.eligibility = _eligibility;
+            emit HatEligibilityChanged(topHatId, _eligibility);
+        }
+        if (_toggle != address(0)) {
+            hat.toggle = _toggle;
+            emit HatToggleChanged(topHatId, _toggle);
+        }
+        if (bytes(_details).length > 0) {
+            hat.details = _details;
+            emit HatDetailsChanged(topHatId, _details);
+        }
+        if (bytes(_imageURI).length > 0) {
+            hat.imageURI = _imageURI;
+            emit HatImageURIChanged(topHatId, _imageURI);
         }
 
         linkedTreeAdmins[_topHatDomain] = _newAdminHat;
