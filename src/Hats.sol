@@ -104,9 +104,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @notice Creates and mints a Hat that is its own admin, i.e. a "topHat"
     /// @dev A topHat has no eligibility and no toggle
     /// @param _target The address to which the newly created topHat is minted
-    /// @param _details A description of the Hat [optional]
+    /// @param _details A description of the Hat [optional]. Should not be larger than 7000 bytes 
+    ///                 (enforced in changeHatDetails)
     /// @param _imageURI The image uri for this top hat and the fallback for its
-    ///                  downstream hats [optional]
+    ///                  downstream hats [optional]. Should not be large than 7000 bytes
+    ///                  (enforced in changeHatImageURI)
     /// @return topHatId The id of the newly created topHat
     function mintTopHat(address _target, string calldata _details, string calldata _imageURI)
         public
@@ -131,14 +133,14 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /// @notice Creates a new hat. The msg.sender must wear the `_admin` hat.
     /// @dev Initializes a new Hat struct, but does not mint any tokens.
-    /// @param _details A description of the Hat
+    /// @param _details A description of the Hat. Should not be larger than 7000 bytes (enforced in changeHatDetails)
     /// @param _maxSupply The total instances of the Hat that can be worn at once
     /// @param _admin The id of the Hat that will control who wears the newly created hat
     /// @param _eligibility The address that can report on the Hat wearer's status
     /// @param _toggle The address that can deactivate the Hat
     /// @param _mutable Whether the hat's properties are changeable after creation
     /// @param _imageURI The image uri for this hat and the fallback for its
-    ///                  downstream hats [optional]
+    ///                  downstream hats [optional]. Should not be larger than 7000 bytes (enforced in changeHatImageURI)
     /// @return newHatId The id of the newly created Hat
     function createHat(
         uint256 _admin,
@@ -580,11 +582,14 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Change a hat's details
-    /// @dev Hat must be mutable, except for tophats
+    /// @dev Hat must be mutable, except for tophats.
     /// @param _hatId The id of the Hat to change
-    /// @param _newDetails The new details
+    /// @param _newDetails The new details. Must not be larger than 7000 bytes.
     function changeHatDetails(uint256 _hatId, string calldata _newDetails) external {
+        if (bytes(_newDetails).length > 7000) revert StringTooLong();
+
         _checkAdmin(_hatId);
+
         Hat storage hat = _hats[_hatId];
 
         // a tophat can change its own details, but otherwise only mutable hat details can be changed
@@ -638,8 +643,10 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @notice Change a hat's details
     /// @dev Hat must be mutable, except for tophats
     /// @param _hatId The id of the Hat to change
-    /// @param _newImageURI The new imageURI
+    /// @param _newImageURI The new imageURI. Must not be larger than 7000 bytes.
     function changeHatImageURI(uint256 _hatId, string calldata _newImageURI) external {
+        if (bytes(_newImageURI).length > 7000) revert StringTooLong();
+
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 

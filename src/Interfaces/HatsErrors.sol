@@ -66,6 +66,11 @@ interface HatsErrors {
     /// @notice Emitted when attempting to link a tophat without a request
     error LinkageNotRequested();
 
-    /// @notice Emmited when attempted to change a hat's eligibility or toggle module to the zero address
+    /// @notice Emmited when attempting to change a hat's eligibility or toggle module to the zero address
     error ZeroAddress();
+
+    /// @notice Emmitted when attempting to change a hat's details or imageURI to a string with over 7000 bytes (~characters)
+    /// @dev This protects against a DOS attack where an admin iteratively extend's a hat's details or imageURI 
+    ///      to be so long that reading it exceeds the block gas limit, breaking `uri()` and `viewHat()`
+    error StringTooLong();
 }

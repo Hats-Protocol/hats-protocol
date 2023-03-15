@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import "../src/Hats.sol";
 import "./HatsTestSetup.t.sol";
+import { LongStrings } from "./LongStrings.sol";
 
 contract DeployTest is TestSetup {
     function testDeployWithParams() public {
@@ -1178,7 +1179,7 @@ contract ToggleCheckHatsTest is TestSetup2 {
     }
 }
 
-contract MutabilityTests is TestSetupMutable {
+contract MutabilityTests is TestSetupMutable, LongStrings {
     function testAdminCanMakeMutableHatImmutable() public {
         (,,,,,,, mutable_,) = hats.viewHat(secondHatId);
         assertTrue(mutable_);
@@ -1452,6 +1453,20 @@ contract MutabilityTests is TestSetupMutable {
         vm.expectRevert(HatsErrors.ZeroAddress.selector);
         vm.prank(topHatWearer);
         hats.changeHatToggle(secondHatId, address(0));
+    }
+
+    function testAdminCannotChangeDetailsToTooLongString() public {
+        vm.prank(topHatWearer);
+        // console2.log("string length", bytes(long7050).length);
+        vm.expectRevert(HatsErrors.StringTooLong.selector);
+        hats.changeHatDetails(secondHatId, long7050);
+    }
+
+    function testAdminCannotChangeImageURIToTooLongString() public {
+        vm.prank(topHatWearer);
+        // console2.log("string length", bytes(long7050).length);
+        vm.expectRevert(HatsErrors.StringTooLong.selector);
+        hats.changeHatImageURI(secondHatId, long7050);
     }
 }
 
