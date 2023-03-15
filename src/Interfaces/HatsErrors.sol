@@ -70,7 +70,7 @@ interface HatsErrors {
     error ZeroAddress();
 
     /// @notice Emmitted when attempting to change a hat's details or imageURI to a string with over 7000 bytes (~characters)
-    /// @dev This protects against a DOS attack where an admin iteratively extend's a hat's details or imageURI 
+    /// @dev This protects against a DOS attack where an admin iteratively extend's a hat's details or imageURI
     ///      to be so long that reading it exceeds the block gas limit, breaking `uri()` and `viewHat()`
     error StringTooLong();
 }

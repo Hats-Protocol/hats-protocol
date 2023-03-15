@@ -104,7 +104,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @notice Creates and mints a Hat that is its own admin, i.e. a "topHat"
     /// @dev A topHat has no eligibility and no toggle
     /// @param _target The address to which the newly created topHat is minted
-    /// @param _details A description of the Hat [optional]. Should not be larger than 7000 bytes 
+    /// @param _details A description of the Hat [optional]. Should not be larger than 7000 bytes
     ///                 (enforced in changeHatDetails)
     /// @param _imageURI The image uri for this top hat and the fallback for its
     ///                  downstream hats [optional]. Should not be large than 7000 bytes
