@@ -1215,6 +1215,20 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         revert();
     }
 
+    /**
+     * @notice ERC165 interface detection
+     *  @dev While Hats Protocol conforms to the ERC1155 *interface*, it does not fully conform to the ERC1155 *specification*
+     *  since it does not implement the ERC1155Receiver functionality.
+     *  For this reason, this function overrides the ERC1155 implementation to return false for ERC1155.
+     *  @param interfaceId The interface identifier, as specified in ERC-165
+     *  @return bool True if the contract implements `interfaceId` and false otherwise
+     */
+    function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
+        return interfaceId == 0x01ffc9a7 // ERC165 Interface ID for ERC165
+            // interfaceId == 0xd9b67a26 || // ERC165 Interface ID for ERC1155
+            || interfaceId == 0x0e89341c; // ERC165 Interface ID for ERC1155MetadataURI
+    }
+
     /// @notice View the uri for a Hat
     /// @param id The id of the Hat
     /// @return _uri An 1155-compatible JSON object
