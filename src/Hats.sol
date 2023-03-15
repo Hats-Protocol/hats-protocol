@@ -779,6 +779,15 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             _checkAdminOrWearer(_newAdminHat);
         }
 
+        // protect against "theft" of linked trees by middle admins
+        uint256 destLocalTopHat = uint256(_newAdminHat >> 224 << 224); // (256 - TOPHAT_ADDRESS_SPACE);
+        // destination local tophat must be same as origin local tophat,
+        uint256 originLocalTopHat = linkedTreeAdmins[_topHatDomain] >> 224 << 224; // (256 - TOPHAT_ADDRESS_SPACE);
+        if (destLocalTopHat != originLocalTopHat) revert CrossTreeLinkage();
+        // destination is within the tippy top hat's local tree
+        uint256 tippyTopHat = uint256(getTippyTopHatDomain(_topHatDomain)) << 224;
+        if (destLocalTopHat != tippyTopHat) revert CrossTreeLinkage();
+
         // execute the new link, replacing the old link
         _linkTopHatToTree(_topHatDomain, _newAdminHat, _eligibility, _toggle, _details, _imageURI);
     }
