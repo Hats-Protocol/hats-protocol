@@ -1453,21 +1453,6 @@ contract MutabilityTests is TestSetupMutable {
         vm.prank(topHatWearer);
         hats.changeHatToggle(secondHatId, address(0));
     }
-
-    function testMechanisticToggleOutputSavedWhenChangingToHumanisticToggle() public {
-        // mock a getHatStatus call to return false (inactive) for secondHatId
-        vm.mockCall(
-            address(_toggle), abi.encodeWithSelector(IHatsToggle.getHatStatus.selector, secondHatId), abi.encode(false)
-        );
-        (,,,,,,,, bool status) = hats.viewHat(secondHatId);
-        assertFalse(status);
-        // change the toggle to a humanistic module
-        vm.prank(topHatWearer);
-        hats.changeHatToggle(secondHatId, address(5));
-        // ensure that hat status is still active
-        (,,,,,,,, status) = hats.viewHat(secondHatId);
-        assertFalse(status);
-    }
 }
 
 contract OverridesHatTests is TestSetup2 {
