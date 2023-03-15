@@ -728,6 +728,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         _checkAdmin(fullTopHatId);
 
         delete linkedTreeAdmins[_topHatDomain];
+        delete linkedTreeRequests[_topHatDomain];
         emit TopHatLinked(_topHatDomain, 0);
     }
 

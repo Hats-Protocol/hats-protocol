@@ -1878,6 +1878,31 @@ contract LinkHatsTests is TestSetup2 {
         hats.unlinkTopHatFromTree(secondTopHatDomain);
         assertEq(hats.isTopHat(secondTopHatId), true);
     }
+
+    function testUnlinkedHatCannotBeLinkedAgainWithoutPermission() public {
+        // first link of tophat to tree A
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId);
+
+        // tophat wearer creates a new tree B
+        vm.startPrank(topHatWearer);
+        uint256 treeB = hats.mintTopHat(topHatWearer, "for rugging", "http://www.tophat.com/");
+
+        // tree A requests new link to a different tree B
+        // this is possible because tree A is an admin for the tophat
+        hats.requestLinkTopHatToTree(secondTopHatDomain, treeB);
+
+        // tree A unlinks the tophat
+        hats.unlinkTopHatFromTree(secondTopHatDomain);
+
+        // admin B should not be able to rug the tree by approving the link without the tree's permission
+        vm.expectRevert(HatsErrors.LinkageNotRequested.selector);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, treeB);
+
+        assertTrue(hats.isAdminOfHat(thirdWearer, secondTopHatId));
+    }
 }
 
 contract MalformedInputsTests is TestSetup2 {
