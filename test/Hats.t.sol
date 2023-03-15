@@ -107,6 +107,13 @@ contract CreateHatsTest is TestSetup {
         vm.prank(topHatWearer);
         thirdHatId = hats.createHat(topHatId, _details, _maxSupply, _eligibility, address(0), true, thirdHatImageURI);
     }
+
+    function testCannotCreateHatWithInvalidAdmin() public {
+        uint256 invalidAdmin = 0x0000000100000001000000000000000000000000000000000000000000000000;
+        vm.prank(topHatWearer);
+        vm.expectRevert(HatsErrors.InvalidHatId.selector);
+        hats.createHat(invalidAdmin, _details, _maxSupply, _eligibility, _toggle, true, "invalid admin id");
+    }
 }
 
 contract BatchCreateHats is TestSetupBatch {

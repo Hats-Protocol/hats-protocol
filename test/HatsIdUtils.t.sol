@@ -89,4 +89,57 @@ contract HatIdUtilTests is Test {
         assertEq(utils.getTopHatDomain(1), 0);
         assertEq(utils.getTopHatDomain(admin - 1), 0);
     }
+
+    function testGetAdminAtLocalHatLevel() public {
+        uint256 hat = 0x000000FF000100020003000400050006000700080009000a000b000c000d000e;
+        assertEq(utils.getLocalHatLevel(hat), 14);
+        assertEq(
+            utils.getAdminAtLocalLevel(hat, 13), 0x000000FF000100020003000400050006000700080009000a000b000c000d0000
+        );
+        assertEq(
+            utils.getAdminAtLocalLevel(hat, 12), 0x000000FF000100020003000400050006000700080009000a000b000c00000000
+        );
+    }
+
+    function testIsValidHatId_Valid() public {
+        uint256 good = 0x000000FF000100020003000400050006000700080009000a000b000c000d000e;
+        assertTrue(utils.isValidHatId(good));
+    }
+
+    function testIsValidHatId_Invalid1() public {
+        uint256 empty1 = 0x000000FF000000020003000400050006000700080009000a000b000c000d000e;
+        uint256 empty2 = 0x000000FF000100000003000400050006000700080009000a000b000c000d000e;
+        uint256 empty3 = 0x000000FF000100020000000400050006000700080009000a000b000c000d000e;
+        uint256 empty4 = 0x000000FF000100020003000000050006000700080009000a000b000c000d000e;
+        uint256 empty5 = 0x000000FF000100020003000400000006000700080009000a000b000c000d000e;
+        uint256 empty6 = 0x000000FF000100020003000400050000000700080009000a000b000c000d000e;
+        uint256 empty7 = 0x000000FF000100020003000400050006000000080009000a000b000c000d000e;
+
+        assertFalse(utils.isValidHatId(empty1));
+        assertFalse(utils.isValidHatId(empty2));
+        assertFalse(utils.isValidHatId(empty3));
+        assertFalse(utils.isValidHatId(empty4));
+        assertFalse(utils.isValidHatId(empty5));
+        assertFalse(utils.isValidHatId(empty6));
+        assertFalse(utils.isValidHatId(empty7));
+    }
+
+    function testIsValidHatId_Invalid2() public {
+        uint256 empty8 = 0x000000FF000100020003000400050006000700000009000a000b000c000d000e;
+        uint256 empty9 = 0x000000FF000100020003000400050006000700080000000a000b000c000d000e;
+        uint256 emptya = 0x000000FF0001000200030004000500060007000800090000000b000c000d000e;
+        uint256 emptyb = 0x000000FF000100020003000400050006000700080009000a0000000c000d000e;
+        uint256 emptyc = 0x000000FF000100020003000400050006000700080009000a000b0000000d000e;
+        uint256 emptyd = 0x000000FF000100020003000400050006000700080009000a000b000c0000000e;
+        uint256 emptye = 0x000000FF000100020003000400050006000700080009000a000b000c000d0000;
+
+        assertFalse(utils.isValidHatId(empty8));
+        assertFalse(utils.isValidHatId(empty9));
+        assertFalse(utils.isValidHatId(emptya));
+        assertFalse(utils.isValidHatId(emptyb));
+        assertFalse(utils.isValidHatId(emptyc));
+        assertFalse(utils.isValidHatId(emptyd));
+        // this is the same as a valid level 13 hat
+        assertTrue(utils.isValidHatId(emptye));
+    }
 }
