@@ -18,11 +18,15 @@ pragma solidity >=0.8.13;
 
 import "./Interfaces/IHatsIdUtilities.sol";
 
+/// @notice see HatsErrors.sol for description
+error MaxLevelsReached();
+
 /// @title Hats Id Utilities
 /// @dev Functions for working with Hat Ids from Hats Protocol. Factored out of Hats.sol
 /// for easier use by other contracts.
 /// @author Haberdasher Labs
 contract HatsIdUtilities is IHatsIdUtilities {
+
     /// @notice Mapping of tophats requesting to link to admin hats in other trees
     /// @dev Linkage only occurs if request is approved by the new admin
     mapping(uint32 => uint256) public linkedTreeRequests; // topHatDomain => requested new admin
@@ -58,6 +62,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
     uint256 internal constant MAX_LEVELS = 14;
 
     /// @notice Constructs a valid hat id for a new hat underneath a given admin
+    /// @dev Reverts if the admin has already reached `MAX_LEVELS`
     /// @param _admin the id of the admin for the new hat
     /// @param _newHat the uint16 id of the new hat
     /// @return id The constructed hat id
@@ -88,6 +93,9 @@ contract HatsIdUtilities is IHatsIdUtilities {
                 ++i;
             }
         }
+
+        // if _admin is already at MAX_LEVELS, child hats are not possible, so we revert
+        revert MaxLevelsReached();
     }
 
     /// @notice Identifies the level a given hat in its hat tree
