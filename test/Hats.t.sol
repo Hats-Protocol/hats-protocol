@@ -1474,6 +1474,17 @@ contract OverridesHatTests is TestSetup2 {
         string memory jsonUri = hats.uri(topHatId);
         console2.log("encoded URI", jsonUri);
     }
+
+    function testFailBalanceOfBatch() public view {
+        address[] memory addresses = new address[](2);
+        addresses[0] = secondWearer;
+        addresses[1] = thirdWearer;
+        uint256[] memory ids = new uint256[](2);
+        ids[0] = 1;
+        ids[1] = 2;
+
+        hats.balanceOfBatch(addresses, ids);
+    }
 }
 
 contract LinkHatsTests is TestSetup2 {
