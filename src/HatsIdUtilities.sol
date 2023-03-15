@@ -26,7 +26,6 @@ error MaxLevelsReached();
 /// for easier use by other contracts.
 /// @author Haberdasher Labs
 contract HatsIdUtilities is IHatsIdUtilities {
-
     /// @notice Mapping of tophats requesting to link to admin hats in other trees
     /// @dev Linkage only occurs if request is approved by the new admin
     mapping(uint32 => uint256) public linkedTreeRequests; // topHatDomain => requested new admin
