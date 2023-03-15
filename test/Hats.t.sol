@@ -537,25 +537,6 @@ contract MintHatsTest is TestSetup {
         assertEq(hats.hatSupply(secondHatId), supply_pre + 2);
     }
 
-    function testMintInactiveHat() public {
-        // capture pre-values
-        uint256 hatSupply_pre = hats.hatSupply(secondHatId);
-
-        // deactivate the hat
-        vm.prank(_toggle);
-        hats.setHatStatus(secondHatId, false);
-
-        // mint the hat to wearer
-        vm.prank(topHatWearer);
-        hats.mintHat(secondHatId, secondWearer);
-
-        // assert that the wearer does not have the hat
-        assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
-
-        // assert that the hat supply increased
-        assertEq(++hatSupply_pre, hats.hatSupply(secondHatId));
-    }
-
     function testCannotMintNonExistentHat() public {
         vm.prank(topHatWearer);
 
@@ -575,6 +556,16 @@ contract MintHatsTest is TestSetup {
 
         vm.expectRevert(HatsErrors.NotEligible.selector);
         vm.prank(topHatWearer);
+        hats.mintHat(secondHatId, secondWearer);
+    }
+
+    function testCannotMintInactiveHat() public {
+        // mock a toggle call to return inactive
+        vm.mockCall(address(_toggle), abi.encodeWithSignature("getHatStatus(uint256)", secondHatId), abi.encode(false));
+
+        vm.prank(topHatWearer);
+        // expect hat not active error
+        vm.expectRevert(HatsErrors.HatNotActive.selector);
         hats.mintHat(secondHatId, secondWearer);
     }
 
@@ -762,6 +753,14 @@ contract TransferHatTests is TestSetupMutable {
         );
 
         vm.expectRevert(HatsErrors.NotEligible.selector);
+        vm.prank(topHatWearer);
+        hats.transferHat(secondHatId, secondWearer, thirdWearer);
+    }
+
+    function testCannotTransferInactiveHat() public {
+        vm.mockCall(_toggle, abi.encodeWithSignature("getHatStatus(uint256)", secondHatId), abi.encode(false));
+
+        vm.expectRevert(HatsErrors.HatNotActive.selector);
         vm.prank(topHatWearer);
         hats.transferHat(secondHatId, secondWearer, thirdWearer);
     }
@@ -1020,13 +1019,17 @@ contract RenounceHatsTest is TestSetup2 {
     }
 
     function testCanRenounceHatAsNonWearerWithStaticBalance() public {
-        // hat gets toggled off
-        // encode mock for function inside toggle contract to return false
-        vm.mockCall(address(_toggle), abi.encodeWithSignature("getHatStatus(uint256)", secondHatId), abi.encode(false));
+        // wearer becomes ineligible
+        // encode mock for function inside eligibility contract to return false (inelible), true (good standing)
+        vm.mockCall(
+            _eligibility,
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(false, true)
+        );
 
         // show that admin can't mint again to secondWearer, ie because they have a static balance
         vm.prank(topHatWearer);
-        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, secondWearer, secondHatId));
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotEligible.selector));
         hats.mintHat(secondHatId, secondWearer);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
 
@@ -1034,7 +1037,8 @@ contract RenounceHatsTest is TestSetup2 {
         vm.prank(address(secondWearer));
         hats.renounceHat(secondHatId);
 
-        // now, admin should be able to mint again
+        // now, admin should be able to mint again if eligibility no longer returns false
+        vm.clearMockedCalls();
         vm.prank(topHatWearer);
         hats.mintHat(secondHatId, secondWearer);
     }
@@ -1106,7 +1110,7 @@ contract ToggleSetHatsTest is TestSetup2 {
         // artificially mint again to secondWearer
         vm.prank(topHatWearer);
 
-        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, secondWearer, secondHatId));
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.HatNotActive.selector));
 
         hats.mintHat(secondHatId, secondWearer);
 
@@ -1171,7 +1175,7 @@ contract ToggleCheckHatsTest is TestSetup2 {
         // artificially mint again to secondWearer
         vm.prank(topHatWearer);
 
-        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, secondWearer, secondHatId));
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.HatNotActive.selector));
 
         hats.mintHat(secondHatId, secondWearer);
 

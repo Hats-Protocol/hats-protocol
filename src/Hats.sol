@@ -240,20 +240,17 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     function mintHat(uint256 _hatId, address _wearer) public returns (bool success) {
         Hat storage hat = _hats[_hatId];
         if (hat.maxSupply == 0) revert HatDoesNotExist(_hatId);
-
+        // only eligible wearers can receive minted hats
         if (!isEligible(_wearer, _hatId)) revert NotEligible();
-
-        // only the wearer of a hat's admin Hat can mint it
+        // only active hats can be minted
+        if (!_isActive(hat, _hatId)) revert HatNotActive();
+        // only the wearer of one of a hat's admins can mint it
         _checkAdmin(_hatId);
-
-        if (hat.supply >= hat.maxSupply) {
-            revert AllHatsWorn(_hatId);
-        }
-
-        if (_staticBalanceOf(_wearer, _hatId) > 0) {
-            revert AlreadyWearingHat(_wearer, _hatId);
-        }
-
+        // hat supply cannot exceed maxSupply
+        if (hat.supply >= hat.maxSupply) revert AllHatsWorn(_hatId);
+        // wearers cannot wear the same hat more than once
+        if (_staticBalanceOf(_wearer, _hatId) > 0) revert AlreadyWearingHat(_wearer, _hatId);
+        // if we've made it through all the checks, mint the hat
         _mintHat(_wearer, _hatId);
 
         success = true;
@@ -536,28 +533,22 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _to The new wearer
     function transferHat(uint256 _hatId, address _from, address _to) public {
         _checkAdmin(_hatId);
-
         // cannot transfer immutable hats, except for tophats, which can always transfer themselves
         if (!isTopHat(_hatId)) {
             if (!_isMutable(_hats[_hatId])) revert Immutable();
         }
-
         // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
-        if (_staticBalanceOf(_from, _hatId) < 1) {
-            revert NotHatWearer();
-        }
-
+        if (_staticBalanceOf(_from, _hatId) < 1) revert NotHatWearer();
         // Check if recipient is already wearing hat; also checks storage to maintain balance == 1 invariant
-        if (_staticBalanceOf(_to, _hatId) > 0) {
-            revert AlreadyWearingHat(_to, _hatId);
-        }
-
+        if (_staticBalanceOf(_to, _hatId) > 0) revert AlreadyWearingHat(_to, _hatId);
+        // only eligible wearers can receive transferred hats
         if (!isEligible(_to, _hatId)) revert NotEligible();
-
-        //Adjust balances
+        // only active hats can be transferred
+        if (!_isActive(_hats[_hatId], _hatId)) revert HatNotActive();
+        // we've made it passed all the checks, so adjust balances to execute the transfer
         _balanceOf[_from][_hatId] = 0;
         _balanceOf[_to][_hatId] = 1;
-
+        // emit the ERC1155 standard transfer event
         emit TransferSingle(msg.sender, _from, _to, _hatId, 1);
     }
 
