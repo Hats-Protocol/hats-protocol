@@ -39,6 +39,9 @@ interface HatsErrors {
     /// @notice Emitted when attempting to mint a non-existant hat
     error HatDoesNotExist(uint256 hatId);
 
+    /// @notice Emmitted when attempting to mint or transfer a hat that is not active
+    error HatNotActive();
+
     /// @notice Emitted when attempting to mint or transfer a hat to an ineligible wearer
     error NotEligible();
 
