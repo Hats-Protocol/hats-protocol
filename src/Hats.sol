@@ -104,9 +104,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @notice Creates and mints a Hat that is its own admin, i.e. a "topHat"
     /// @dev A topHat has no eligibility and no toggle
     /// @param _target The address to which the newly created topHat is minted
-    /// @param _details A description of the Hat [optional]
+    /// @param _details A description of the Hat [optional]. Should not be larger than 7000 bytes
+    ///                 (enforced in changeHatDetails)
     /// @param _imageURI The image uri for this top hat and the fallback for its
-    ///                  downstream hats [optional]
+    ///                  downstream hats [optional]. Should not be large than 7000 bytes
+    ///                  (enforced in changeHatImageURI)
     /// @return topHatId The id of the newly created topHat
     function mintTopHat(address _target, string calldata _details, string calldata _imageURI)
         public
@@ -131,14 +133,14 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /// @notice Creates a new hat. The msg.sender must wear the `_admin` hat.
     /// @dev Initializes a new Hat struct, but does not mint any tokens.
-    /// @param _details A description of the Hat
+    /// @param _details A description of the Hat. Should not be larger than 7000 bytes (enforced in changeHatDetails)
     /// @param _maxSupply The total instances of the Hat that can be worn at once
     /// @param _admin The id of the Hat that will control who wears the newly created hat
     /// @param _eligibility The address that can report on the Hat wearer's status
     /// @param _toggle The address that can deactivate the Hat
     /// @param _mutable Whether the hat's properties are changeable after creation
     /// @param _imageURI The image uri for this hat and the fallback for its
-    ///                  downstream hats [optional]
+    ///                  downstream hats [optional]. Should not be larger than 7000 bytes (enforced in changeHatImageURI)
     /// @return newHatId The id of the newly created Hat
     function createHat(
         uint256 _admin,
@@ -155,15 +157,14 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         if (_eligibility == address(0)) revert ZeroAddress();
         if (_toggle == address(0)) revert ZeroAddress();
-
+        // check that the admin id is valid, ie does not contain empty levels between filled levels
+        if (!isValidHatId(_admin)) revert InvalidHatId();
+        // construct the next hat id
         newHatId = getNextId(_admin);
-
         // to create a hat, you must be wearing one of its admin hats
         _checkAdmin(newHatId);
-
         // create the new hat
         _createHat(newHatId, _details, _maxSupply, _eligibility, _toggle, _mutable, _imageURI);
-
         // increment _admin.lastHatId
         // use the overflow check to constrain to correct number of hats per level
         ++_hats[_admin].lastHatId;
@@ -241,20 +242,17 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     function mintHat(uint256 _hatId, address _wearer) public returns (bool success) {
         Hat storage hat = _hats[_hatId];
         if (hat.maxSupply == 0) revert HatDoesNotExist(_hatId);
-
+        // only eligible wearers can receive minted hats
         if (!isEligible(_wearer, _hatId)) revert NotEligible();
-
-        // only the wearer of a hat's admin Hat can mint it
+        // only active hats can be minted
+        if (!_isActive(hat, _hatId)) revert HatNotActive();
+        // only the wearer of one of a hat's admins can mint it
         _checkAdmin(_hatId);
-
-        if (hat.supply >= hat.maxSupply) {
-            revert AllHatsWorn(_hatId);
-        }
-
-        if (_staticBalanceOf(_wearer, _hatId) > 0) {
-            revert AlreadyWearingHat(_wearer, _hatId);
-        }
-
+        // hat supply cannot exceed maxSupply
+        if (hat.supply >= hat.maxSupply) revert AllHatsWorn(_hatId);
+        // wearers cannot wear the same hat more than once
+        if (_staticBalanceOf(_wearer, _hatId) > 0) revert AlreadyWearingHat(_wearer, _hatId);
+        // if we've made it through all the checks, mint the hat
         _mintHat(_wearer, _hatId);
 
         success = true;
@@ -417,7 +415,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Internal call for creating a new hat
-    /// @dev Initializes a new Hat struct, but does not mint any tokens
+    /// @dev Initializes a new Hat in storage, but does not mint any tokens
     /// @param _id ID of the hat to be stored
     /// @param _details A description of the hat
     /// @param _maxSupply The total instances of the Hat that can be worn at once
@@ -426,7 +424,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _mutable Whether the hat's properties are changeable after creation
     /// @param _imageURI The image uri for this top hat and the fallback for its
     ///                  downstream hats [optional]
-    /// @return hat The contents of the newly created hat
     function _createHat(
         uint256 _id,
         string calldata _details,
@@ -435,14 +432,20 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         address _toggle,
         bool _mutable,
         string calldata _imageURI
-    ) internal returns (Hat memory hat) {
+    ) internal {
+        /* 
+          We write directly to storage instead of first building the Hat struct in memory.
+          This allows us to cheaply use the existing lastHatId value in case it was incremented by creating a hat while skipping admin levels.
+          (Resetting it to 0 would be bad since this hat's child hat(s) would overwrite the previously created hat(s) at that level.)
+        */
+        Hat storage hat = _hats[_id];
         hat.details = _details;
         hat.maxSupply = _maxSupply;
         hat.eligibility = _eligibility;
         hat.toggle = _toggle;
         hat.imageURI = _imageURI;
+        // config is a concatenation of the status and mutability properties
         hat.config = _mutable ? uint96(3 << 94) : uint96(1 << 95);
-        _hats[_id] = hat;
 
         emit HatCreated(_id, _details, _maxSupply, _eligibility, _toggle, _mutable, _imageURI);
     }
@@ -546,28 +549,22 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @param _to The new wearer
     function transferHat(uint256 _hatId, address _from, address _to) public {
         _checkAdmin(_hatId);
-
         // cannot transfer immutable hats, except for tophats, which can always transfer themselves
         if (!isTopHat(_hatId)) {
             if (!_isMutable(_hats[_hatId])) revert Immutable();
         }
-
         // Checks storage instead of `isWearerOfHat` since admins may want to transfer revoked Hats to new wearers
-        if (_staticBalanceOf(_from, _hatId) < 1) {
-            revert NotHatWearer();
-        }
-
+        if (_staticBalanceOf(_from, _hatId) < 1) revert NotHatWearer();
         // Check if recipient is already wearing hat; also checks storage to maintain balance == 1 invariant
-        if (_staticBalanceOf(_to, _hatId) > 0) {
-            revert AlreadyWearingHat(_to, _hatId);
-        }
-
+        if (_staticBalanceOf(_to, _hatId) > 0) revert AlreadyWearingHat(_to, _hatId);
+        // only eligible wearers can receive transferred hats
         if (!isEligible(_to, _hatId)) revert NotEligible();
-
-        //Adjust balances
+        // only active hats can be transferred
+        if (!_isActive(_hats[_hatId], _hatId)) revert HatNotActive();
+        // we've made it passed all the checks, so adjust balances to execute the transfer
         _balanceOf[_from][_hatId] = 0;
         _balanceOf[_to][_hatId] = 1;
-
+        // emit the ERC1155 standard transfer event
         emit TransferSingle(msg.sender, _from, _to, _hatId, 1);
     }
 
@@ -589,11 +586,14 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Change a hat's details
-    /// @dev Hat must be mutable, except for tophats
+    /// @dev Hat must be mutable, except for tophats.
     /// @param _hatId The id of the Hat to change
-    /// @param _newDetails The new details
+    /// @param _newDetails The new details. Must not be larger than 7000 bytes.
     function changeHatDetails(uint256 _hatId, string calldata _newDetails) external {
+        if (bytes(_newDetails).length > 7000) revert StringTooLong();
+
         _checkAdmin(_hatId);
+
         Hat storage hat = _hats[_hatId];
 
         // a tophat can change its own details, but otherwise only mutable hat details can be changed
@@ -655,8 +655,10 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @notice Change a hat's details
     /// @dev Hat must be mutable, except for tophats
     /// @param _hatId The id of the Hat to change
-    /// @param _newImageURI The new imageURI
+    /// @param _newImageURI The new imageURI. Must not be larger than 7000 bytes.
     function changeHatImageURI(uint256 _hatId, string calldata _newImageURI) external {
+        if (bytes(_newImageURI).length > 7000) revert StringTooLong();
+
         _checkAdmin(_hatId);
         Hat storage hat = _hats[_hatId];
 
@@ -671,7 +673,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Change a hat's details
-    /// @dev Hat must be mutable; new max supply cannot be greater than current supply
+    /// @dev Hat must be mutable; new max supply cannot be less than current supply
     /// @param _hatId The id of the Hat to change
     /// @param _newMaxSupply The new max supply
     function changeHatMaxSupply(uint256 _hatId, uint32 _newMaxSupply) external {
@@ -1229,6 +1231,25 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         pure
         override
     {
+        revert();
+    }
+
+    /**
+     * @notice ERC165 interface detection
+     *  @dev While Hats Protocol conforms to the ERC1155 *interface*, it does not fully conform to the ERC1155 *specification*
+     *  since it does not implement the ERC1155Receiver functionality.
+     *  For this reason, this function overrides the ERC1155 implementation to return false for ERC1155.
+     *  @param interfaceId The interface identifier, as specified in ERC-165
+     *  @return bool True if the contract implements `interfaceId` and false otherwise
+     */
+    function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
+        return interfaceId == 0x01ffc9a7 // ERC165 Interface ID for ERC165
+            // interfaceId == 0xd9b67a26 || // ERC165 Interface ID for ERC1155
+            || interfaceId == 0x0e89341c; // ERC165 Interface ID for ERC1155MetadataURI
+    }
+
+    /// @notice Since Hat balances are handled differently, this function is not supported
+    function balanceOfBatch(address[] calldata, uint256[] calldata) public pure override returns (uint256[] memory) {
         revert();
     }
 
