@@ -1230,6 +1230,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         return interfaceId == 0x01ffc9a7 // ERC165 Interface ID for ERC165
             // interfaceId == 0xd9b67a26 || // ERC165 Interface ID for ERC1155
             || interfaceId == 0x0e89341c; // ERC165 Interface ID for ERC1155MetadataURI
+    }
 
     /// @notice Since Hat balances are handled differently, this function is not supported
     function balanceOfBatch(address[] calldata, uint256[] calldata) public pure override returns (uint256[] memory) {
