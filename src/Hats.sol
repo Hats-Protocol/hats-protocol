@@ -750,8 +750,10 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     }
 
     /// @notice Move a tree root to a different position within the same parent tree,
-    ///         without a request
-    /// @dev Caller must be both an admin tree root and admin or wearer of `_newAdminHat`
+    ///         without a request. Valid destinations include within the same local tree as the origin,
+    ///         or to the local tree of the tippyTopHat. TippyTopHat wearers can bypass this restriction
+    ///         to relink to anywhere in its full tree.
+    /// @dev Caller must be both an admin tree root and admin or wearer of `_newAdminHat`.
     /// @param _topHatDomain The 32 bit domain of the topHat to relink
     /// @param _newAdminHat The new admin for the linked tree
     /// @param _eligibility Optional new eligibility module for the linked topHat
@@ -779,14 +781,18 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             _checkAdminOrWearer(_newAdminHat);
         }
 
-        // protect against "theft" of linked trees by middle admins
-        uint256 destLocalTopHat = uint256(_newAdminHat >> 224 << 224); // (256 - TOPHAT_ADDRESS_SPACE);
-        // destination local tophat must be same as origin local tophat,
-        uint256 originLocalTopHat = linkedTreeAdmins[_topHatDomain] >> 224 << 224; // (256 - TOPHAT_ADDRESS_SPACE);
-        if (destLocalTopHat != originLocalTopHat) revert CrossTreeLinkage();
-        // destination is within the tippy top hat's local tree
+        // if caller is not the tippy top hat, we must protect against "theft" of linked trees by middle admins
         uint256 tippyTopHat = uint256(getTippyTopHatDomain(_topHatDomain)) << 224;
-        if (destLocalTopHat != tippyTopHat) revert CrossTreeLinkage();
+        if (!isWearerOfHat(msg.sender, tippyTopHat)) {
+            uint256 destLocalTopHat = uint256(_newAdminHat >> 224 << 224); // (256 - TOPHAT_ADDRESS_SPACE);
+            // destination local tophat must be either...
+            // a) the same as origin local tophat, or
+            // b) within the tippy top hat's local tree
+            uint256 originLocalTopHat = linkedTreeAdmins[_topHatDomain] >> 224 << 224; // (256 - TOPHAT_ADDRESS_SPACE);
+            if (destLocalTopHat != originLocalTopHat && destLocalTopHat != tippyTopHat) {
+                revert CrossTreeLinkage();
+            }
+        }
 
         // execute the new link, replacing the old link
         _linkTopHatToTree(_topHatDomain, _newAdminHat, _eligibility, _toggle, _details, _imageURI);

@@ -1816,9 +1816,8 @@ contract LinkHatsTests is TestSetup2 {
         hats.approveLinkTopHatToTree(thirdTopHatDomain, secondTopHatId, address(0), address(0), "", "");
 
         // try relink second tophat under third tophat
-        // this will revert with a CrossTreeLink error rather than a CircularLinkage error because relinks must be within same local tree
         vm.prank(topHatWearer);
-        vm.expectRevert(abi.encodeWithSelector(HatsErrors.CrossTreeLinkage.selector));
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.CircularLinkage.selector));
         hats.relinkTopHatWithinTree(secondTopHatDomain, thirdTopHatId, address(0), address(0), "", "");
     }
 
