@@ -1217,7 +1217,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         revert();
     }
 
-
     /**
      * @notice ERC165 interface detection
      *  @dev While Hats Protocol conforms to the ERC1155 *interface*, it does not fully conform to the ERC1155 *specification*
@@ -1235,7 +1234,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @notice Since Hat balances are handled differently, this function is not supported
     function balanceOfBatch(address[] calldata, uint256[] calldata) public pure override returns (uint256[] memory) {
         revert();
-
     }
 
     /// @notice View the uri for a Hat
