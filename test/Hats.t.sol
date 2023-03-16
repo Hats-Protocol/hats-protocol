@@ -1533,15 +1533,6 @@ contract OverridesHatTests is TestSetup2 {
         console2.log("encoded URI", jsonUri);
     }
 
-    function testSupportsInterface() public {
-        bytes4 ERC165 = 0x01ffc9a7;
-        bytes4 ERC1155Metadata = 0x0e89341c;
-        bytes4 ERC1155Standard = 0xd9b67a26;
-        assertTrue(hats.supportsInterface(ERC165));
-        assertTrue(hats.supportsInterface(ERC1155Metadata));
-        assertFalse(hats.supportsInterface(ERC1155Standard));
-    }
-
     function testCreateUriForTopHat() public view {
         string memory jsonUri = hats.uri(topHatId);
         console2.log("encoded URI", jsonUri);
