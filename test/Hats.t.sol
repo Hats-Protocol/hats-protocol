@@ -1488,7 +1488,6 @@ contract MutabilityTests is TestSetupMutable, LongStrings {
         hats.changeHatToggle(secondHatId, address(0));
     }
 
-
     function testMechanisticToggleOutputSavedWhenChangingToHumanisticToggle() public {
         // mock a getHatStatus call to return false (inactive) for secondHatId
         vm.mockCall(
@@ -1503,7 +1502,7 @@ contract MutabilityTests is TestSetupMutable, LongStrings {
         (,,,,,,,, status) = hats.viewHat(secondHatId);
         assertFalse(status);
     }
-    
+
     function testAdminCannotChangeDetailsToTooLongString() public {
         vm.prank(topHatWearer);
         // console2.log("string length", bytes(long7050).length);
@@ -1516,7 +1515,6 @@ contract MutabilityTests is TestSetupMutable, LongStrings {
         // console2.log("string length", bytes(long7050).length);
         vm.expectRevert(HatsErrors.StringTooLong.selector);
         hats.changeHatImageURI(secondHatId, long7050);
-
     }
 }
 
