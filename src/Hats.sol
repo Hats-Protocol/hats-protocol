@@ -855,7 +855,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             hat.toggle = _toggle;
             emit HatToggleChanged(topHatId, _toggle);
         }
-        
+
         uint256 length = bytes(_details).length;
         if (length > 0) {
             if (length > 7000) revert StringTooLong();
@@ -1331,9 +1331,27 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             || interfaceId == 0x0e89341c; // ERC165 Interface ID for ERC1155MetadataURI
     }
 
-    /// @notice Since Hat balances are handled differently, this function is not supported
-    function balanceOfBatch(address[] calldata, uint256[] calldata) public pure override returns (uint256[] memory) {
-        revert();
+    /// @notice Batch retrieval for wearer balances
+    /// @dev Given the higher gas overhead of Hats balanceOf checks, large batches may be high cost or run into gas limits
+    /// @param _wearers Array of addresses to check balances for
+    /// @param _hatIds Array of Hat ids to check, using the same index as _wearers
+    function balanceOfBatch(address[] calldata _wearers, uint256[] calldata _hatIds)
+        public
+        view
+        override(ERC1155, IHats)
+        returns (uint256[] memory balances)
+    {
+        if (_wearers.length != _hatIds.length) revert BatchArrayLengthMismatch();
+
+        balances = new uint256[](_wearers.length);
+
+        // Unchecked because the only math done is incrementing
+        // the array index counter which cannot possibly overflow.
+        unchecked {
+            for (uint256 i = 0; i < _wearers.length; ++i) {
+                balances[i] = balanceOf(_wearers[i], _hatIds[i]);
+            }
+        }
     }
 
     /// @notice View the uri for a Hat
