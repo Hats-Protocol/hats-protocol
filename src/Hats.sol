@@ -855,11 +855,17 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             hat.toggle = _toggle;
             emit HatToggleChanged(topHatId, _toggle);
         }
-        if (bytes(_details).length > 0) {
+        
+        uint256 length = bytes(_details).length;
+        if (length > 0) {
+            if (length > 7000) revert StringTooLong();
             hat.details = _details;
             emit HatDetailsChanged(topHatId, _details);
         }
-        if (bytes(_imageURI).length > 0) {
+
+        length = bytes(_imageURI).length;
+        if (length > 0) {
+            if (length > 7000) revert StringTooLong();
             hat.imageURI = _imageURI;
             emit HatImageURIChanged(topHatId, _imageURI);
         }
