@@ -296,12 +296,23 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @dev May change the hat's status in storage
     /// @param _hatId The id of the Hat whose toggle we are checking
     /// @return toggled Whether there was a new status
-    function checkHatStatus(uint256 _hatId) external returns (bool toggled) {
+    function checkHatStatus(uint256 _hatId) public returns (bool toggled) {
         Hat storage hat = _hats[_hatId];
-        bool newStatus;
 
+        // attempt to retrieve the hat's status from the toggle module
+        (bool success, bool newStatus) = _pullHatStatus(hat, _hatId);
+
+        // if unsuccessful (ie toggle was humanistic), process the new status
+        if (!success) revert NotHatsToggle();
+
+        // if successful (ie toggle was mechanistic), process the new status
+        toggled = _processHatStatus(_hatId, newStatus);
+    }
+
+    function _pullHatStatus(Hat storage _hat, uint256 _hatId) internal view returns (bool success, bool newStatus) {
         bytes memory data = abi.encodeWithSignature("getHatStatus(uint256)", _hatId);
-        (bool success, bytes memory returndata) = hat.toggle.staticcall(data);
+        bytes memory returndata;
+        (success, returndata) = _hat.toggle.staticcall(data);
 
         /* 
         * if function call succeeds with data of length == 32, then we know the contract exists 
@@ -321,13 +332,11 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             }
             // invalid condition
             else {
-                revert NotHatsToggle();
+                success = false;
             }
         } else {
-            revert NotHatsToggle();
+            success = false;
         }
-
-        toggled = _processHatStatus(_hatId, newStatus);
     }
 
     /// @notice Report from a hat's eligibility on the status of one of its wearers and, if `false`, revoke their hat
@@ -630,6 +639,14 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             revert Immutable();
         }
 
+        // record hat status from old toggle before changing; ensures smooth transition to new toggle,
+        // especially in case of switching from mechanistic to humanistic toggle
+        // a) attempt to retrieve hat status from old toggle
+        (bool success, bool newStatus) = _pullHatStatus(hat, _hatId);
+        // b) if succeeded, (ie if old toggle was mechanistic), store the retrieved status
+        if (success) _processHatStatus(_hatId, newStatus);
+
+        // set the new toggle
         hat.toggle = _newToggle;
 
         emit HatToggleChanged(_hatId, _newToggle);
@@ -893,10 +910,10 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         (bool success, bytes memory returndata) =
             _hat.toggle.staticcall(abi.encodeWithSignature("getHatStatus(uint256)", _hatId));
 
-        /* 
-        * if function call succeeds with data of length == 32, then we know the contract exists 
+        /*
+        * if function call succeeds with data of length == 32, then we know the contract exists
         * and has the getHatStatus function.
-        * But — since function selectors don't include return types — we still can't assume that the return data is a boolean, 
+        * But — since function selectors don't include return types — we still can't assume that the return data is a boolean,
         * so we treat it as a uint so it will always safely decode without throwing.
         */
         if (success && returndata.length == 32) {
