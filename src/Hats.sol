@@ -17,7 +17,7 @@
 pragma solidity >=0.8.13;
 
 import { ERC1155 } from "lib/ERC1155/ERC1155.sol";
-import { console2 } from "forge-std/Test.sol"; //remove after testing
+// import { console2 } from "forge-std/Test.sol"; //remove after testing
 import "./Interfaces/IHats.sol";
 import "./HatsIdUtilities.sol";
 import "./Interfaces/IHatsToggle.sol";
