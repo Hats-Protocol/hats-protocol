@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import "../src/Hats.sol";
 import "./HatsTestSetup.t.sol";
+import { LongStrings } from "./LongStrings.sol";
 
 contract DeployTest is TestSetup {
     function testDeployWithParams() public {
@@ -106,6 +107,13 @@ contract CreateHatsTest is TestSetup {
         vm.expectRevert(HatsErrors.ZeroAddress.selector);
         vm.prank(topHatWearer);
         thirdHatId = hats.createHat(topHatId, _details, _maxSupply, _eligibility, address(0), true, thirdHatImageURI);
+    }
+
+    function testCannotCreateHatWithInvalidAdmin() public {
+        uint256 invalidAdmin = 0x0000000100000001000000000000000000000000000000000000000000000000;
+        vm.prank(topHatWearer);
+        vm.expectRevert(HatsErrors.InvalidHatId.selector);
+        hats.createHat(invalidAdmin, _details, _maxSupply, _eligibility, _toggle, true, "invalid admin id");
     }
 }
 
@@ -313,6 +321,28 @@ contract BatchCreateHats is TestSetupBatch {
             mutablesBatch,
             imageURIsBatch
         );
+    }
+
+    function testCreatingSkippedHatDoesNotOverwriteChildHat() public {
+        uint32 testMax = 99;
+        // first, skip a level to create a hat
+        uint256 level1Hat = 0x000000010001 << (224 - 16);
+        vm.startPrank(topHatWearer);
+        uint256 level2HatA = hats.createHat(
+            level1Hat, "should not be overwritten", testMax, _eligibility, _toggle, false, "amistillhere.com"
+        );
+
+        // then, create the hat at the skipped level
+        uint256 skippedHat =
+            hats.createHat(topHatId, "At first I was skipped, now I'm here", 1, _eligibility, _toggle, false, "gm");
+        assertEq(skippedHat, level1Hat);
+
+        // finally, attempt to create a new child of skippedHat
+        uint256 level2HatB = hats.createHat(skippedHat, "i should be hat 2", 1, _eligibility, _toggle, false, "");
+        assertEq(level2HatB, 0x0000000100010002 << (224 - 32));
+        assertFalse(level2HatB == level2HatA);
+        (, uint32 max,,,,,,,) = hats.viewHat(level2HatA);
+        assertEq(max, testMax);
     }
 }
 
@@ -530,25 +560,6 @@ contract MintHatsTest is TestSetup {
         assertEq(hats.hatSupply(secondHatId), supply_pre + 2);
     }
 
-    function testMintInactiveHat() public {
-        // capture pre-values
-        uint256 hatSupply_pre = hats.hatSupply(secondHatId);
-
-        // deactivate the hat
-        vm.prank(_toggle);
-        hats.setHatStatus(secondHatId, false);
-
-        // mint the hat to wearer
-        vm.prank(topHatWearer);
-        hats.mintHat(secondHatId, secondWearer);
-
-        // assert that the wearer does not have the hat
-        assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
-
-        // assert that the hat supply increased
-        assertEq(++hatSupply_pre, hats.hatSupply(secondHatId));
-    }
-
     function testCannotMintNonExistentHat() public {
         vm.prank(topHatWearer);
 
@@ -568,6 +579,16 @@ contract MintHatsTest is TestSetup {
 
         vm.expectRevert(HatsErrors.NotEligible.selector);
         vm.prank(topHatWearer);
+        hats.mintHat(secondHatId, secondWearer);
+    }
+
+    function testCannotMintInactiveHat() public {
+        // mock a toggle call to return inactive
+        vm.mockCall(address(_toggle), abi.encodeWithSignature("getHatStatus(uint256)", secondHatId), abi.encode(false));
+
+        vm.prank(topHatWearer);
+        // expect hat not active error
+        vm.expectRevert(HatsErrors.HatNotActive.selector);
         hats.mintHat(secondHatId, secondWearer);
     }
 
@@ -755,6 +776,14 @@ contract TransferHatTests is TestSetupMutable {
         );
 
         vm.expectRevert(HatsErrors.NotEligible.selector);
+        vm.prank(topHatWearer);
+        hats.transferHat(secondHatId, secondWearer, thirdWearer);
+    }
+
+    function testCannotTransferInactiveHat() public {
+        vm.mockCall(_toggle, abi.encodeWithSignature("getHatStatus(uint256)", secondHatId), abi.encode(false));
+
+        vm.expectRevert(HatsErrors.HatNotActive.selector);
         vm.prank(topHatWearer);
         hats.transferHat(secondHatId, secondWearer, thirdWearer);
     }
@@ -1013,13 +1042,17 @@ contract RenounceHatsTest is TestSetup2 {
     }
 
     function testCanRenounceHatAsNonWearerWithStaticBalance() public {
-        // hat gets toggled off
-        // encode mock for function inside toggle contract to return false
-        vm.mockCall(address(_toggle), abi.encodeWithSignature("getHatStatus(uint256)", secondHatId), abi.encode(false));
+        // wearer becomes ineligible
+        // encode mock for function inside eligibility contract to return false (inelible), true (good standing)
+        vm.mockCall(
+            _eligibility,
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", secondWearer, secondHatId),
+            abi.encode(false, true)
+        );
 
         // show that admin can't mint again to secondWearer, ie because they have a static balance
         vm.prank(topHatWearer);
-        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, secondWearer, secondHatId));
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotEligible.selector));
         hats.mintHat(secondHatId, secondWearer);
         assertFalse(hats.isWearerOfHat(secondWearer, secondHatId));
 
@@ -1027,7 +1060,8 @@ contract RenounceHatsTest is TestSetup2 {
         vm.prank(address(secondWearer));
         hats.renounceHat(secondHatId);
 
-        // now, admin should be able to mint again
+        // now, admin should be able to mint again if eligibility no longer returns false
+        vm.clearMockedCalls();
         vm.prank(topHatWearer);
         hats.mintHat(secondHatId, secondWearer);
     }
@@ -1099,7 +1133,7 @@ contract ToggleSetHatsTest is TestSetup2 {
         // artificially mint again to secondWearer
         vm.prank(topHatWearer);
 
-        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, secondWearer, secondHatId));
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.HatNotActive.selector));
 
         hats.mintHat(secondHatId, secondWearer);
 
@@ -1164,7 +1198,7 @@ contract ToggleCheckHatsTest is TestSetup2 {
         // artificially mint again to secondWearer
         vm.prank(topHatWearer);
 
-        vm.expectRevert(abi.encodeWithSelector(HatsErrors.AlreadyWearingHat.selector, secondWearer, secondHatId));
+        vm.expectRevert(abi.encodeWithSelector(HatsErrors.HatNotActive.selector));
 
         hats.mintHat(secondHatId, secondWearer);
 
@@ -1178,7 +1212,7 @@ contract ToggleCheckHatsTest is TestSetup2 {
     }
 }
 
-contract MutabilityTests is TestSetupMutable {
+contract MutabilityTests is TestSetupMutable, LongStrings {
     function testAdminCanMakeMutableHatImmutable() public {
         (,,,,,,, mutable_,) = hats.viewHat(secondHatId);
         assertTrue(mutable_);
@@ -1453,6 +1487,20 @@ contract MutabilityTests is TestSetupMutable {
         vm.prank(topHatWearer);
         hats.changeHatToggle(secondHatId, address(0));
     }
+
+    function testAdminCannotChangeDetailsToTooLongString() public {
+        vm.prank(topHatWearer);
+        // console2.log("string length", bytes(long7050).length);
+        vm.expectRevert(HatsErrors.StringTooLong.selector);
+        hats.changeHatDetails(secondHatId, long7050);
+    }
+
+    function testAdminCannotChangeImageURIToTooLongString() public {
+        vm.prank(topHatWearer);
+        // console2.log("string length", bytes(long7050).length);
+        vm.expectRevert(HatsErrors.StringTooLong.selector);
+        hats.changeHatImageURI(secondHatId, long7050);
+    }
 }
 
 contract OverridesHatTests is TestSetup2 {
@@ -1482,6 +1530,17 @@ contract OverridesHatTests is TestSetup2 {
     function testCreateUriForTopHat() public view {
         string memory jsonUri = hats.uri(topHatId);
         console2.log("encoded URI", jsonUri);
+    }
+
+    function testFailBalanceOfBatch() public view {
+        address[] memory addresses = new address[](2);
+        addresses[0] = secondWearer;
+        addresses[1] = thirdWearer;
+        uint256[] memory ids = new uint256[](2);
+        ids[0] = 1;
+        ids[1] = 2;
+
+        hats.balanceOfBatch(addresses, ids);
     }
 }
 

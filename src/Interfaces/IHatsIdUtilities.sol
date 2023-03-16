@@ -27,6 +27,8 @@ interface IHatsIdUtilities {
 
     function isLocalTopHat(uint256 _hatId) external pure returns (bool _localTopHat);
 
+    function isValidHatId(uint256 _hatId) external view returns (bool validHatId);
+
     function getAdminAtLevel(uint256 _hatId, uint32 _level) external view returns (uint256 admin);
 
     function getAdminAtLocalLevel(uint256 _hatId, uint32 _level) external pure returns (uint256 admin);
