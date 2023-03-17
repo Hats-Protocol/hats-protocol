@@ -1346,7 +1346,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         // Unchecked because the only math done is incrementing
         // the array index counter which cannot possibly overflow.
         unchecked {
-            for (uint256 i = 0; i < _wearers.length; ++i) {
+            for (uint256 i; i < _wearers.length; ++i) {
                 balances[i] = balanceOf(_wearers[i], _hatIds[i]);
             }
         }
