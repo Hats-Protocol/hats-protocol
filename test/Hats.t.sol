@@ -2054,14 +2054,37 @@ contract NestingTests is TestSetupNest {
         assertEq(hats.getTippyTopHatDomain(domainE), uint32(topHatId >> 224));
     }
 
-    function testCannotLinkToParentTreeWith6NestedTrees() public {
+    function testCannotLinkToParentTreeWith11NestedTrees() public {
         uint256 treeF = hats.mintTopHat(topHatWearer, "treeF", "http://www.tophat.com/");
+        uint256 treeG = hats.mintTopHat(topHatWearer, "treeG", "http://www.tophat.com/");
+        uint256 treeH = hats.mintTopHat(topHatWearer, "treeH", "http://www.tophat.com/");
+        uint256 treeI = hats.mintTopHat(topHatWearer, "treeI", "http://www.tophat.com/");
+        uint256 treeJ = hats.mintTopHat(topHatWearer, "treeJ", "http://www.tophat.com/");
+        uint256 treeK = hats.mintTopHat(topHatWearer, "treeK", "http://www.tophat.com/");
+
         uint32 domainF = uint32(treeF >> 224);
+        uint32 domainG = uint32(treeG >> 224);
+        uint32 domainH = uint32(treeH >> 224);
+        uint32 domainI = uint32(treeI >> 224);
+        uint32 domainJ = uint32(treeJ >> 224);
+        uint32 domainK = uint32(treeK >> 224);
+
+        // nest F-J under E
+        hats.requestLinkTopHatToTree(domainF, treeE);
+        hats.approveLinkTopHatToTree(domainF, treeE, address(0), address(0), "", "");
+        hats.requestLinkTopHatToTree(domainG, treeF);
+        hats.approveLinkTopHatToTree(domainG, treeF, address(0), address(0), "", "");
+        hats.requestLinkTopHatToTree(domainH, treeG);
+        hats.approveLinkTopHatToTree(domainH, treeG, address(0), address(0), "", "");
+        hats.requestLinkTopHatToTree(domainI, treeH);
+        hats.approveLinkTopHatToTree(domainI, treeH, address(0), address(0), "", "");
+        hats.requestLinkTopHatToTree(domainJ, treeI);
+        hats.approveLinkTopHatToTree(domainJ, treeI, address(0), address(0), "", "");
 
         // try to nest one more
-        hats.requestLinkTopHatToTree(domainF, treeE);
+        hats.requestLinkTopHatToTree(domainK, treeJ);
         vm.expectRevert(HatsErrors.TooManyNestedTrees.selector);
-        hats.approveLinkTopHatToTree(domainF, treeE, address(0), address(0), "", "");
+        hats.approveLinkTopHatToTree(domainK, treeJ, address(0), address(0), "", "");
     }
 
     function testCanLink6DeepNestedTreeTo5DeepNestedTree() public {

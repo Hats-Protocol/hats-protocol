@@ -846,20 +846,33 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         {
             // prevent too many nested trees
             // count up number of nested trees in parent tree
-            uint256 count = 1;
+            uint256 parentDepth = 1;
             uint256 newAdminParent = linkedTreeAdmins[uint32(_newAdminHat >> 224)];
             while (newAdminParent > 0) {
                 // will never overflow since we know count is capped at 6
                 unchecked {
-                    ++count;
+                    ++parentDepth;
                 }
 
                 newAdminParent = linkedTreeAdmins[uint32(newAdminParent >> 224)];
             }
-            // compare to oeprational max
-            if (count > (MAX_NESTED_TREE_DEPTH / 2)) {
-                // in uint256 math, dividing an odd number by 2 will round down
-                revert TooManyNestedTrees();
+
+            // count down number of nested trees in child tree
+            uint256 childDepth = 1;
+            uint32 newAdminChild = linkedTreeChildren[_topHatDomain << 224];
+            while (newAdminChild > 0) {
+                // will never overflow since we know count is capped at 6
+                unchecked {
+                    ++childDepth;
+                }
+
+                newAdminChild = linkedTreeChildren[newAdminChild << 224];
+            }
+            // compare to max and revert if exceeded
+            unchecked {
+                if (parentDepth + childDepth > MAX_NESTED_TREE_DEPTH) {
+                    revert TooManyNestedTrees();
+                }
             }
         }
 
@@ -890,7 +903,10 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             emit HatImageURIChanged(topHatId, _imageURI);
         }
 
+        // store the new linked admin
         linkedTreeAdmins[_topHatDomain] = _newAdminHat;
+        // store the new linked child
+        linkedTreeChildren[_newAdminHat] = _topHatDomain;
         emit TopHatLinked(_topHatDomain, _newAdminHat);
     }
 
