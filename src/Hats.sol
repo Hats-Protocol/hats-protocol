@@ -822,22 +822,44 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         string calldata _imageURI
     ) internal {
         if (!noCircularLinkage(_topHatDomain, _newAdminHat)) revert CircularLinkage();
+        {
+            uint256 linkedAdmin = linkedTreeAdmins[_topHatDomain];
 
-        // disallow relinking to separate tree
-        if (linkedTreeAdmins[_topHatDomain] > 0) {
-            uint256 tippyTopHat = uint256(getTippyTopHatDomain(_topHatDomain)) << 224;
-            if (!isWearerOfHat(msg.sender, tippyTopHat)) {
-                uint256 destLocalTopHat = uint256(_newAdminHat >> 224 << 224); // (256 - TOPHAT_ADDRESS_SPACE);
-                // for non-tippyTopHat wearers: destination local tophat must be either...
-                // a) the same as origin local tophat, or
-                // b) within the tippy top hat's local tree
-                uint256 originLocalTopHat = linkedTreeAdmins[_topHatDomain] >> 224 << 224; // (256 - TOPHAT_ADDRESS_SPACE);
-                if (destLocalTopHat != originLocalTopHat && destLocalTopHat != tippyTopHat) {
+            // disallow relinking to separate tree
+            if (linkedAdmin > 0) {
+                uint256 tippyTopHat = uint256(getTippyTopHatDomain(_topHatDomain)) << 224;
+                if (!isWearerOfHat(msg.sender, tippyTopHat)) {
+                    uint256 destLocalTopHat = uint256(_newAdminHat >> 224 << 224); // (256 - TOPHAT_ADDRESS_SPACE);
+                    // for non-tippyTopHat wearers: destination local tophat must be either...
+                    // a) the same as origin local tophat, or
+                    // b) within the tippy top hat's local tree
+                    uint256 originLocalTopHat = linkedAdmin >> 224 << 224; // (256 - TOPHAT_ADDRESS_SPACE);
+                    if (destLocalTopHat != originLocalTopHat && destLocalTopHat != tippyTopHat) {
+                        revert CrossTreeLinkage();
+                    }
+                    // for tippyTopHat weerers: destination must be within the same super tree
+                } else if (!sameTippyTopHatDomain(_topHatDomain, _newAdminHat)) {
                     revert CrossTreeLinkage();
                 }
-                // for tippyTopHat weerers: destination must be within the same super tree
-            } else if (!sameTippyTopHatDomain(_topHatDomain, _newAdminHat)) {
-                revert CrossTreeLinkage();
+            }
+        }
+        {
+            // prevent too many nested trees
+            // count up number of nested trees in parent tree
+            uint256 count = 1;
+            uint256 newAdminParent = linkedTreeAdmins[uint32(_newAdminHat >> 224)];
+            while (newAdminParent > 0) {
+                // will never overflow since we know count is capped at 6
+                unchecked {
+                    ++count;
+                }
+
+                newAdminParent = linkedTreeAdmins[uint32(newAdminParent >> 224)];
+            }
+            // compare to oeprational max
+            if (count > (MAX_NESTED_TREE_DEPTH / 2)) {
+                // in uint256 math, dividing an odd number by 2 will round down
+                revert TooManyNestedTrees();
             }
         }
 

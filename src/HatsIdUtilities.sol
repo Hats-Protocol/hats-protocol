@@ -61,6 +61,16 @@ contract HatsIdUtilities is IHatsIdUtilities {
     ///      (256 - TOPHAT_ADDRESS_SPACE) / LOWER_LEVEL_ADDRESS_SPACE;
     uint256 internal constant MAX_LEVELS = 14;
 
+    /**
+     * @notice The maximum number of hat trees that can be nested, ie linked within each other
+     * @dev In practice, this means that we restrict linkages between trees when the would-be parent has
+     *  greater than `floor(MAX_NESTED_TREE_DEPTH / 2) = 5`. In uint256 math, we don't need the floor operation
+     *  to achieve this value.
+     *
+     *   Note: This constant should always be an odd number.
+     */
+    uint256 internal constant MAX_NESTED_TREE_DEPTH = 11;
+
     /// @notice Constructs a valid hat id for a new hat underneath a given admin
     /// @dev Reverts if the admin has already reached `MAX_LEVELS`
     /// @param _admin the id of the admin for the new hat

@@ -2049,6 +2049,55 @@ contract LinkHatsTests is TestSetup2 {
     }
 }
 
+contract NestingTests is TestSetupNest {
+    function testCanLinkToParentTreeWith5NestedTrees() public {
+        assertEq(hats.getTippyTopHatDomain(domainE), uint32(topHatId >> 224));
+    }
+
+    function testCannotLinkToParentTreeWith6NestedTrees() public {
+        uint256 treeF = hats.mintTopHat(topHatWearer, "treeF", "http://www.tophat.com/");
+        uint32 domainF = uint32(treeF >> 224);
+
+        // try to nest one more
+        hats.requestLinkTopHatToTree(domainF, treeE);
+        vm.expectRevert(HatsErrors.TooManyNestedTrees.selector);
+        hats.approveLinkTopHatToTree(domainF, treeE, address(0), address(0), "", "");
+    }
+
+    function testCanLink6DeepNestedTreeTo5DeepNestedTree() public {
+        // create 5 new tophats
+        uint256 tree1 = hats.mintTopHat(topHatWearer, "tree1", "http://www.tophat.com/");
+        uint256 tree2 = hats.mintTopHat(topHatWearer, "tree2", "http://www.tophat.com/");
+        uint256 tree3 = hats.mintTopHat(topHatWearer, "tree3", "http://www.tophat.com/");
+        uint256 tree4 = hats.mintTopHat(topHatWearer, "tree4", "http://www.tophat.com/");
+        uint256 tree5 = hats.mintTopHat(topHatWearer, "tree5", "http://www.tophat.com/");
+
+        // derive the domains of each
+        // uint32 domainE = uint32(treeE >> 224);
+        uint32 domain1 = uint32(tree1 >> 224);
+        uint32 domain2 = uint32(tree2 >> 224);
+        uint32 domain3 = uint32(tree3 >> 224);
+        uint32 domain4 = uint32(tree4 >> 224);
+        uint32 domain5 = uint32(tree5 >> 224);
+
+        // nest 2-5 under 1 (this is our 5Deep Tree)
+        hats.requestLinkTopHatToTree(domain2, tree1);
+        hats.approveLinkTopHatToTree(domain2, tree1, address(0), address(0), "", "");
+        hats.requestLinkTopHatToTree(domain3, tree2);
+        hats.approveLinkTopHatToTree(domain3, tree2, address(0), address(0), "", "");
+        hats.requestLinkTopHatToTree(domain4, tree3);
+        hats.approveLinkTopHatToTree(domain4, tree3, address(0), address(0), "", "");
+        hats.requestLinkTopHatToTree(domain5, tree4);
+        hats.approveLinkTopHatToTree(domain5, tree4, address(0), address(0), "", "");
+
+        // try nesting 6Deep under 5Deep
+        uint32 domainTopHat = uint32(topHatId >> 224);
+        hats.requestLinkTopHatToTree(domainTopHat, tree5);
+        hats.approveLinkTopHatToTree(domainTopHat, tree5, address(0), address(0), "", "");
+        assertEq(hats.getTippyTopHatDomain(domainE), domain1);
+    }
+}
+
 contract MalformedInputsTests is TestSetup2 {
     string internal constant longString =
         "this is a super long string that hopefully is longer than 32 bytes. What say we make this especially loooooooooong?";
