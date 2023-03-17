@@ -800,19 +800,6 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
             _checkAdminOrWearer(_newAdminHat);
         }
 
-        // if caller is not the tippy top hat, we must protect against "theft" of linked trees by middle admins
-        uint256 tippyTopHat = uint256(getTippyTopHatDomain(_topHatDomain)) << 224;
-        if (!isWearerOfHat(msg.sender, tippyTopHat)) {
-            uint256 destLocalTopHat = uint256(_newAdminHat >> 224 << 224); // (256 - TOPHAT_ADDRESS_SPACE);
-            // destination local tophat must be either...
-            // a) the same as origin local tophat, or
-            // b) within the tippy top hat's local tree
-            uint256 originLocalTopHat = linkedTreeAdmins[_topHatDomain] >> 224 << 224; // (256 - TOPHAT_ADDRESS_SPACE);
-            if (destLocalTopHat != originLocalTopHat && destLocalTopHat != tippyTopHat) {
-                revert CrossTreeLinkage();
-            }
-        }
-
         // execute the new link, replacing the old link
         _linkTopHatToTree(_topHatDomain, _newAdminHat, _eligibility, _toggle, _details, _imageURI);
     }
@@ -838,13 +825,24 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
         // disallow relinking to separate tree
         if (linkedTreeAdmins[_topHatDomain] > 0) {
-            if (!sameTippyTopHatDomain(_topHatDomain, _newAdminHat)) {
+            uint256 tippyTopHat = uint256(getTippyTopHatDomain(_topHatDomain)) << 224;
+            if (!isWearerOfHat(msg.sender, tippyTopHat)) {
+                uint256 destLocalTopHat = uint256(_newAdminHat >> 224 << 224); // (256 - TOPHAT_ADDRESS_SPACE);
+                // for non-tippyTopHat wearers: destination local tophat must be either...
+                // a) the same as origin local tophat, or
+                // b) within the tippy top hat's local tree
+                uint256 originLocalTopHat = linkedTreeAdmins[_topHatDomain] >> 224 << 224; // (256 - TOPHAT_ADDRESS_SPACE);
+                if (destLocalTopHat != originLocalTopHat && destLocalTopHat != tippyTopHat) {
+                    revert CrossTreeLinkage();
+                }
+                // for tippyTopHat weerers: destination must be within the same super tree
+            } else if (!sameTippyTopHatDomain(_topHatDomain, _newAdminHat)) {
                 revert CrossTreeLinkage();
             }
         }
 
         // update and log the linked topHat's modules and metadata, if any changes
-        uint256 topHatId = uint256(_topHatDomain) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
+        uint256 topHatId = uint256(_topHatDomain) << 224;
         Hat storage hat = _hats[topHatId];
 
         if (_eligibility != address(0)) {
