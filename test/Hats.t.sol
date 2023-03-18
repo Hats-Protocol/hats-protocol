@@ -1538,15 +1538,48 @@ contract OverridesHatTests is TestSetup2 {
         console2.log("encoded URI", jsonUri);
     }
 
-    function testFailBalanceOfBatch() public view {
-        address[] memory addresses = new address[](2);
-        addresses[0] = secondWearer;
-        addresses[1] = thirdWearer;
-        uint256[] memory ids = new uint256[](2);
-        ids[0] = 1;
-        ids[1] = 2;
+    function testBalanceOfBatch() public {
+        // create and mint two separate hats to two separate wearers
 
-        hats.balanceOfBatch(addresses, ids);
+        // build this test result array
+        // secondWearer wears secondHatId, ie 1
+        // thirdWearer wearss thidrHatId, 1
+        // nonWearer doesn't wear secondHatId, 0
+        uint256[] memory test = new uint256[](3);
+        test[0] = 1;
+        test[1] = 1;
+        test[2] = 0;
+
+        address[] memory wearers = new address[](3);
+        wearers[0] = secondWearer;
+        wearers[1] = thirdWearer;
+        wearers[2] = nonWearer;
+
+        // create and mint thirdHatId to thirdWearer
+        vm.prank(topHatWearer);
+        thirdHatId = hats.createHat(
+            topHatId,
+            "third hat",
+            3, // maxSupply
+            _eligibility,
+            _toggle,
+            true,
+            ""
+        );
+
+        uint256[] memory ids = new uint256[](3);
+        ids[0] = secondHatId;
+        ids[1] = thirdHatId;
+        ids[2] = secondHatId;
+
+        vm.prank(topHatWearer);
+        hats.mintHat(thirdHatId, thirdWearer);
+
+        uint256[] memory balances = hats.balanceOfBatch(wearers, ids);
+
+        assertEq(balances, test);
+
+        // try balance of batch with three hats and three wearers
     }
 }
 

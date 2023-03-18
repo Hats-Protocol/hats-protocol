@@ -136,5 +136,10 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
 
     function balanceOf(address wearer, uint256 hatId) external view returns (uint256 balance);
 
+    function balanceOfBatch(address[] calldata _wearers, uint256[] calldata _hatIds)
+        external
+        view
+        returns (uint256[] memory);
+
     function uri(uint256 id) external view returns (string memory _uri);
 }
