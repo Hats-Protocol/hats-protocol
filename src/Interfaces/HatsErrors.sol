@@ -33,11 +33,17 @@ interface HatsErrors {
     /// @notice Emitted when attempting to create a hat with a level 14 hat as its admin
     error MaxLevelsReached();
 
+    /// @notice Emitted when an attempted hat id has empty intermediate level(s)
+    error InvalidHatId();
+
     /// @notice Emitted when attempting to mint `hatId` to a `wearer` who is already wearing the hat
     error AlreadyWearingHat(address wearer, uint256 hatId);
 
     /// @notice Emitted when attempting to mint a non-existant hat
     error HatDoesNotExist(uint256 hatId);
+
+    /// @notice Emmitted when attempting to mint or transfer a hat that is not active
+    error HatNotActive();
 
     /// @notice Emitted when attempting to mint or transfer a hat to an ineligible wearer
     error NotEligible();
@@ -66,6 +72,11 @@ interface HatsErrors {
     /// @notice Emitted when attempting to link a tophat without a request
     error LinkageNotRequested();
 
-    /// @notice Emmited when attempted to change a hat's eligibility or toggle module to the zero address
+    /// @notice Emmited when attempting to change a hat's eligibility or toggle module to the zero address
     error ZeroAddress();
+
+    /// @notice Emmitted when attempting to change a hat's details or imageURI to a string with over 7000 bytes (~characters)
+    /// @dev This protects against a DOS attack where an admin iteratively extend's a hat's details or imageURI
+    ///      to be so long that reading it exceeds the block gas limit, breaking `uri()` and `viewHat()`
+    error StringTooLong();
 }

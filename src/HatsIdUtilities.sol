@@ -17,6 +17,10 @@
 pragma solidity >=0.8.13;
 
 import "./Interfaces/IHatsIdUtilities.sol";
+// import { console2 } from "forge-std/Test.sol"; //remove after testing
+
+/// @notice see HatsErrors.sol for description
+error MaxLevelsReached();
 
 /// @title Hats Id Utilities
 /// @dev Functions for working with Hat Ids from Hats Protocol. Factored out of Hats.sol
@@ -58,6 +62,7 @@ contract HatsIdUtilities is IHatsIdUtilities {
     uint256 internal constant MAX_LEVELS = 14;
 
     /// @notice Constructs a valid hat id for a new hat underneath a given admin
+    /// @dev Reverts if the admin has already reached `MAX_LEVELS`
     /// @param _admin the id of the admin for the new hat
     /// @param _newHat the uint16 id of the new hat
     /// @return id The constructed hat id
@@ -88,6 +93,9 @@ contract HatsIdUtilities is IHatsIdUtilities {
                 ++i;
             }
         }
+
+        // if _admin is already at MAX_LEVELS, child hats are not possible, so we revert
+        revert MaxLevelsReached();
     }
 
     /// @notice Identifies the level a given hat in its hat tree
@@ -140,6 +148,28 @@ contract HatsIdUtilities is IHatsIdUtilities {
     /// @return _isLocalTopHat Whether the hat is a topHat for its local tree
     function isLocalTopHat(uint256 _hatId) public pure returns (bool _isLocalTopHat) {
         _isLocalTopHat = _hatId > 0 && uint224(_hatId) == 0;
+    }
+
+    function isValidHatId(uint256 _hatId) public pure returns (bool validHatId) {
+        // valid top hats are valid hats
+        if (isLocalTopHat(_hatId)) return true;
+
+        uint32 level = getLocalHatLevel(_hatId);
+        uint256 admin;
+        // for each subsequent level up the tree, check if the level is 0 and return false if so
+        for (uint256 i = level - 1; i > 0;) {
+            // truncate to find the (truncated) admin at this level
+            // we don't need to check _hatId's own level since getLocalHatLevel already ensures that its non-empty
+            admin = _hatId >> (LOWER_LEVEL_ADDRESS_SPACE * (MAX_LEVELS - i));
+            // if the lowest level of the truncated admin is empty, the hat id is invalid
+            if (uint16(admin) == 0) return false;
+
+            unchecked {
+                --i;
+            }
+        }
+        // if there are no empty levels, return true
+        return true;
     }
 
     /// @notice Gets the hat id of the admin at a given level of a given hat
