@@ -35,9 +35,6 @@ contract HatsIdUtilities is IHatsIdUtilities {
     /// @dev Trees can only be linked to another tree via their tophat
     mapping(uint32 => uint256) public linkedTreeAdmins; // topHatDomain => hatId
 
-    /// @notice Mapping of linked tree admins to their top hat children
-    /// @dev Used for ensuring that nested tree depth cannot exceed MAX_NESTED_TREE_DEPTH
-    mapping(uint256 => uint32) public linkedTreeChildren; // hatId => topHatDomain
     /**
      * Hat Ids serve as addresses. A given Hat's Id represents its location in its
      * hat tree: its level, its admin, its admin's admin (etc, all the way up to the
@@ -63,9 +60,6 @@ contract HatsIdUtilities is IHatsIdUtilities {
     /// @dev Maximum number of levels below the tophat, ie max tree depth
     ///      (256 - TOPHAT_ADDRESS_SPACE) / LOWER_LEVEL_ADDRESS_SPACE;
     uint256 internal constant MAX_LEVELS = 14;
-
-    /// @notice The maximum number of hat trees that can be nested, ie linked within each other
-    uint256 internal constant MAX_NESTED_TREE_DEPTH = 11;
 
     /// @notice Constructs a valid hat id for a new hat underneath a given admin
     /// @dev Reverts if the admin has already reached `MAX_LEVELS`

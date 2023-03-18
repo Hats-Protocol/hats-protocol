@@ -72,9 +72,6 @@ interface HatsErrors {
     /// @notice Emitted when attempting to link a tophat without a request
     error LinkageNotRequested();
 
-    /// @notice Emitted when attempting to link a tophat to a tree that already has more than `MAX_NESTED_TREE_DEPTH / 2` linked tophats
-    error TooManyNestedTrees();
-
     /// @notice Emmited when attempting to change a hat's eligibility or toggle module to the zero address
     error ZeroAddress();
 
