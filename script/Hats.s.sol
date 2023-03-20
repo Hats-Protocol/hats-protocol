@@ -23,7 +23,8 @@ contract DeployHats is Script {
         // deploy Hats
         Hats hats = new Hats{ salt: SALT }(name, baseImageURI);
 
-        // mint Hats Protocol Governance tophat
+        // mint Hats Protocol Governance topHat
+        // Note: This topHat is not connected to any protocol authorities. The protocol is fully permissionless and not upgradeable.
         hats.mintTopHat(
             0x2D785497c6C8ce3f4cCff4937D321C37e80705E8, // hatsprotocol.eth
             "Hats Protocol Governance",

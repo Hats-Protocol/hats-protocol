@@ -147,13 +147,13 @@ To avoid confusion, Hats Protocol does not claim to be ERC1155-compliant. Instea
 Each Hat has several properties:
 
 * `id` - the integer identifier for the Hat, which also serves as the ERC1155-similar token id (see three paragraphs below)
-* `details` - metadata about the Hat; such as a name, description, and other properties like roles and responsibilities associated with the Hat
+* `details` - metadata about the Hat; such as a name, description, and other properties like roles and responsibilities associated with the Hat. Should not exceed 7,000 characters.
 * `maxSupply` - the maximum number of addresses that can wear the Hat at once
 * `admin` - the Hat that controls who can wear the Hat
 * `eligibility` - the address that controls eligibility criteria and whether a given wearer of the Hat is in good standing
 * `toggle` - the address that controls whether the Hat is active
 * `mutable` - whether the hat's properties can be changed by the admin
-* `imageURI` - the URI for the image used in the Hat's ERC1155-similar token
+* `imageURI` - the URI for the image used in the Hat's ERC1155-similar token. Should not exceed 7,000 characters.
 
 For more information on each property, refer to the detailed sections below.
 
@@ -304,7 +304,7 @@ Changes are allowed to the following Hat properties:
 
 Additionally, mutable hats can be transferred by their admins to a different wearer. Immutable hats cannot be transferred.
 
-#### Tophat Exception
+#### TopHat Exception
 
 The only exception to the above mutability rules is for tophats, which despite being immutable are allowed to change their own `details` and `imageURI` (but not other properties).
 
@@ -346,7 +346,7 @@ To create a batch of Hats, a DAO can call the `Hats.batchCreateHats()` function.
 
 Only a Hat's admin can mint its token to a wearer.
 
-To mint a Hat, the Hat's max supply must not have already been reached, the target wearer must not already wear the Hat, and the target wearer must be eligible for the hat.
+To mint a Hat, the Hat must be active, its max supply must not have already been reached, the target wearer must not already wear the Hat, and the target wearer must be eligible for the Hat.
 
 A Hat's admin can mint its token individually by calling `Hats.mintHat`.
 
@@ -368,18 +368,29 @@ For these reasons, in Hats Protocol, the standard ERC1155 transfer functions &md
 
 As a replacement, Hats can be transfered by admins via `Hats.transferHat`, which emits the ERC1155 standard event `TransferSingle`. Transfer recipients must not already be wearing the hat, and must be eligible to wear the hat.
 
-With the exception of tophats — which can always transfer themselves — only mutable Hats can be transferred.
+With the exception of tophats — which can always transfer themselves — only mutable Hats can be transferred. Inactive Hats cannot be transferred.
 
 ### Hat Tree Grafting
 
 Not all Hats trees will unfurl from top down or inside out. Sometimes, new branches will form independently from the main tree, or multiple trees will form before a main tree even exists.
 
-In these cases, Hat trees can be grafted onto other trees. This is done by the wearer of one tree's tophat linking their tophat to a hat in another tree, via `Hats.linkTopHatToTree`. This has two main effects:
+In these cases, Hat trees can be grafted onto other trees. This is done via a request-approve process where the wearer of one tree's topHat requests to link their topHat to a hat in another tree, whose admin can approve if desired. This has three main effects:
 
-1. The linked tophat loses its tophat status (i.e., `Hats.isTopHat` will return `false`) and turns into what we call a "tree root", and
+1. The linked tophat loses its topHat status (i.e., `Hats.isTopHat` will return `false`) and turns into what we call a "tree root" or "linked topHat", and
 2. The hat to which it is linked becomes its new admin; it is no longer its own admin
+3. On linking, the linked topHat can be assigned eligibility and/or toggle modules like any other hat
 
-Linked Hat trees can also be unlinked by the tree root from its linked admin, via `Hats.unlinkTopHatFromTree`. This causes the tree root to regain its status as a top hat and to once again become its own admin.
+Linked Hat trees can also be unlinked by the tree root from its linked admin, via `Hats.unlinkTopHatFromTree`. This causes the tree root to regain its status as a top hat and to once again become its own admin. Any eligibility or toggle modules added on linking are cleared.
+
+⚠️ **CAUTION**: Be careful when nesting multiple Hat trees. If the nested linkages become too long, the higher level admins may lose control of the lowest level Hats because admin actions at that distance may cost-prohibitive or even exceed the gas limit. Best practice is to not attach external authorities (e.g. via token gating) to Hats in trees that are more than ~10 nested trees deep (varies by network).
+
+#### Relinking
+
+Linked topHats can be relinked to a different Hat within the same tree. This is useful for DAOs that want to reorganize their subtrees without having to go through the request and approve steps. Valid relinks must meet the following criteria in order to ensure security:
+
+1. The Hat wearer executing the relink is an admin of both the linked topHat and the new admin (destination)
+2. The new admin (destination) is within the same local tree as the existing admin (origin), or within the tippy top hat's local tree. Tippy top hats executing a relink are not subject to these restrictions.
+3. The new link does not create a circular linkage.
 
 ### Renouncing a Hat
 
