@@ -26,20 +26,23 @@ wrap_comments = false
 book = "./book.toml"
 
 [rpc_endpoints]
-ethereum = "${ETHEREUM_RPC}"
-optimism = "${OPTIMISM_RPC}"
-goerli = "${GOERLI_RPC}"
+arbitrum = "${ARBITRUM_RPC}"
 gnosis = "${GC_RPC}"
-polygon = "${POLYGON_RPC}"
+goerli = "${GOERLI_RPC}"
 local = "http://localhost:8545"
+mainnet = "${ETHEREUM_RPC}"
+optimism = "${OPTIMISM_RPC}"
+polygon = "${POLYGON_RPC}"
+sepolia = "${SEPOLIA_RPC}"
 
 [etherscan]
 arbitrum = {key = "${ARBISCAN_KEY}", url = "https://api.arbiscan.io/api"}
 goerli = {key = "${ETHERSCAN_KEY}", url = "https://api-goerli.etherscan.io/api"}
-ethereum = {key = "${ETHERSCAN_KEY}", chain = "mainnet"}
-optimism = {key = "${OPTIMISM_ETHERSCAN_KEY}", url = "https://api-optimistic.etherscan.io/api"}
-polygon = {key = "${POLYGONSCAN_KEY}", url = "https://api.polygonscan.com/api"}
 gnosis = {key = "${GNOSISSCAN_KEY}", url = "https://api.gnosisscan.io/api"}
+mainnet = {key = "${ETHERSCAN_KEY}", url = "https://api.etherscan.io/api"}
+optimism = {key = "${OPTIMISM_KEY}", url = "https://api-optimistic.etherscan.io/api"}
+sepolia = {key = "${ETHERSCAN_KEY}", url = "https://api-sepolia.etherscan.io/api"}
+polygon = {key = "${POLYGONSCAN_KEY}", url = "https://api.polygonscan.com/api"}
 
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
