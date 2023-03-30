@@ -1032,6 +1032,13 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
     }
 
+    /// @notice Checks the active status of a hat
+    /// @param _hatId The id of the hat
+    /// @return active Whether the hat is active
+    function isActive(uint256 _hatId) external view returns (bool active) {
+        active = _isActive(_hats[_hatId], _hatId);
+    }
+
     /// @notice Internal function to retrieve a hat's status from storage
     /// @dev reads the 0th bit of the hat's config
     /// @param _hat The hat object
@@ -1128,6 +1135,27 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @return supply The current supply of the Hat
     function hatSupply(uint256 _hatId) external view returns (uint32 supply) {
         supply = _hats[_hatId].supply;
+    }
+
+    /// @notice Gets the eligibility module for a hat
+    /// @param _hatId The hat whose eligibility module we're looking for
+    /// @return eligibility The eligibility module for this hat
+    function getHatEligibilityModule(uint256 _hatId) external view returns (address eligibility) {
+        eligibility = _hats[_hatId].eligibility;
+    }
+
+    /// @notice Gets the toggle module for a hat
+    /// @param _hatId The hat whose toggle module we're looking for
+    /// @return toggle The toggle module for this hat
+    function getHatToggleModule(uint256 _hatId) external view returns (address toggle) {
+        toggle = _hats[_hatId].toggle;
+    }
+
+    /// @notice Gets the max supply for a hat
+    /// @param _hatId The hat whose max supply we're looking for
+    /// @return maxSupply The max supply for this hat
+    function getHatMaxSupply(uint256 _hatId) external view returns (uint32 maxSupply) {
+        maxSupply = _hats[_hatId].maxSupply;
     }
 
     /// @notice Gets the imageURI for a given hat

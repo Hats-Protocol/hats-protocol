@@ -130,6 +130,12 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
 
     function isEligible(address _wearer, uint256 _hatId) external view returns (bool eligible);
 
+    function getHatEligibilityModule(uint256 _hatId) external view returns (address eligibility);
+
+    function getHatToggleModule(uint256 _hatId) external view returns (address toggle);
+
+    function getHatMaxSupply(uint256 _hatId) external view returns (uint32 maxSupply);
+
     function hatSupply(uint256 _hatId) external view returns (uint32 supply);
 
     function getImageURIForHat(uint256 _hatId) external view returns (string memory _uri);
