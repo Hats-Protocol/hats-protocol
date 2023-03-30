@@ -750,14 +750,26 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         _linkTopHatToTree(_topHatDomain, _newAdminHat, _eligibility, _toggle, _details, _imageURI);
     }
 
-    /// @notice Unlink a Tree from the parent tree
-    /// @dev This can only be called by an admin of the tree root
-    /// @param _topHatDomain The 32 bit domain of the topHat to unlink
-    function unlinkTopHatFromTree(uint32 _topHatDomain) external {
+    /**
+     * @notice Unlink a Tree from the parent tree
+     * @dev This can only be called by an admin of the tree root. Fails if the topHat to unlink has no wearer, which can occur if...
+     *     - It's wearer is in badStanding
+     *     - It has been revoked from its wearer (and possibly burned)˘
+     *     - It is not active (ie toggled off)
+     * @param _topHatDomain The 32 bit domain of the topHat to unlink
+     * @param _wearer The current wearer of the topHat to unlink
+     */
+    function unlinkTopHatFromTree(uint32 _topHatDomain, address _wearer) external {
         uint256 fullTopHatId = uint256(_topHatDomain) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
         _checkAdmin(fullTopHatId);
 
+        // prevent unlinking if the topHat has no wearer;
+        // since we cannot search the entire address space for a wearer, we require the caller to provide the wearer
+        if (!isWearerOfHat(_wearer, fullTopHatId)) revert HatsErrors.InvalidUnlink();
+
+        // execute the unlink
         delete linkedTreeAdmins[_topHatDomain];
+        // remove the request — ensures all linkages are initialized by unique requests
         delete linkedTreeRequests[_topHatDomain];
 
         // reset eligibility and storage to defaults for unlinked top hats
