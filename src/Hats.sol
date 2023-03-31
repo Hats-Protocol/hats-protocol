@@ -752,7 +752,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /**
      * @notice Unlink a Tree from the parent tree
-     * @dev This can only be called by an admin of the tree root. Fails if the topHat to unlink has no wearer, which can occur if...
+     * @dev This can only be called by an admin of the tree root. Fails if the topHat to unlink has no non-zero wearer, which can occur if...
      *     - It's wearer is in badStanding
      *     - It has been revoked from its wearer (and possibly burned)˘
      *     - It is not active (ie toggled off)
@@ -763,9 +763,9 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256 fullTopHatId = uint256(_topHatDomain) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
         _checkAdmin(fullTopHatId);
 
-        // prevent unlinking if the topHat has no wearer;
+        // prevent unlinking if the topHat has no non-zero earer
         // since we cannot search the entire address space for a wearer, we require the caller to provide the wearer
-        if (!isWearerOfHat(_wearer, fullTopHatId)) revert HatsErrors.InvalidUnlink();
+        if (_wearer == address(0) || !isWearerOfHat(_wearer, fullTopHatId)) revert HatsErrors.InvalidUnlink();
 
         // execute the unlink
         delete linkedTreeAdmins[_topHatDomain];

@@ -2178,6 +2178,46 @@ contract LinkHatsTests is TestSetup2 {
         vm.expectRevert(HatsErrors.InvalidUnlink.selector);
         hats.unlinkTopHatFromTree(secondTopHatDomain, thirdWearer);
     }
+
+    function testAdminCannotUnlinkTopHatWornByZeroAddress() public {
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        // approve
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, _eligibility, address(0), "", "");
+
+        // revoke top hat
+        vm.prank(_eligibility);
+        hats.setHatWearerStatus(secondTopHatId, thirdWearer, false, true);
+
+        // remint it to address(0)
+        vm.prank(topHatWearer);
+        hats.mintHat(secondTopHatId, address(0));
+
+        // attempt unlink
+        vm.prank(topHatWearer);
+        vm.expectRevert(HatsErrors.InvalidUnlink.selector);
+        hats.unlinkTopHatFromTree(secondTopHatDomain, address(0));
+    }
+
+    function testAdminCannotUnlinkRenouncedTopHat() public {
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        // approve
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, _eligibility, address(0), "", "");
+
+        // the tophat is renounced
+        vm.prank(thirdWearer);
+        hats.renounceHat(secondTopHatId);
+
+        // attempt unlink
+        vm.prank(topHatWearer);
+        vm.expectRevert(HatsErrors.InvalidUnlink.selector);
+        hats.unlinkTopHatFromTree(secondTopHatDomain, address(0));
+    }
 }
 
 contract MalformedInputsTests is TestSetup2 {
