@@ -92,7 +92,7 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
         string calldata _imageURI
     ) external;
 
-    function unlinkTopHatFromTree(uint32 _topHatId) external;
+    function unlinkTopHatFromTree(uint32 _topHatId, address _wearer) external;
 
     function relinkTopHatWithinTree(
         uint32 _topHatDomain,
@@ -129,6 +129,12 @@ interface IHats is IHatsIdUtilities, HatsErrors, HatsEvents {
     function isInGoodStanding(address _wearer, uint256 _hatId) external view returns (bool standing);
 
     function isEligible(address _wearer, uint256 _hatId) external view returns (bool eligible);
+
+    function getHatEligibilityModule(uint256 _hatId) external view returns (address eligibility);
+
+    function getHatToggleModule(uint256 _hatId) external view returns (address toggle);
+
+    function getHatMaxSupply(uint256 _hatId) external view returns (uint32 maxSupply);
 
     function hatSupply(uint256 _hatId) external view returns (uint32 supply);
 

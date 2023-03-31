@@ -1977,12 +1977,12 @@ contract LinkHatsTests is TestSetup2 {
         assertEq(hats.linkedTreeRequests(secondTopHatDomain), 0);
 
         vm.expectRevert(abi.encodeWithSelector(HatsErrors.NotAdmin.selector, address(this), secondTopHatId));
-        hats.unlinkTopHatFromTree(secondTopHatDomain);
+        hats.unlinkTopHatFromTree(secondTopHatDomain, thirdWearer);
 
         vm.prank(secondWearer);
         vm.expectEmit(true, true, true, true);
         emit TopHatLinked(secondTopHatDomain, 0);
-        hats.unlinkTopHatFromTree(secondTopHatDomain);
+        hats.unlinkTopHatFromTree(secondTopHatDomain, thirdWearer);
         assertEq(hats.isTopHat(secondTopHatId), true);
     }
 
@@ -2002,7 +2002,7 @@ contract LinkHatsTests is TestSetup2 {
         hats.requestLinkTopHatToTree(secondTopHatDomain, treeB);
 
         // tree A unlinks the tophat
-        hats.unlinkTopHatFromTree(secondTopHatDomain);
+        hats.unlinkTopHatFromTree(secondTopHatDomain, thirdWearer);
 
         // admin B should not be able to rug the tree by approving the link without the tree's permission
         vm.expectRevert(HatsErrors.LinkageNotRequested.selector);
@@ -2041,11 +2041,182 @@ contract LinkHatsTests is TestSetup2 {
         assertFalse(status);
 
         // modules values reset on unlink
+        // first need to toggle back on
+        vm.mockCall(address(101), abi.encodeWithSignature("getHatStatus(uint256)", secondTopHatId), abi.encode(true));
+        (,,,,,,,, status) = hats.viewHat(secondTopHatId);
+        assertTrue(status);
         vm.prank(topHatWearer);
-        hats.unlinkTopHatFromTree(secondTopHatDomain);
+        hats.unlinkTopHatFromTree(secondTopHatDomain, thirdWearer);
         (,,, eligibility, toggle,,,,) = hats.viewHat(secondTopHatId);
         assertEq(eligibility, address(0));
         assertEq(toggle, address(0));
+    }
+
+    function testAdminCanBurnAndRemintLinkedTopHat() public {
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        // approve
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, _eligibility, address(0), "", "");
+
+        // mock wearer ineligible
+        vm.mockCall(
+            _eligibility,
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", thirdWearer, secondTopHatId),
+            abi.encode(false, true)
+        );
+        assertFalse(hats.isEligible(thirdWearer, secondTopHatId));
+        // burn the hat
+        hats.checkHatWearerStatus(secondTopHatId, thirdWearer);
+
+        // remint
+        vm.expectEmit(true, true, true, true);
+        emit TransferSingle(topHatWearer, address(0), address(99), secondTopHatId, 1);
+        vm.prank(topHatWearer);
+        hats.mintHat(secondTopHatId, address(99));
+    }
+
+    function testAdminCannotTransferLinkedTopHat() public {
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        // approve
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(0), "", "");
+
+        // attempt transfer
+        vm.prank(topHatWearer);
+        vm.expectRevert(HatsErrors.Immutable.selector);
+        hats.transferHat(secondTopHatId, thirdWearer, address(99));
+    }
+
+    function testAdminCannotUnlinkInactivefTopHat() public {
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        // approve
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, address(0), address(101), "", "");
+
+        // toggle off linked tophat
+        vm.mockCall(address(101), abi.encodeWithSignature("getHatStatus(uint256)", secondTopHatId), abi.encode(false));
+        hats.checkHatStatus(secondTopHatId);
+        (,,,,,,,, bool status) = hats.viewHat(secondTopHatId);
+        assertFalse(status);
+
+        // attempt unlink
+        vm.prank(topHatWearer);
+        vm.expectRevert(HatsErrors.InvalidUnlink.selector);
+        hats.unlinkTopHatFromTree(secondTopHatDomain, thirdWearer);
+    }
+
+    function testAdminCannotUnlinkBurnedTopHat() public {
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        // approve
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, _eligibility, address(0), "", "");
+
+        // mock wearer ineligible
+        vm.mockCall(
+            _eligibility,
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", thirdWearer, secondTopHatId),
+            abi.encode(false, true)
+        );
+        assertFalse(hats.isEligible(thirdWearer, secondTopHatId));
+        // burn the hat
+        hats.checkHatWearerStatus(secondTopHatId, thirdWearer);
+
+        // attempt unlink
+        vm.prank(topHatWearer);
+        vm.expectRevert(HatsErrors.InvalidUnlink.selector);
+        hats.unlinkTopHatFromTree(secondTopHatDomain, thirdWearer);
+    }
+
+    function testAdminCannotUnlinkRevokedTopHat() public {
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        // approve
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, _eligibility, address(0), "", "");
+
+        // mock wearer ineligible
+        vm.mockCall(
+            _eligibility,
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", thirdWearer, secondTopHatId),
+            abi.encode(false, true)
+        );
+        assertFalse(hats.isEligible(thirdWearer, secondTopHatId));
+
+        // attempt unlink
+        vm.prank(topHatWearer);
+        vm.expectRevert(HatsErrors.InvalidUnlink.selector);
+        hats.unlinkTopHatFromTree(secondTopHatDomain, thirdWearer);
+    }
+
+    function testAdminCannotUnlinkTopHatWhenWearerIsInBadStanding() public {
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        // approve
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, _eligibility, address(0), "", "");
+
+        // mock wearer ineligible
+        vm.mockCall(
+            _eligibility,
+            abi.encodeWithSignature("getWearerStatus(address,uint256)", thirdWearer, secondTopHatId),
+            abi.encode(true, false)
+        );
+        assertFalse(hats.isEligible(thirdWearer, secondTopHatId));
+
+        // attempt unlink
+        vm.prank(topHatWearer);
+        vm.expectRevert(HatsErrors.InvalidUnlink.selector);
+        hats.unlinkTopHatFromTree(secondTopHatDomain, thirdWearer);
+    }
+
+    function testAdminCannotUnlinkTopHatWornByZeroAddress() public {
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        // approve
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, _eligibility, address(0), "", "");
+
+        // revoke top hat
+        vm.prank(_eligibility);
+        hats.setHatWearerStatus(secondTopHatId, thirdWearer, false, true);
+
+        // remint it to address(0)
+        vm.prank(topHatWearer);
+        hats.mintHat(secondTopHatId, address(0));
+
+        // attempt unlink
+        vm.prank(topHatWearer);
+        vm.expectRevert(HatsErrors.InvalidUnlink.selector);
+        hats.unlinkTopHatFromTree(secondTopHatDomain, address(0));
+    }
+
+    function testAdminCannotUnlinkRenouncedTopHat() public {
+        // request
+        vm.prank(thirdWearer);
+        hats.requestLinkTopHatToTree(secondTopHatDomain, secondHatId);
+        // approve
+        vm.prank(topHatWearer);
+        hats.approveLinkTopHatToTree(secondTopHatDomain, secondHatId, _eligibility, address(0), "", "");
+
+        // the tophat is renounced
+        vm.prank(thirdWearer);
+        hats.renounceHat(secondTopHatId);
+
+        // attempt unlink
+        vm.prank(topHatWearer);
+        vm.expectRevert(HatsErrors.InvalidUnlink.selector);
+        hats.unlinkTopHatFromTree(secondTopHatDomain, address(0));
     }
 }
 

@@ -380,7 +380,7 @@ In these cases, Hat trees can be grafted onto other trees. This is done via a re
 2. The hat to which it is linked becomes its new admin; it is no longer its own admin
 3. On linking, the linked topHat can be assigned eligibility and/or toggle modules like any other hat
 
-Linked Hat trees can also be unlinked by the tree root from its linked admin, via `Hats.unlinkTopHatFromTree`. This causes the tree root to regain its status as a top hat and to once again become its own admin. Any eligibility or toggle modules added on linking are cleared.
+Linked Hat trees can also be unlinked by the tree root from its linked admin, via `Hats.unlinkTopHatFromTree`. This causes the tree root to regain its status as a top hat and to once again become its own admin. Any eligibility or toggle modules added on linking are cleared. Note that unlinking is only allowed if the tree root is active and has an eligible wearer.
 
 ⚠️ **CAUTION**: Be careful when nesting multiple Hat trees. If the nested linkages become too long, the higher level admins may lose control of the lowest level Hats because admin actions at that distance may cost-prohibitive or even exceed the gas limit. Best practice is to not attach external authorities (e.g. via token gating) to Hats in trees that are more than ~10 nested trees deep (varies by network).
 

@@ -750,14 +750,26 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         _linkTopHatToTree(_topHatDomain, _newAdminHat, _eligibility, _toggle, _details, _imageURI);
     }
 
-    /// @notice Unlink a Tree from the parent tree
-    /// @dev This can only be called by an admin of the tree root
-    /// @param _topHatDomain The 32 bit domain of the topHat to unlink
-    function unlinkTopHatFromTree(uint32 _topHatDomain) external {
+    /**
+     * @notice Unlink a Tree from the parent tree
+     * @dev This can only be called by an admin of the tree root. Fails if the topHat to unlink has no non-zero wearer, which can occur if...
+     *     - It's wearer is in badStanding
+     *     - It has been revoked from its wearer (and possibly burned)˘
+     *     - It is not active (ie toggled off)
+     * @param _topHatDomain The 32 bit domain of the topHat to unlink
+     * @param _wearer The current wearer of the topHat to unlink
+     */
+    function unlinkTopHatFromTree(uint32 _topHatDomain, address _wearer) external {
         uint256 fullTopHatId = uint256(_topHatDomain) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
         _checkAdmin(fullTopHatId);
 
+        // prevent unlinking if the topHat has no non-zero wearer
+        // since we cannot search the entire address space for a wearer, we require the caller to provide the wearer
+        if (_wearer == address(0) || !isWearerOfHat(_wearer, fullTopHatId)) revert HatsErrors.InvalidUnlink();
+
+        // execute the unlink
         delete linkedTreeAdmins[_topHatDomain];
+        // remove the request — ensures all linkages are initialized by unique requests
         delete linkedTreeRequests[_topHatDomain];
 
         // reset eligibility and storage to defaults for unlinked top hats
@@ -1020,6 +1032,13 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         }
     }
 
+    /// @notice Checks the active status of a hat
+    /// @param _hatId The id of the hat
+    /// @return active Whether the hat is active
+    function isActive(uint256 _hatId) external view returns (bool active) {
+        active = _isActive(_hats[_hatId], _hatId);
+    }
+
     /// @notice Internal function to retrieve a hat's status from storage
     /// @dev reads the 0th bit of the hat's config
     /// @param _hat The hat object
@@ -1116,6 +1135,27 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
     /// @return supply The current supply of the Hat
     function hatSupply(uint256 _hatId) external view returns (uint32 supply) {
         supply = _hats[_hatId].supply;
+    }
+
+    /// @notice Gets the eligibility module for a hat
+    /// @param _hatId The hat whose eligibility module we're looking for
+    /// @return eligibility The eligibility module for this hat
+    function getHatEligibilityModule(uint256 _hatId) external view returns (address eligibility) {
+        eligibility = _hats[_hatId].eligibility;
+    }
+
+    /// @notice Gets the toggle module for a hat
+    /// @param _hatId The hat whose toggle module we're looking for
+    /// @return toggle The toggle module for this hat
+    function getHatToggleModule(uint256 _hatId) external view returns (address toggle) {
+        toggle = _hats[_hatId].toggle;
+    }
+
+    /// @notice Gets the max supply for a hat
+    /// @param _hatId The hat whose max supply we're looking for
+    /// @return maxSupply The maximum possible quantity of this hat that could be minted
+    function getHatMaxSupply(uint256 _hatId) external view returns (uint32 maxSupply) {
+        maxSupply = _hats[_hatId].maxSupply;
     }
 
     /// @notice Gets the imageURI for a given hat

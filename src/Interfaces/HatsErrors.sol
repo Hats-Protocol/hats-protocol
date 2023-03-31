@@ -72,6 +72,10 @@ interface HatsErrors {
     /// @notice Emitted when attempting to link a tophat without a request
     error LinkageNotRequested();
 
+    /// @notice Emitted when attempting to unlink a tophat that does not have a wearer
+    /// @dev This ensures that unlinking never results in a bricked tophat
+    error InvalidUnlink();
+
     /// @notice Emmited when attempting to change a hat's eligibility or toggle module to the zero address
     error ZeroAddress();
 
