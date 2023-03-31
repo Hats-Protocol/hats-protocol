@@ -11,7 +11,7 @@ contract DeployHats is Script {
 
     bytes32 internal constant SALT = bytes32(abi.encode(0x4a75)); // ~ H(4) A(a) T(7) S(5)
 
-    function run() external {   
+    function run() external {
         // set up deployer
         uint256 privKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.rememberKey(privKey);
