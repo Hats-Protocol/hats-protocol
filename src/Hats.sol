@@ -763,7 +763,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
         uint256 fullTopHatId = uint256(_topHatDomain) << 224; // (256 - TOPHAT_ADDRESS_SPACE);
         _checkAdmin(fullTopHatId);
 
-        // prevent unlinking if the topHat has no non-zero earer
+        // prevent unlinking if the topHat has no non-zero wearer
         // since we cannot search the entire address space for a wearer, we require the caller to provide the wearer
         if (_wearer == address(0) || !isWearerOfHat(_wearer, fullTopHatId)) revert HatsErrors.InvalidUnlink();
 
@@ -1153,7 +1153,7 @@ contract Hats is IHats, ERC1155, HatsIdUtilities {
 
     /// @notice Gets the max supply for a hat
     /// @param _hatId The hat whose max supply we're looking for
-    /// @return maxSupply The max supply for this hat
+    /// @return maxSupply The maximum possible quantity of this hat that could be minted
     function getHatMaxSupply(uint256 _hatId) external view returns (uint32 maxSupply) {
         maxSupply = _hats[_hatId].maxSupply;
     }
