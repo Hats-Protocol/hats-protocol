@@ -73,7 +73,7 @@ For information on Hats Protocol versions and deployments, see [Releases](https:
 
 ### Security Audits
 
-This project has received the following security audits. See the [audits](https://github.com/Hats-Protocol/hats-protocol/audits) directory for the detailed reports.
+This project has received the following security audits. See the [audits](https://github.com/Hats-Protocol/hats-protocol/tree/main/audits) directory for the detailed reports.
 
 * Trust Security (also includes review of the [HatsSignerGate](https://github.com/Hats-Protocol/hats-zodiac) contracts)
 
