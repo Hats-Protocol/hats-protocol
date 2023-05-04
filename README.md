@@ -73,9 +73,12 @@ For information on Hats Protocol versions and deployments, see [Releases](https:
 
 ### Security Audits
 
-This project has received the following security audits. See the [audits](https://github.com/Hats-Protocol/hats-protocol/audits) directory for the detailed reports.
+This project has received two security audits, listed below. See the [audits](https://github.com/Hats-Protocol/hats-protocol/tree/main/audits) directory for the detailed reports.
 
-* Trust Security (also includes review of the [HatsSignerGate](https://github.com/Hats-Protocol/hats-zodiac) contracts)
+| Auditor | Report Date | Review Commit Hash | Notes |
+| --- | --- | --- | --- |
+| Trust Security | Feb 23, 2023 | [60f07df](https://github.com/Hats-Protocol/hats-protocol/commit/60f07df0679ba52d4ad818b1bb3700d2f4f5a63a) | Report also includes findings from [Hats Protocol](https://github.com/Hats-Protocol/hats-protocol) audit |
+| Sherlock | May 3, 2023 | [fafcfd](https://github.com/Hats-Protocol/hats-protocol/commit/fafcfdf046c0369c1f9e077eacd94a328f9d7af0) | Report also includes findings from [Hats Protocol](https://github.com/Hats-Protocol/hats-protocol) audit |
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -183,7 +186,7 @@ Any address can wear a Hat, including:
 
 The admin of every Hat is another Hat. This means that the authority to perform admin functions for a given Hat is assigned to the wearer of its admin Hat.
 
-The scope of authority for a Hat's admin is to determine who can wear it. This is reflected in the ability create the Hat and to mint or (for mutable Hats) transfer the Hat's token.
+The scope of authority for a Hat's admin is to determine who can wear it. This is reflected in the ability to create the Hat and to mint or (for mutable Hats) transfer the Hat's token.
 
 #### Hatter Contracts
 
@@ -194,7 +197,7 @@ Hatter contract logic is a wide design space for DAOs. Here are some examples of
 * **Wearer eligibility** - Enforce certain requirements that prospective wearers must meet in order to wear a given Hat, such as membership in a DAO or holding some token(s).
 * **Wearer staking** - One particularly important type of eligibility requirement is staking tokens, DAO shares, or some other asset as a bond that could be slashed if the wearer is not a good steward of the accountabilities associated with the Hat, or does not follow through on its associated responsibilities.
 * **Hat creation** - Allow certain addresses -- such as members of a DAO -- to create Hats that are then admin'd by the DAO.
-* **Hat minting** - Allow certain addresses -- such as members of a DAO -- to mint Hat tokens. Together with the above, a DAO could in this way enable its members to create and wear a certain type of Hat permissionlessly. This would be esepcially if using Hats to facilitate role clarity and legibility.
+* **Hat minting** - Allow certain addresses -- such as members of a DAO -- to mint Hat tokens. Together with the above, a DAO could in this way enable its members to create and wear a certain type of Hat permissionlessly. This would be especially if using Hats to facilitate role clarity and legibility.
 
 #### Hat Trees
 
@@ -227,11 +230,11 @@ A hat tree can have up to 14 levels, plus the top hat (tree root). Within those 
 
 #### Displaying Hat Ids
 
-It is recommended for front ends to instead convert hat ids to hexidecimal, revealing the values of the bytes &mdash; and therefore the hat levels &mdash; directly.
+It is recommended for front ends to instead convert hat ids to hexadecimal, revealing the values of the bytes &mdash; and therefore the hat levels &mdash; directly.
 
 For example, instead of a hat id looking like this under base 10: `26960769438260605603848134863118277618512635038780455604427388092416`
 
-...under hexidecimal it would look like this: `0x0000000100020003000000000000000000000000000000000000000000000000`
+...under hexadecimal it would look like this: `0x0000000100020003000000000000000000000000000000000000000000000000`
 
 In this second version, you can see that this hat is...
 
@@ -366,7 +369,7 @@ As a result, there is no need for safe transfers (transfers which check whether 
 
 For these reasons, in Hats Protocol, the standard ERC1155 transfer functions &mdash; `safeTransferFrom` and `safeBatchTransferFrom` are disabled and will always revert. Similarly, token approvals are not required and `setApprovalForAll` will always revert.
 
-As a replacement, Hats can be transfered by admins via `Hats.transferHat`, which emits the ERC1155 standard event `TransferSingle`. Transfer recipients must not already be wearing the hat, and must be eligible to wear the hat.
+As a replacement, Hats can be transferred by admins via `Hats.transferHat`, which emits the ERC1155 standard event `TransferSingle`. Transfer recipients must not already be wearing the hat, and must be eligible to wear the hat.
 
 With the exception of tophats — which can always transfer themselves — only mutable Hats can be transferred. Inactive Hats cannot be transferred.
 
