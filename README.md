@@ -73,9 +73,12 @@ For information on Hats Protocol versions and deployments, see [Releases](https:
 
 ### Security Audits
 
-This project has received the following security audits. See the [audits](https://github.com/Hats-Protocol/hats-protocol/tree/main/audits) directory for the detailed reports.
+This project has received two security audits, listed below. See the [audits](https://github.com/Hats-Protocol/hats-protocol/tree/main/audits) directory for the detailed reports.
 
-* Trust Security (also includes review of the [HatsSignerGate](https://github.com/Hats-Protocol/hats-zodiac) contracts)
+| Auditor | Report Date | Review Commit Hash | Notes |
+| --- | --- | --- | --- |
+| Trust Security | Feb 23, 2023 | [60f07df](https://github.com/Hats-Protocol/hats-protocol/commit/60f07df0679ba52d4ad818b1bb3700d2f4f5a63a) | Report also includes findings from [Hats Protocol](https://github.com/Hats-Protocol/hats-protocol) audit |
+| Sherlock | May 3, 2023 | [fafcfd](https://github.com/Hats-Protocol/hats-protocol/commit/fafcfdf046c0369c1f9e077eacd94a328f9d7af0) | Report also includes findings from [Hats Protocol](https://github.com/Hats-Protocol/hats-protocol) audit |
 
 <!-- CONTRIBUTING -->
 ## Contributing
