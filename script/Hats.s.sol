@@ -5,9 +5,9 @@ import { Script, console2 } from "forge-std/Script.sol";
 import { Hats } from "../src/Hats.sol";
 
 contract DeployHats is Script {
-    string public constant baseImageURI = "ipfs://bafybeigcimbqwfajsnhoq7fqnbdllz7kye7cpdy3adj2sob3wku2llu5bi";
+    string public constant baseImageURI = "ipfs://bafkreiflezpk3kjz6zsv23pbvowtatnd5hmqfkdro33x5mh2azlhne3ah4";
 
-    string public constant name = "Hats Protocol v1.0"; // increment this each deployment
+    string public constant name = "Hats Protocol v1"; // increment this each deployment
 
     bytes32 internal constant SALT = bytes32(abi.encode(0x4a75)); // ~ H(4) A(a) T(7) S(5)
 
@@ -30,12 +30,10 @@ contract DeployHats is Script {
         console2.log("Hats contract: ", address(hats));
     }
 
-    // forge script script/Hats.s.sol:DeployHats -f mainnet
-    // forge script script/Hats.s.sol:DeployHats -f mainnet --broadcast --verify
+    // forge script script/Hats.s.sol:DeployHats -f goerli
+    // forge script script/Hats.s.sol:DeployHats -f goerli --broadcast --verify
 
-    // forge script script/Hats.s.sol:DeployHats --rpc-url http://localhost:8545 --broadcast
-
-    // forge verify-contract --chain-id 1 --num-of-optimizations 10000 --watch --constructor-args $(cast abi-encode "constructor(string,string)" "Hats Protocol v1.0" "ipfs://bafybeigcimbqwfajsnhoq7fqnbdllz7kye7cpdy3adj2sob3wku2llu5bi") --compiler-version v0.8.17 0x9D2dfd6066d5935267291718E8AA16C8Ab729E9d src/Hats.sol:Hats --etherscan-api-key $ETHERSCAN_KEY
+    // forge verify-contract --chain-id 5 --num-of-optimizations 10000 --watch --constructor-args $(cast abi-encode "constructor(string,string)" "Hats Protocol v1" "ipfs://bafkreiflezpk3kjz6zsv23pbvowtatnd5hmqfkdro33x5mh2azlhne3ah4") --compiler-version v0.8.17 0x3bc1A0Ad72417f2d411118085256fC53CBdDd137 src/Hats.sol:Hats --etherscan-api-key $ETHERSCAN_KEY
 }
 
 contract DeployHatsAndMintTopHat is Script {
