@@ -2395,3 +2395,112 @@ contract MalformedInputsTests is TestSetup2 {
         hats.checkHatStatus(secondHatId);
     }
 }
+
+contract MulticallTests is TestSetup {
+    bytes[] data;
+    string topDeets;
+    string secondDeets;
+    string topImage;
+    string secondImage;
+
+    function test_mintNewTopHat_andCreateHat() public {
+        topHatId = 0x00000002_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000;
+        secondHatId = 0x00000002_0001_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000;
+        topDeets = "multicall tophat";
+        secondDeets = "multicall second hat";
+        topImage = "hatsprotocol.eth/tophat.png";
+        secondImage = "hatsprotocol.eth/secondhat.png";
+
+        // craft the data for the mintTopHat call
+        bytes memory mintTopHatData =
+            abi.encodeWithSignature("mintTopHat(address,string,string)", topHatWearer, topDeets, topImage);
+
+        // craft the data for the createHat call
+        bytes memory createHatData = abi.encodeWithSignature(
+            "createHat(uint256,string,uint32,address,address,bool,string)",
+            topHatId,
+            secondDeets,
+            500,
+            _eligibility,
+            _toggle,
+            true,
+            secondImage
+        );
+
+        // craft the data for the multicall
+        data = new bytes[](2);
+        data[0] = mintTopHatData;
+        data[1] = createHatData;
+
+        // expect hat created, hat minted, and hat created events
+        vm.expectEmit();
+        emit HatCreated(topHatId, topDeets, 1, address(0), address(0), false, topImage);
+        vm.expectEmit();
+        emit TransferSingle(topHatWearer, address(0), topHatWearer, topHatId, 1);
+        vm.expectEmit();
+        emit HatCreated(secondHatId, secondDeets, 500, _eligibility, _toggle, true, secondImage);
+
+        // call the multicall from topHatWearer
+        vm.prank(topHatWearer);
+        hats.multicall(data);
+
+        // check that the hats were created
+        assertTrue(hats.isWearerOfHat(topHatWearer, topHatId));
+        assertEq(hats.getHatMaxSupply(secondHatId), 500);
+    }
+
+    function test_editHat() public {
+        // create a mutable hat
+        test_mintNewTopHat_andCreateHat();
+
+        // craft the data for the details change
+        bytes memory changeDetailsData =
+            abi.encodeWithSignature("changeHatDetails(uint256,string)", secondHatId, "new details");
+
+        // craft the data for the image change
+        bytes memory changeImageData =
+            abi.encodeWithSignature("changeHatImageURI(uint256,string)", secondHatId, "hatsprotocol.eth/newimage.png");
+
+        // craft the data for the eligibility change
+        bytes memory changeEligibilityData =
+            abi.encodeWithSignature("changeHatEligibility(uint256,address)", secondHatId, address(1234));
+
+        // craft the data for the toggle change
+        bytes memory changeToggleData =
+            abi.encodeWithSignature("changeHatToggle(uint256,address)", secondHatId, address(5678));
+
+        // craft the data for the max supply change
+        bytes memory changeMaxSupplyData =
+            abi.encodeWithSignature("changeHatMaxSupply(uint256,uint32)", secondHatId, 1000);
+
+        // craft the data to make the hat immutable
+        bytes memory makeHatImmutableData = abi.encodeWithSignature("makeHatImmutable(uint256)", secondHatId);
+
+        // craft the data for the multicall
+        data = new bytes[](6);
+        data[0] = changeDetailsData;
+        data[1] = changeImageData;
+        data[2] = changeEligibilityData;
+        data[3] = changeToggleData;
+        data[4] = changeMaxSupplyData;
+        data[5] = makeHatImmutableData;
+
+        // expect the details, image, eligibility, toggle, max supply, and immutable events
+        vm.expectEmit();
+        emit HatDetailsChanged(secondHatId, "new details");
+        vm.expectEmit();
+        emit HatImageURIChanged(secondHatId, "hatsprotocol.eth/newimage.png");
+        vm.expectEmit();
+        emit HatEligibilityChanged(secondHatId, address(1234));
+        vm.expectEmit();
+        emit HatToggleChanged(secondHatId, address(5678));
+        vm.expectEmit();
+        emit HatMaxSupplyChanged(secondHatId, 1000);
+        vm.expectEmit();
+        emit HatMutabilityChanged(secondHatId);
+
+        // call the multicall from topHatWearer
+        vm.prank(topHatWearer);
+        hats.multicall(data);
+    }
+}

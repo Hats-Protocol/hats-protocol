@@ -401,6 +401,10 @@ The wearer of a Hat can "take off" their Hat via `Hats.renounceHat`. This burns 
 
 <p align="right">(<a href="#table-of-contents">back to contents</a>)</p>
 
+### Multicall
+
+This contract inherits from [Multicallable](https://github.com/Vectorized/solady/blob/main/src/utils/Multicallable.sol), which adds a non-payable `multicall` function to the contract. This enables EOAs to make multiple calls to the contract atomically, unlocking a number of useful batch operations that were previously only available to smart contracts.
+
 ## License
 
 Distributed under the AGPLv3 License. See `LICENSE.txt` for more information.

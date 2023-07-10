@@ -24,12 +24,16 @@ import "./Interfaces/IHatsToggle.sol";
 import "./Interfaces/IHatsEligibility.sol";
 import "solbase/utils/Base64.sol";
 import "solbase/utils/LibString.sol";
+import "solady/utils/Multicallable.sol";
 
-/// @title Hats Protocol
+/// @title Hats Protocol v1
 /// @notice Hats are DAO-native, revocable, and programmable roles that are represented as non-transferable ERC-1155-similar tokens for composability
-/// @dev This is a multitenant contract that can manage all hats for a given chain. While it fully implements the ERC1155 interface, it does not fully comply with the ERC1155 standard.
+/// @dev This is a multi-tenant contract that can manage all hats for a given chain. While it fully implements the ERC1155 interface, it does not fully comply with the ERC1155 standard.
 /// @author Haberdasher Labs
-contract Hats is IHats, ERC1155, HatsIdUtilities {
+contract Hats is IHats, ERC1155, Multicallable, HatsIdUtilities {
+    /// @notice This contract's version is labeled v1. Previous versions labeled similarly as v1 and v1.0 are deprecated,
+    ///         and should be treated as beta deployments.
+
     /*//////////////////////////////////////////////////////////////
                               HATS DATA MODELS
     //////////////////////////////////////////////////////////////*/

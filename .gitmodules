@@ -4,3 +4,6 @@
 [submodule "lib/solbase"]
 	path = lib/solbase
 	url = https://github.com/sol-dao/solbase
+[submodule "lib/solady"]
+	path = lib/solady
+	url = https://github.com/vectorized/solady
