@@ -23,7 +23,7 @@ quote_style = "double"
 tab_width = 4
 wrap_comments = false
 
-[book]
+[profile.book]
 book = "./book.toml"
 
 [rpc_endpoints]
