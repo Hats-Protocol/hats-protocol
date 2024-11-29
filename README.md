@@ -266,7 +266,7 @@ When a Hat is revoked, its token is burned.
 
 For example, a hatter contract implementing staking logic could slash a wearer's stake if they are placed in bad standing by the eligibility module.
 
-An address placed in bad standing by a Hat's eligibility module automatically loses eligibility for that Hat. Note, though, that ineligibility does necessarily imply bad standing; it is possible for an address may be ineligible but in good standing.
+An address placed in bad standing by a Hat's eligibility module automatically loses eligibility for that Hat. Note, though, that ineligibility does not necessarily imply bad standing; it is possible for an address may be ineligible but in good standing.
 
 Any address can serve as an eligibility module for a given Hat. Hats Protocol supports two categories of eligibility modules:
 
